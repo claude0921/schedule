@@ -199,6 +199,11 @@ td.a { vertical-align: top; }
 /* the 子項目／備註 column is pinned next to the 主項目 column while it is shown */
 #tbl th.b, #tbl td.b { position: sticky; left: 150px; z-index: 4; border-right: 1px solid var(--line2); background-clip: padding-box; }
 #tbl thead th.b { z-index: 6; }
+td.c.fixh { overflow: hidden; position: relative; }
+td.c.fixh > .items, td.c.fixh > .chip { max-height: calc(var(--rh) - 14px); overflow: hidden; }
+td.c.fixh:hover { overflow: visible; z-index: 5; }
+td.c.fixh:hover > .items, td.c.fixh:hover > .chip { overflow: visible; }   /* point at a clipped cell to see all of it */
+td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
 .cz { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
 .cz:hover, .cz.on { background: var(--accent); opacity: .45; }
 .rh { position: absolute; left: 0; bottom: 0; width: 100%; height: 6px; cursor: row-resize; touch-action: none; z-index: 7; }
@@ -697,7 +702,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   var rowArmed = null, rowArmTimer = null;
   function paintLabel(td, def, i, n) {
     td.textContent = '';
-    var rzh = h('span', 'rh'); rzh.title = '拖曳調整這一列的高度，雙擊還原'; rzh.dataset.k = def.k; rzh.addEventListener('pointerdown', startRowResize); rzh.addEventListener('dblclick', function () { delete rhUser[def.k]; saveSizes(); var tr = td.parentNode; if (tr) tr.style.height = ''; }); td.appendChild(rzh);
+    var rzh = h('span', 'rh'); rzh.title = '拖曳調整這一列的高度，雙擊還原'; rzh.dataset.k = def.k; rzh.addEventListener('pointerdown', startRowResize); rzh.addEventListener('dblclick', function () { delete rhUser[def.k]; saveSizes(); var tr = td.parentNode; if (tr) clearRowH(tr); }); td.appendChild(rzh);
     var lb = h('div', 'lb', def.label); lb.title = '點一下開啟「' + flat(def.label) + '」的記事本';
     var hasPad = !!((notes['pad-' + def.k] && notes['pad-' + def.k].text) || '');   // the 📓 shows only when the notepad has something in it
     var pd = h('button', 'pd on', '📓'); pd.type = 'button'; pd.dataset.act = 'rowpad';
@@ -782,8 +787,8 @@ details.wm summary { cursor: pointer; font-weight: 500; }
         } else paintCell(td, col, def.k);
         tr.appendChild(td);
       });
-      if (rhUser[def.k]) tr.style.height = rhUser[def.k] + 'px';
-      tbody.appendChild(tr);
+      
+      tbody.appendChild(tr); if (rhUser[def.k]) setRowH(tr, rhUser[def.k]);
     });
     tbl.appendChild(tbody);
 
@@ -1224,6 +1229,15 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     fitCW(); render(); if (dn != null) scrollToDn(dn);
   }
   /* row heights: drag the bottom edge of a row's name cell (a row can never get shorter than what it holds) */
+  /* a row normally grows to its tallest cell (even a date scrolled off-screen); once the height is set by hand the cells are clipped to it */
+  function setRowH(tr, px) {
+    tr.style.height = px + 'px';
+    Array.prototype.forEach.call(tr.querySelectorAll('td.c'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', px + 'px'); });
+  }
+  function clearRowH(tr) {
+    tr.style.height = '';
+    Array.prototype.forEach.call(tr.querySelectorAll('td.c'), function (td) { td.classList.remove('fixh'); td.style.removeProperty('--rh'); });
+  }
   var rhs = null;
   function startRowResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
@@ -1231,7 +1245,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     rhs = { y: ev.clientY, h: tr.getBoundingClientRect().height / UZ, tr: tr, k: ev.currentTarget.dataset.k, el: ev.currentTarget }; rhs.el.classList.add('on'); document.body.style.userSelect = 'none';
     document.addEventListener('pointermove', moveRowResize); document.addEventListener('pointerup', endRowResize); document.addEventListener('pointercancel', endRowResize);
   }
-  function moveRowResize(ev) { if (rhs) rhs.tr.style.height = Math.max(24, Math.min(900, Math.round(rhs.h + (ev.clientY - rhs.y) / UZ))) + 'px'; }
+  function moveRowResize(ev) { if (rhs) setRowH(rhs.tr, Math.max(34, Math.min(900, Math.round(rhs.h + (ev.clientY - rhs.y) / UZ)))); }
   function endRowResize() {
     if (!rhs) return;
     rhs.el.classList.remove('on'); document.body.style.userSelect = '';
@@ -1641,7 +1655,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   }
   $('resetCW').addEventListener('click', resetCW);
   $('resetRH').addEventListener('click', function () {
-    rhUser = {}; saveSizes(); Array.prototype.forEach.call($('tbl').querySelectorAll('tbody tr'), function (tr) { tr.style.height = ''; });
+    rhUser = {}; saveSizes(); Array.prototype.forEach.call($('tbl').querySelectorAll('tbody tr'), function (tr) { clearRowH(tr); });
   });
   $('spanBtn').addEventListener('click', function () {
     if (editing) commit();
