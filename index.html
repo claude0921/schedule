@@ -60,7 +60,7 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .sync i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-2); display: inline-block; }
 .sync.on i { background: var(--accent); }
 .sync.warn i { background: #d98a00; }
-.banner { background: var(--panel); border: 1px solid var(--accent); border-radius: 4px; padding: 6px 10px; font-size: 13px; }
+.banner { background: var(--panel); border: 2px solid var(--red); border-radius: 4px; padding: 8px 10px; font-size: 14px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; }
 
 /* formula bar */
 .fbar { background: var(--panel); border: 1px solid var(--grid); display: grid; gap: 0; }
@@ -306,7 +306,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   try { if (window.innerWidth < 700 && localStorage.getItem('sched2.hideB') === null) hideB = true; } catch (e) {}
 
   function h(tag, cls, text) { var el = document.createElement(tag); if (cls) el.className = cls; if (text != null) el.textContent = text; return el; }
-  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2600); }
+  function toast(msg, ms) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, ms || 2600); }
   function setSync(state, text) { var s = $('sync'); s.className = 'sync ' + state; s.lastChild.textContent = text; }
 
   function buildCols() {
@@ -570,7 +570,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var p;
     if (text === '') { delete store[key]; p = backend.del(name, id); }
     else { store[key] = data || { text: text }; p = backend.put(name, id, data || { text: text }); }
-    p.catch(function (err) { toast('儲存失敗：' + ((err && err.message) || '請稍後再試')); });
+    p.catch(function (err) { toast('未存到雲端：' + ((err && err.message) || '請稍後再試'), 7000); });
   }
 
   /* ---------- events ---------- */
@@ -661,35 +661,48 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   }
   /* Google Apps Script + Google Sheet as the shared store (used when the page is hosted outside claude.ai). */
   function gasBackend(url) {
-    var subs = {}, inflight = 0, lastW = 0, timer = null, KEY = 'sched2.key';
+    var subs = {}, inflight = 0, lastW = 0, timer = null, KEY = 'sched2.key', authed = false, needKey = false, queue = [];
     function getKey() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } }
     function post(body) {
       body.key = getKey();
       return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
         .then(function (r) { return r.json(); })
         .then(function (j) {
-          if (j && j.error === 'auth') { askKey(); throw new Error('共用密碼不正確'); }
+          if (j && j.error === 'auth') { authed = false; needKey = true; askKey(); throw new Error('共用密碼不正確'); }
           if (j && j.error) throw new Error(j.error);
           return j;
         });
     }
     function askKey() {
-      var b = $('banner'); b.hidden = false; b.textContent = '請輸入共用密碼（設定在 Google 試算表的 Apps Script 裡）：';
+      var b = $('banner'); b.hidden = false;
+      if ($('keyIn')) return;
+      b.textContent = '尚未同步：請輸入共用密碼（Apps Script 裡設定的那組）。輸入前的修改不會存到雲端，輸入後會自動補存。';
       var i = document.createElement('input'); i.type = 'password'; i.id = 'keyIn'; i.style.margin = '0 6px'; i.setAttribute('aria-label', '共用密碼');
       var ok = h('button', 'btn primary', '確認');
-      ok.addEventListener('click', function () {
+      function submit() {
         try { localStorage.setItem(KEY, i.value); } catch (e) {}
-        b.hidden = true; pull();
-      });
+        b.hidden = true; b.textContent = ''; pull(true);
+      }
+      ok.addEventListener('click', submit);
+      i.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit(); });
       b.appendChild(i); b.appendChild(ok);
+      setSync('warn', '未同步：需要密碼');
+    }
+    function flush() {
+      var q = queue.splice(0, queue.length);
+      return q.reduce(function (p, op) { return p.then(function () { return post(op); }); }, Promise.resolve())
+        .then(function () { lastW = Date.now(); toast('已補存先前未同步的內容', 4000); })
+        .catch(function () { queue = q.concat(queue); throw new Error('補存失敗'); });
     }
     function applyAll(j) {
       ['cells', 'rowNotes', 'meta'].forEach(function (n) { if (subs[n]) subs[n](j[n] || {}, false); });
       var d = new Date(); setSync('on', '已同步 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
     }
-    function pull() {
-      if (inflight || editing || Date.now() - lastW < 4000) return;
+    function pull(force) {
+      if (!force && (inflight || editing || Date.now() - lastW < 4000)) return;
       post({ op: 'all' }).then(function (j) {
+        authed = true; needKey = false;
+        if (queue.length) { return flush().then(function () { lastW = 0; pull(true); }); }
         var empty = !Object.keys(j.cells || {}).length && !Object.keys(j.rowNotes || {}).length && !Object.keys(j.meta || {}).length;
         if (empty && window.SCHED_SEED) {
           var seed = window.SCHED_SEED, jobs = [];
@@ -699,9 +712,14 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       }).catch(function (e) { if (!/密碼/.test(e.message)) setSync('warn', '連不上 Google，稍後自動重試'); });
     }
     function write(op, name, id, data) {
+      var job = { op: op, name: name, id: id, data: data };
+      if (!authed) {
+        queue.push(job);
+        return Promise.reject(new Error(needKey ? '尚未輸入共用密碼，輸入後會自動補存' : '尚未連上 Google，連上後會自動補存'));
+      }
       inflight++;
-      return post({ op: op, name: name, id: id, data: data }).then(function () { lastW = Date.now(); }, function (e) { throw e; })
-        .then(function (v) { inflight--; return v; }, function (e) { inflight--; throw e; });
+      return post(job).then(function () { lastW = Date.now(); })
+        .then(function (v) { inflight--; return v; }, function (e) { inflight--; queue.push(job); throw e; });
     }
     return {
       sub: function (name, cb) {
