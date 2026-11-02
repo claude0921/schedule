@@ -273,10 +273,14 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 .items { display: flex; flex-direction: column; gap: 2px; }
 .mview .it { font-size: 11px; gap: 1px; }
 .mview th.dh, .mview th.dh * { font-size: 10px; letter-spacing: -.5px; }
-.mview .gr, .mview .rp, .mview .nt { display: none; }
-.it { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; padding: 1px 0; }
-.it > .tx { flex: 1 1 56px; order: 1; }
-.it > .rp, .it > .nt, .it > .x { order: 2; }
+.it { display: flex; align-items: flex-start; gap: 4px; padding: 1px 0; position: relative; }
+.bul { flex: none; width: 12px; text-align: center; color: var(--ink2); line-height: 1.5; }
+.it.star .bul { color: var(--star); }
+.it.done .bul { color: var(--accent); }
+.itb { display: none; position: absolute; left: 0; bottom: 100%; z-index: 9; align-items: center; gap: 2px; padding: 1px 4px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; }
+.it:hover .itb { display: flex; }
+.itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
+@media (hover: none) { .it { flex-wrap: wrap; } .itb { display: flex; position: static; flex-basis: 100%; box-shadow: none; border: 0; padding: 0; background: transparent; } .bul { display: none; } }
 .st { border: 0; background: transparent; padding: 0 2px; font-size: 16px; line-height: 1.35; color: var(--ink2); opacity: .5; }
 .it:hover .st, .it.star .st { opacity: 1; }
 .it.star .st { color: var(--star); }
@@ -670,9 +674,13 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       var x = h('button', 'x' + (isArmed ? ' armed' : ''), isArmed ? '確定刪除？' : '×'); x.type = 'button'; x.dataset.act = 'del';
       x.setAttribute('aria-label', '刪除這項工作');
       if (it.r) x.title = '只刪除這一天（整個重複事項請點 ⋮）';
-      row.appendChild(gr); row.appendChild(ck); row.appendChild(st); row.appendChild(tx); row.appendChild(nt);
-      if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); row.appendChild(rp); }
-      row.appendChild(x); box.appendChild(row);
+      /* a plain bullet (or the lit ★ / ☑) is all that shows until the mouse is over the item; then the tool buttons appear above the text */
+      var bul = h('span', 'bul', it.s ? '★' : it.d ? '☑' : '•'); bul.setAttribute('aria-hidden', 'true');
+      var tb = h('div', 'itb');
+      tb.appendChild(gr); tb.appendChild(ck); tb.appendChild(st); tb.appendChild(nt);
+      if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); tb.appendChild(rp); }
+      tb.appendChild(x);
+      row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
     });
     td.appendChild(box);
     var add = h('button', 'add', '＋ 新增'); add.type = 'button'; add.dataset.act = 'add'; td.appendChild(add);
