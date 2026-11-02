@@ -49,6 +49,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
 /* Layout: today strip with starred items on top, then a work-month board (dates across, main items down). */
+html { zoom: .8; }   /* default view size = the browser at 80% */
 :root {
   --bg: #f1f3f5;
   --card: #ffffff;
@@ -198,6 +199,10 @@ td.a { vertical-align: top; }
 /* the 子項目／備註 column is pinned next to the 主項目 column while it is shown */
 #tbl th.b, #tbl td.b { position: sticky; left: 150px; z-index: 4; border-right: 1px solid var(--line2); background-clip: padding-box; }
 #tbl thead th.b { z-index: 6; }
+.cz { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
+.cz:hover, .cz.on { background: var(--accent); opacity: .45; }
+.rh { position: absolute; left: 0; bottom: 0; width: 100%; height: 6px; cursor: row-resize; touch-action: none; z-index: 7; }
+.rh:hover, .rh.on { background: var(--accent); opacity: .45; }
 .rz { position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
 .rz:hover, .rz.on { background: var(--accent); opacity: .45; }
 .hb { margin-left: 8px; }
@@ -277,6 +282,8 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 .bul { flex: none; width: 12px; text-align: center; color: var(--ink2); line-height: 1.5; }
 .it.star .bul { color: var(--star); }
 .it.done .bul { color: var(--accent); }
+td.c.manual { overflow: visible; position: relative; }   /* so the floating tool buttons above an item are not cut off by the cell */
+td.c.manual:hover, td.c.manual.editing { z-index: 5; }
 .itb { display: none; position: absolute; left: 0; bottom: 100%; z-index: 9; align-items: center; gap: 2px; padding: 1px 4px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; }
 .it:hover .itb { display: flex; }
 .itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
@@ -341,6 +348,8 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       <button class="btn primary" id="goToday">回到今天</button>
       <button class="btn" id="next">下一工作月 ›</button>
       <button class="btn" id="spanBtn" title="切換顯示一週／整個工作月">工作月視角</button>
+      <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
+      <button class="btn" id="resetRH" title="所有列高還原成預設">預設列高</button>
       <button class="btn" id="toggleB">隱藏子項目欄</button>
       <select class="btn" id="exportWm" title="選擇要匯出的工作月（一次匯出一個工作月，28 天）"></select>
       <button class="btn" id="exportX">匯出 Excel</button>
@@ -688,6 +697,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   var rowArmed = null, rowArmTimer = null;
   function paintLabel(td, def, i, n) {
     td.textContent = '';
+    var rzh = h('span', 'rh'); rzh.title = '拖曳調整這一列的高度，雙擊還原'; rzh.dataset.k = def.k; rzh.addEventListener('pointerdown', startRowResize); rzh.addEventListener('dblclick', function () { delete rhUser[def.k]; saveSizes(); var tr = td.parentNode; if (tr) tr.style.height = ''; }); td.appendChild(rzh);
     var lb = h('div', 'lb', def.label); lb.title = '點一下開啟「' + flat(def.label) + '」的記事本';
     var hasPad = !!((notes['pad-' + def.k] && notes['pad-' + def.k].text) || '');   // the 📓 shows only when the notepad has something in it
     var pd = h('button', 'pd on', '📓'); pd.type = 'button'; pd.dataset.act = 'rowpad';
@@ -722,7 +732,11 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   var CW = 150, span = 7;
   try { if (localStorage.getItem('sched2.span') === '28') span = 28; } catch (e) {}
   if (span === 28) hideB = true;
-  function fitCW() { var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / span)); var ch = n !== CW; CW = n; return ch; }
+  var UZ = .8;   // = the html { zoom } above: mouse movement is in screen pixels, sizes are in zoomed pixels
+  var cwUser = {}, rhUser = {};   // per-viewer: date-column width (per view) and row heights (per row), set by dragging
+  try { cwUser = JSON.parse(localStorage.getItem('sched2.cw') || '{}') || {}; rhUser = JSON.parse(localStorage.getItem('sched2.rh') || '{}') || {}; } catch (e) {}
+  function saveSizes() { try { localStorage.setItem('sched2.cw', JSON.stringify(cwUser)); localStorage.setItem('sched2.rh', JSON.stringify(rhUser)); } catch (e) {} }
+  function fitCW() { if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / span)); var ch = n !== CW; CW = n; return ch; }
   function render() {
     fitCW();
     buildCols();
@@ -746,6 +760,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       var cls = (todayDn === col.dn ? ' today' : '') + (col.wd === 0 || col.wd === 6 ? ' wk' : '') + (col.w.dayno === 1 ? ' mstart' : '') + (HOL[col.dn] ? ' hol' : '');
       var th = h('th', 'dh' + cls); th.dataset.c = String(col.i); th.appendChild(h('div', 'dd', fromDn(col.dn).m + '/' + fromDn(col.dn).d)); th.appendChild(h('div', 'dw', WDN[col.wd].replace('星期', '週') + (HOL[col.dn] ? ' ' + HOL[col.dn] : '')));
       if (HOL[col.dn]) th.title = HOL[col.dn] + '（國定假日）';
+      var cz = h('span', 'cz'); cz.title = '拖曳調整日期欄寬（所有日期同寬），雙擊還原'; cz.addEventListener('pointerdown', startColResize); cz.addEventListener('dblclick', resetCW); th.appendChild(cz);
       r1.appendChild(th);
       var g = h('th', 'dg' + cls, wdLabel(col.w)); g.dataset.c = String(col.i); g.title = slash(col.dn) + ' 屬於工作月 ' + col.w.code + '（' + slash(col.w.start) + ' ～ ' + slash(col.w.end) + '），第 ' + col.w.dayno + ' 天';
       r2.appendChild(g);
@@ -767,6 +782,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
         } else paintCell(td, col, def.k);
         tr.appendChild(td);
       });
+      if (rhUser[def.k]) tr.style.height = rhUser[def.k] + 'px';
       tbody.appendChild(tr);
     });
     tbl.appendChild(tbody);
@@ -1131,15 +1147,12 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
     if (ev.target.closest('.cgo')) jumpTo(Number(w.dataset.dn), w.dataset.k);
   });
-  /* ---------- wheel over the board scrolls only the board (no click needed, never the page behind it) ---------- */
+  /* ---------- wheel scrolls up/down as usual; Shift + wheel scrolls the dates sideways ---------- */
   $('sheet').addEventListener('wheel', function (ev) {
-    var s = $('sheet');
-    if (ev.ctrlKey || ev.shiftKey) return;                                  // zoom / native horizontal scroll
-    var canV = s.scrollHeight > s.clientHeight + 1;
-    if (!canV && Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {               // nothing to scroll vertically: use the wheel for the dates
-      var before = s.scrollLeft; s.scrollLeft += ev.deltaY;
-      if (s.scrollLeft !== before) ev.preventDefault();
-    }
+    if (!ev.shiftKey || ev.ctrlKey) return;
+    var s = $('sheet'), d = ev.deltaX || ev.deltaY;
+    if (!d) return;
+    s.scrollLeft += d; ev.preventDefault();
   }, { passive: false });
 
   /* ---------- crosshair highlight for the hovered cell ---------- */
@@ -1174,7 +1187,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     $('tbl').style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
     padSheet();
   }
-  function moveResize(ev) { if (!rs) return; bw = Math.max(160, Math.min(900, Math.round(rs.w + ev.clientX - rs.x))); applyBw(); }
+  function moveResize(ev) { if (!rs) return; bw = Math.max(160, Math.min(900, Math.round(rs.w + (ev.clientX - rs.x) / UZ))); applyBw(); }
   function endResize() {
     if (!rs) return;
     rs.el.classList.remove('on'); rs = null; document.body.style.userSelect = '';
@@ -1185,6 +1198,46 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   function refit() {
     var sheet = $('sheet'), k = Math.max(0, Math.min(cols.length - 1, Math.floor(sheet.scrollLeft / CW))), dn = cols[k] && cols[k].dn;
     if (fitCW() && dn != null) { render(); scrollToDn(dn); }
+  }
+  /* date columns: drag the right edge of any date header; every date column gets the same width */
+  var czs = null;
+  function applyCW(w) {
+    CW = w; var cs = $('tbl').querySelectorAll('colgroup col');
+    for (var i = 2; i < cs.length; i++) cs[i].style.width = w + 'px';
+    $('tbl').style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
+  }
+  function startColResize(ev) {
+    ev.preventDefault(); ev.stopPropagation();
+    czs = { x: ev.clientX, w: CW, el: ev.currentTarget }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
+    document.addEventListener('pointermove', moveColResize); document.addEventListener('pointerup', endColResize); document.addEventListener('pointercancel', endColResize);
+  }
+  function moveColResize(ev) { if (czs) applyCW(Math.max(span === 28 ? 24 : 70, Math.min(600, Math.round(czs.w + (ev.clientX - czs.x) / UZ)))); }
+  function endColResize() {
+    if (!czs) return;
+    czs.el.classList.remove('on'); czs = null; document.body.style.userSelect = '';
+    document.removeEventListener('pointermove', moveColResize); document.removeEventListener('pointerup', endColResize); document.removeEventListener('pointercancel', endColResize);
+    cwUser[span] = CW; saveSizes();
+  }
+  function resetCW() {
+    delete cwUser[span]; saveSizes();
+    var sheet = $('sheet'), k = Math.max(0, Math.min(cols.length - 1, Math.floor(sheet.scrollLeft / CW))), dn = cols[k] && cols[k].dn;
+    fitCW(); render(); if (dn != null) scrollToDn(dn);
+  }
+  /* row heights: drag the bottom edge of a row's name cell (a row can never get shorter than what it holds) */
+  var rhs = null;
+  function startRowResize(ev) {
+    ev.preventDefault(); ev.stopPropagation();
+    var tr = ev.currentTarget.closest('tr'); if (!tr) return;
+    rhs = { y: ev.clientY, h: tr.getBoundingClientRect().height / UZ, tr: tr, k: ev.currentTarget.dataset.k, el: ev.currentTarget }; rhs.el.classList.add('on'); document.body.style.userSelect = 'none';
+    document.addEventListener('pointermove', moveRowResize); document.addEventListener('pointerup', endRowResize); document.addEventListener('pointercancel', endRowResize);
+  }
+  function moveRowResize(ev) { if (rhs) rhs.tr.style.height = Math.max(24, Math.min(900, Math.round(rhs.h + (ev.clientY - rhs.y) / UZ))) + 'px'; }
+  function endRowResize() {
+    if (!rhs) return;
+    rhs.el.classList.remove('on'); document.body.style.userSelect = '';
+    document.removeEventListener('pointermove', moveRowResize); document.removeEventListener('pointerup', endRowResize); document.removeEventListener('pointercancel', endRowResize);
+    rhUser[rhs.k] = parseInt(rhs.tr.style.height, 10) || 0; if (!rhUser[rhs.k]) delete rhUser[rhs.k];
+    rhs = null; saveSizes();
   }
   function startResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
@@ -1209,7 +1262,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       rowLine = h('div', 'rowline'); document.body.appendChild(rowLine);
       rdrag.raf = requestAnimationFrame(rdTick);
     }
-    rdrag.ghost.style.left = (ev.clientX + 12) + 'px'; rdrag.ghost.style.top = (ev.clientY + 8) + 'px';
+    rdrag.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; rdrag.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
     var trs = [].slice.call($('tbl').querySelectorAll('tbody tr')), idx = 0;
     for (var i = 0; i < trs.length; i++) { var r = trs[i].getBoundingClientRect(); if (ev.clientY > r.top + r.height / 2) idx = i + 1; }
     rdrag.idx = idx;
@@ -1464,7 +1517,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       drag.row.classList.add('dragging'); document.body.classList.add('dragmode');
       drag.raf = requestAnimationFrame(dragTick);
     }
-    drag.ghost.style.left = (ev.clientX + 12) + 'px'; drag.ghost.style.top = (ev.clientY + 8) + 'px';
+    drag.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; drag.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
     clearDrop();
     var t = dropTarget(ev.clientX, ev.clientY); drag.t = t;
     if (t) {
@@ -1569,6 +1622,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   });
   function padSheet() { $('sheet').style.paddingRight = '0px'; }
   var rzT = 0;
+  window.addEventListener('load', function () { setTimeout(function () { if (!editing) refit(); }, 300); });
   window.addEventListener('resize', function () {
     padSheet();
     clearTimeout(rzT);
@@ -1585,6 +1639,10 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var left = th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
+  $('resetCW').addEventListener('click', resetCW);
+  $('resetRH').addEventListener('click', function () {
+    rhUser = {}; saveSizes(); Array.prototype.forEach.call($('tbl').querySelectorAll('tbody tr'), function (tr) { tr.style.height = ''; });
+  });
   $('spanBtn').addEventListener('click', function () {
     if (editing) commit();
     span = span === 28 ? 7 : 28;
