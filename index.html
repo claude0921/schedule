@@ -190,17 +190,19 @@ thead th.today.mstart { box-shadow: inset 0 3px 0 var(--today-line), inset 3px 0
 .rdel { color: var(--red); border-color: var(--red); }
 .rdel.armed { background: var(--red); color: #fff; }
 .rp { border: 0; background: transparent; color: var(--accent); font-size: 14px; padding: 0 3px; cursor: pointer; }
-td.c > .chip.plain { margin-bottom: 3px; }
-.removed { display: inline-flex; align-items: center; gap: 8px; margin-left: 12px; flex-wrap: wrap; }
+td.c > .chip.plain { margin-bottom: 0; }
+.removed { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }   /* pushed to the right end of the add-row line */
+.addform .rep { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; white-space: nowrap; cursor: pointer; }
 .removed .chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .auto { font-size: 12px; color: var(--ink2); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-td.c { position: relative; }
+td.c { position: relative; padding-top: 2px; padding-bottom: 2px; }
+td.c > .add { position: absolute; right: 3px; bottom: 1px; margin: 0; background: var(--card); z-index: 2; }   /* never takes up row height, like Excel */
 td.a { vertical-align: top; }
 /* the 子項目／備註 column is pinned next to the 主項目 column while it is shown */
 #tbl th.b, #tbl td.b { position: sticky; left: 150px; z-index: 4; border-right: 1px solid var(--line2); background-clip: padding-box; }
 #tbl thead th.b { z-index: 6; }
 td.c.fixh { overflow: hidden; position: relative; }
-td.c.fixh > .items, td.c.fixh > .chip { max-height: calc(var(--rh) - 14px); overflow: hidden; }
+td.c.fixh > .items, td.c.fixh > .chip { max-height: calc(var(--rh) - 6px); overflow: hidden; }
 td.c.fixh:hover { overflow: visible; z-index: 5; }
 td.c.fixh:hover > .items, td.c.fixh:hover > .chip { overflow: visible; }   /* point at a clipped cell to see all of it */
 td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
@@ -227,6 +229,8 @@ td.a:hover .rgr, .rgr:focus-visible { opacity: 1; color: var(--accent); }
 tr.rowdragging td { opacity: .35; }
 .rowline { position: fixed; height: 3px; background: var(--accent); border-radius: 2px; z-index: 45; pointer-events: none; box-shadow: 0 0 0 1px var(--card); }
 .lbrow { display: flex; align-items: flex-start; gap: 4px; }
+td.a { padding-top: 2px; padding-bottom: 2px; }
+td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* the row name may be clipped too, so the row can shrink */
 .lbrow .lb { flex: 1; min-width: 0; }
 .pd { flex: none; border: 0; background: transparent; padding: 0 2px; font-size: 14px; line-height: 1.5; opacity: .5; }
 .pd:hover, .pd.on { opacity: 1; }
@@ -374,13 +378,15 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   <div class="sheet" id="sheet" aria-label="工作月排程表"><table id="tbl"></table></div>
 
   <div class="addrow">
-    <button class="btn" id="addRow">＋ 新增主要工作項目</button>    <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
+    <button class="btn" id="addRow">＋ 新增主要工作項目</button>
     <span class="addform" id="addForm" hidden>
       <input type="text" id="addName" maxlength="30" placeholder="工作項目名稱，例如：專案 A" aria-label="新工作項目名稱">
+      <label class="rep" title="勾選後，這一列就像「例行公事」「外勤相關行事曆」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
       <button class="btn primary" id="addOk" type="button">加入</button>
       <button class="btn" id="addNo" type="button">取消</button>
-      <span class="sub">會加在最後一列，之後可以用 ▲▼ 移動</span>
+      <span class="sub">會加在最後一列，之後可以按住列名稱旁的 ☰ 上下拖曳移動</span>
     </span>
+    <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
   </div>
 
   <section class="foot" aria-label="備註">
@@ -519,7 +525,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   /* ---------- rows (r = row number in the original workbook, used by the Excel export) ---------- */
   var BASE = [
     { k: 'mgr', r: 5, label: '重要會議倒數', type: 'meeting' },
-    { k: 'field', r: 6, label: '外勤相關行事曆', type: 'calc' },
+    { k: 'field', r: 6, label: '外勤相關行事曆', type: 'routine' },   // repeat rules like 例行公事 (starter rules: 每工第 9、12、15、16、23 天)
     { k: 'routine', r: 7, label: '例行公事', type: 'routine' },   // the two built-in rules show as a chip; its own items and repeating items are typed in
     { k: 'temp', r: 8, label: '臨時', type: 'manual' },
     { k: 'ot1', r: 9, label: '人加班', type: 'manual' },
@@ -541,7 +547,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var lay = meta.layout || {}, order = Array.isArray(lay.order) ? lay.order : [], custom = lay.custom || {}, map = {}, seen = {}, out = [];
     var labels = lay.labels || {};   // renamed built-in rows
     BASE.forEach(function (d) { map[d.k] = labels[d.k] ? { k: d.k, r: d.r, label: labels[d.k], type: d.type } : d; });
-    Object.keys(custom).forEach(function (k) { map[k] = { k: k, label: (custom[k] && custom[k].label) || '新工作項目', type: 'manual', custom: true }; });
+    Object.keys(custom).forEach(function (k) { var rep = !!(custom[k] && custom[k].rep); map[k] = { k: k, label: (custom[k] && custom[k].label) || '新工作項目', type: rep ? 'routine' : 'manual', custom: true, rep: rep }; });
     order.forEach(function (k) { if (map[k] && !seen[k]) { out.push(map[k]); seen[k] = 1; } });
     BASE.forEach(function (d) { if (!seen[d.k]) { out.push(d); seen[d.k] = 1; } });
     Object.keys(custom).forEach(function (k) { if (!seen[k]) { out.push(map[k]); seen[k] = 1; } });
@@ -605,13 +611,20 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (Array.isArray(d.items)) return d.items.filter(function (x) { return x && x.t; });
     return d.text ? [{ t: String(d.text), s: 0 }] : [];
   }
-  function itemsOf(id) { return id.slice(-8) === '_routine' ? routineView(id) : storedItems(id); }
+  function isRR(k) { var c = meta.layout && meta.layout.custom && meta.layout.custom[k]; return k === 'routine' || k === 'field' || !!(c && c.rep); }   // rows driven by repeat rules
+  function rowOfId(id) { var k = id.slice(11); return k && id.charAt(10) === '_' && isRR(k) ? k : ''; }
+  function itemsOf(id) { var rk = rowOfId(id); return rk ? routineView(id, rk) : storedItems(id); }
 
   /* ---------- repeating items (例行公事 row) ----------
      A rule {id, t, st, start:'YYYY-MM-DD', f:'day'|'week'|'wm', n, wd:[0-6], wm:[1-28], end:{k:'never'|'on'|'count', on, c}} lives in meta.rules.list.
      Nothing is stored per day until the user touches an occurrence (done / star / note / edit / delete): then that day keeps an item
      {t, s, d, n, r: ruleId, e: 1 if its text was edited, x: 1 if it was removed}. */
   function rulesList() { return (meta.rules && meta.rules.list) || []; }
+  function rulesFor(k) { return rulesList().filter(function (r) { return (r.row || 'routine') === k; }); }
+  function expandT(t, dn) {                                           // {上} = previous work month number, {本} = this work month number
+    if (String(t).indexOf('{') < 0) return t;
+    var w = wmOf(dn); return String(t).replace(/\{上\}/g, prevMo(w.mo)).replace(/\{本\}/g, pad(w.mo));
+  }
   function ruleById(id) { var l = rulesList(); for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
   function weekIdx(dn) { return Math.floor((dn + 3) / 7); }          // weeks start on Monday
   function ruleBase(r, dn) {
@@ -639,17 +652,18 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (e.k === 'count') { var l = ruleLast(r); return l !== null && dn <= l; }
     return true;
   }
-  function routineView(id) {
+  function routineView(id, rk) {
+    rk = rk || 'routine';
     var stored = storedItems(id), dn = isoToDn(id.slice(0, 10)), out = [], seen = {};
     stored.forEach(function (it) {
       if (!it.r) { out.push(it); return; }
       var r = ruleById(it.r);
-      if (!r || !ruleHits(r, dn)) return;                             // series deleted, or no longer falls on this day
+      if (!r || (r.row || 'routine') !== rk || !ruleHits(r, dn)) return;   // series deleted, or no longer falls on this day
       seen[it.r] = 1;
       if (it.x) return;                                               // this day was removed
-      var o = { t: it.e ? it.t : r.t, s: it.s ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; out.push(o);
+      var o = { t: it.e ? it.t : expandT(r.t, dn), s: it.s ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; out.push(o);
     });
-    rulesList().forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: r.t, s: r.st ? 1 : 0, d: 0, r: r.id }); });
+    rulesFor(rk).forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: expandT(r.t, dn), s: r.st ? 1 : 0, d: 0, r: r.id }); });
     return out;
   }
   function cellText(items) { return items.map(function (i) { return (i.s ? '★ ' : '') + (i.d ? '✓ ' : '') + i.t + (i.n ? '\n　↳ ' + String(i.n).replace(/\n/g, ' ') : ''); }).join('\n'); }
@@ -713,7 +727,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var more = h('button', 'mo', '⋮'); more.type = 'button'; more.dataset.act = 'rowmore'; more.title = '設定：記事本、改名、隱藏、刪除'; td.appendChild(more);
     var tools = h('div', 'rowtools');
     var npd = h('button', 'rt', '記事本'); npd.type = 'button'; npd.dataset.act = 'rowpad'; npd.title = '開啟這個工作項目的記事本'; tools.appendChild(npd);
-    if (def.k === 'routine') { var rr = h('button', 'rt', '重複規則'); rr.type = 'button'; rr.dataset.act = 'rowrules'; rr.title = '查看、修改、刪除例行公事的所有重複規則'; tools.appendChild(rr); }
+    if (isRR(def.k)) { var rr = h('button', 'rt', '重複規則'); rr.type = 'button'; rr.dataset.act = 'rowrules'; rr.title = '查看、修改、刪除「' + flat(def.label) + '」的所有重複規則'; tools.appendChild(rr); }
     var ren = h('button', 'rt', '改名'); ren.type = 'button'; ren.dataset.act = 'rowrename'; ren.title = '修改這個工作項目的名稱'; tools.appendChild(ren);
     var hide = h('button', 'rt', '隱藏'); hide.type = 'button'; hide.dataset.act = 'rowhide';
     hide.title = '先收起這一列，上方會留下標籤提醒'; tools.appendChild(hide);
@@ -858,8 +872,8 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var line = '', mc = mgrCfg(), ms = isoToDn(mc.start);
     if (todayDn < ms) line += mc.name + ' 剩' + z2(ms - todayDn) + '天';
     for (var n = 0; n <= 60; n++) {
-      var dn = todayDn + n, f = fieldInfo(wmOf(dn));
-      if (f.txt) { line += (line ? '　' : '') + '下個節點：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + f.txt.replace(/\n/g, ' '); break; }
+      var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
+      if (fi.length) { line += (line ? '　' : '') + '下個節點：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
     }
     $('nextLine').textContent = line;
   }
@@ -869,7 +883,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var out = [];
     var ids = Object.keys(cellsMap), have = {}; ids.forEach(function (id) { have[id] = 1; });
     if (rulesList().some(function (r) { return r.st; })) {            // repeating items marked ★ show up in the next 90 days even before they are touched
-      for (var dd = todayDn; dd <= todayDn + 90; dd++) { var rid = iso(dd) + '_routine'; if (!have[rid]) { ids.push(rid); have[rid] = 1; } }
+      for (var dd = todayDn; dd <= todayDn + 90; dd++) rows().filter(function (d) { return isRR(d.k); }).forEach(function (d) { var rid = iso(dd) + '_' + d.k; if (!have[rid]) { ids.push(rid); have[rid] = 1; } });
     }
     ids.forEach(function (id) {
       var d = cellsMap[id], parts = id.split('_'), date = (d && d.date) || parts[0], row = (d && d.row) || parts.slice(1).join('_');
@@ -927,9 +941,9 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   function saveItems(col, k, items) {
     var id = cellKey(col, k), p;
     items = items.filter(function (x) { return x && x.t; });
-    if (k === 'routine') {                                            // an occurrence that is no longer in the list was deleted for this day only
+    if (isRR(k)) {                                                    // an occurrence that is no longer in the list was deleted for this day only
       var have = {}; items.forEach(function (x) { if (x.r) have[x.r] = 1; });
-      rulesList().forEach(function (r) { if (!have[r.id] && ruleHits(r, col.dn)) items.push({ t: r.t, s: 0, d: 0, r: r.id, x: 1 }); });
+      rulesFor(k).forEach(function (r) { if (!have[r.id] && ruleHits(r, col.dn)) items.push({ t: r.t, s: 0, d: 0, r: r.id, x: 1 }); });
     }
     if (!items.length) { delete cellsMap[id]; p = backend.del('cells', id); }
     else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
@@ -985,7 +999,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
         BASE.forEach(function (d) { if (d.k === e.k) base = d; });
         if (name && name !== e.orig) {
           var lay = layoutNow();
-          if (def0.custom) lay.custom[e.k] = { label: name };
+          if (def0.custom) { lay.custom[e.k] = { label: name }; if (def0.rep) lay.custom[e.k].rep = 1; }
           else if (base && name === flat(base.label)) delete lay.labels[e.k];   // back to the original name
           else lay.labels[e.k] = name;
           saveLayout(lay);
@@ -1005,7 +1019,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
 
   function startAdd(td, k, c) {
     if (editing) commit();
-    if (k === 'routine') { openRule(cols[c].dn); return; }          // 例行公事 asks for the repeat settings first
+    if (isRR(k)) { openRule(cols[c].dn, null, k); return; }          // 例行公事 asks for the repeat settings first
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     td.classList.add('editing');
     var add = td.querySelector('.add'); if (add) add.remove();
@@ -1232,11 +1246,11 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   /* a row normally grows to its tallest cell (even a date scrolled off-screen); once the height is set by hand the cells are clipped to it */
   function setRowH(tr, px) {
     tr.style.height = px + 'px';
-    Array.prototype.forEach.call(tr.querySelectorAll('td.c'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', px + 'px'); });
+    Array.prototype.forEach.call(tr.querySelectorAll('td.c, td.a'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', px + 'px'); });
   }
   function clearRowH(tr) {
     tr.style.height = '';
-    Array.prototype.forEach.call(tr.querySelectorAll('td.c'), function (td) { td.classList.remove('fixh'); td.style.removeProperty('--rh'); });
+    Array.prototype.forEach.call(tr.querySelectorAll('td.c, td.a'), function (td) { td.classList.remove('fixh'); td.style.removeProperty('--rh'); });
   }
   var rhs = null;
   function startRowResize(ev) {
@@ -1245,7 +1259,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     rhs = { y: ev.clientY, h: tr.getBoundingClientRect().height / UZ, tr: tr, k: ev.currentTarget.dataset.k, el: ev.currentTarget }; rhs.el.classList.add('on'); document.body.style.userSelect = 'none';
     document.addEventListener('pointermove', moveRowResize); document.addEventListener('pointerup', endRowResize); document.addEventListener('pointercancel', endRowResize);
   }
-  function moveRowResize(ev) { if (rhs) setRowH(rhs.tr, Math.max(34, Math.min(900, Math.round(rhs.h + (ev.clientY - rhs.y) / UZ)))); }
+  function moveRowResize(ev) { if (rhs) setRowH(rhs.tr, Math.max(22, Math.min(900, Math.round(rhs.h + (ev.clientY - rhs.y) / UZ)))); }
   function endRowResize() {
     if (!rhs) return;
     rhs.el.classList.remove('on'); document.body.style.userSelect = '';
@@ -1330,7 +1344,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   function layoutNow() {
     var r = (rows(), ROWS_ALL), custom = {}, removed = {}, rs = removedSet();
     Object.keys(rs).forEach(function (k) { if (rs[k]) removed[k] = 1; });
-    r.forEach(function (d) { if (d.custom) custom[d.k] = { label: d.label }; });
+    r.forEach(function (d) { if (d.custom) { custom[d.k] = { label: d.label }; if (d.rep) custom[d.k].rep = 1; } });
     var hidden = {}, hs = hiddenSet(); Object.keys(hs).forEach(function (k) { if (hs[k]) hidden[k] = 1; });
     var labels = {}, ls = (meta.layout && meta.layout.labels) || {}; Object.keys(ls).forEach(function (k) { if (ls[k]) labels[k] = ls[k]; });
     return { order: r.map(function (d) { return d.k; }), custom: custom, hidden: hidden, labels: labels, removed: removed };
@@ -1342,7 +1356,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (editing) commit();
     if (act === 'rowrename') { startLabel(k); return; }
     if (act === 'rowpad') { openPad(k); return; }
-    if (act === 'rowrules') { renderRuleList(); $('rules').hidden = false; return; }
+    if (act === 'rowrules') { listRow = k; renderRuleList(); $('rules').hidden = false; return; }
     var lay = layoutNow(), i = lay.order.indexOf(k);
     if ((act === 'rowup' || act === 'rowdown') && i >= 0) {
       // move past the neighbouring visible row, skipping rows that are hidden
@@ -1373,12 +1387,12 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (!name) { $('addName').focus(); return; }
     if (editing) commit();
     var lay = layoutNow(), k = 'x' + Date.now().toString(36);
-    lay.order.push(k); lay.custom[k] = { label: name };
+    lay.order.push(k); lay.custom[k] = { label: name }; if ($('addRep').checked) lay.custom[k].rep = 1;
     saveLayout(lay); closeAdd(); render();
     var td = $('tbl').querySelector('td.a[data-k="' + k + '"]'); if (td && td.scrollIntoView) td.scrollIntoView({ block: 'nearest' });
     toast('已新增「' + name + '」，放在最後一列');
   }
-  $('addRow').addEventListener('click', function () { $('addRow').hidden = true; $('addForm').hidden = false; $('addName').value = ''; $('addName').focus(); });
+  $('addRow').addEventListener('click', function () { $('addRow').hidden = true; $('addForm').hidden = false; $('addRep').checked = false; $('addName').value = ''; $('addName').focus(); });
   $('addOk').addEventListener('click', doAdd);
   $('addNo').addEventListener('click', closeAdd);
   $('addName').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); doAdd(); } else if (ev.key === 'Escape') { ev.preventDefault(); closeAdd(); } });
@@ -1407,11 +1421,12 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   }
   $('ruleF').addEventListener('change', ruleSync);
   function closeRule() { $('rule').hidden = true; ruleEd = null; if (!$('rules').hidden) renderRuleList(); var d = $('ruleDel'); d.classList.remove('armed'); d.textContent = '刪除整個重複事項'; }
-  function openRule(dn, rid) {
+  var listRow = 'routine';
+  function openRule(dn, rid, row) {
     if (editing) commit();
     var r = rid ? ruleById(rid) : null; if (rid && !r) return;
-    ruleEd = { id: r ? r.id : null };
-    $('ruleTitle').textContent = r ? '修改重複事項' : '新增例行公事';
+    ruleEd = { id: r ? r.id : null, row: r ? (r.row || 'routine') : (row || 'routine') };
+    $('ruleTitle').textContent = r ? '修改重複事項' : '新增' + flat((rowDef(ruleEd.row) || {}).label || '例行公事');
     $('ruleT').value = r ? r.t : '';
     $('ruleS').value = r ? r.start : iso(dn);
     $('ruleF').value = r ? r.f : 'none';
@@ -1428,27 +1443,37 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   }
   function writeRules(list) {
     list = list.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = x[k]; }); return o; });   // drop the cached "_last"
-    meta.rules = { list: list };
+    meta.rules = { list: list, fs: 1 };
     backend.put('meta', 'rules', meta.rules).catch(failToast);        // kept even when empty, so the two starter rules are not put back
   }
   // The two rules the original workbook had (週三提醒交週報, 每工第 19 天 5PR報表) start out as ordinary repeating items the user can edit or delete.
   function seedRules() {
-    if (meta.rules || !(live.meta && live.cells)) return;
-    writeRules([
-      { id: 'sys-weekly', t: '提醒交週報', st: 0, start: '2020-01-01', f: 'week', n: 1, wd: [3], end: { k: 'never' } },
-      { id: 'sys-5pr', t: '5PR報表', st: 0, start: '2020-01-01', f: 'wm', n: 1, wm: [19], end: { k: 'never' } }
-    ]);
+    if (!(live.meta && live.cells)) return;
+    var FIELD = [   // the 外勤相關行事曆 row of the original workbook, as repeat rules ({上}/{本} = work-month number)
+      { id: 'fld-9', t: '{上}工 業績核實(跑資料)', wm: [9] },
+      { id: 'fld-12', t: '{上}工 業績核實(可查詢)', wm: [12] },
+      { id: 'fld-15', t: '{本}工 組織核實', wm: [15] },
+      { id: 'fld-16', t: '{上}工大聯盟(申覆前)(彥方給資料)', wm: [16] },
+      { id: 'fld-23', t: '{上}工大聯盟(申覆後)', wm: [23] }
+    ].map(function (f) { return { id: f.id, row: 'field', t: f.t, st: 0, start: '2020-01-01', f: 'wm', n: 1, wm: f.wm, end: { k: 'never' } }; });
+    if (!meta.rules) {
+      writeRules([
+        { id: 'sys-weekly', t: '提醒交週報', st: 0, start: '2020-01-01', f: 'week', n: 1, wd: [3], end: { k: 'never' } },
+        { id: 'sys-5pr', t: '5PR報表', st: 0, start: '2020-01-01', f: 'wm', n: 1, wm: [19], end: { k: 'never' } }
+      ].concat(FIELD));
+    } else if (!meta.rules.fs) writeRules(rulesList().concat(FIELD));   // existing users: add the 外勤 rules once
   }
   function ruleSave() {
     var t = $('ruleT').value.trim(), s = $('ruleS').value, f = $('ruleF').value;
     if (!t) { $('ruleT').focus(); toast('請輸入工作內容'); return; }
     if (!s) { toast('請選開始日期'); return; }
     if (f === 'none') {                                               // no repeat: an ordinary item on that day
-      var col = { dn: isoToDn(s) }, items = itemsNow(col, 'routine');
-      items.push({ t: t, s: $('ruleSt').checked ? 1 : 0 }); saveItems(col, 'routine', items);
+      var col = { dn: isoToDn(s) }, items = itemsNow(col, ruleEd.row);
+      items.push({ t: t, s: $('ruleSt').checked ? 1 : 0 }); saveItems(col, ruleEd.row, items);
       closeRule(); render(); return;
     }
     var r = { id: ruleEd.id || 'r' + Date.now().toString(36), t: t, st: $('ruleSt').checked ? 1 : 0, start: s, f: f, n: Math.max(1, Math.min(99, Math.floor(Number($('ruleN').value)) || 1)) };
+    if (ruleEd.row !== 'routine') r.row = ruleEd.row;
     if (f === 'week') { r.wd = getDots('ruleWd'); if (!r.wd.length) { toast('請至少選一個星期'); return; } }
     if (f === 'wm') { r.wm = getDots('ruleWm'); if (!r.wm.length) { toast('請至少選一個「每工第幾天」'); return; } }
     var ek = 'never'; Array.prototype.forEach.call(document.getElementsByName('ruleE'), function (x) { if (x.checked) ek = x.value; });
@@ -1465,11 +1490,11 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (!d.classList.contains('armed')) { d.classList.add('armed'); d.textContent = '確定刪除整個重複事項？'; return; }
     writeRules(rulesList().filter(function (x) { return x.id !== id; }));
     Object.keys(cellsMap).forEach(function (cid) {                    // drop the per-day leftovers (done marks, notes) of this series
-      if (cid.slice(-8) !== '_routine') return;
+      var rk = rowOfId(cid); if (!rk) return;
       var its = storedItems(cid), keep = its.filter(function (x) { return x.r !== id; });
       if (keep.length === its.length) return;
       if (!keep.length) { delete cellsMap[cid]; backend.del('cells', cid).catch(failToast); }
-      else { var data = { date: cid.slice(0, 10), row: 'routine', items: keep }; cellsMap[cid] = data; backend.put('cells', cid, data).catch(failToast); }
+      else { var data = { date: cid.slice(0, 10), row: rk, items: keep }; cellsMap[cid] = data; backend.put('cells', cid, data).catch(failToast); }
     });
     closeRule(); render(); renderStars(); toast('已刪除這個重複事項');
   }
@@ -1482,17 +1507,17 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   }
   function renderRuleList() {
     var box = $('rulesList'); box.textContent = '';
-    var list = rulesList();
-    if (!list.length) box.appendChild(h('div', 'hint', '目前沒有重複規則。按「＋ 新增規則」，或在例行公事列的格子按「＋ 新增」。'));
+    var list = rulesFor(listRow);
+    if (!list.length) box.appendChild(h('div', 'hint', '目前沒有重複規則。按「＋ 新增規則」，或在該列的格子按「＋ 新增」。'));
     list.forEach(function (r) {
       var row = h('div', 'rli'), t = h('div', 'rt1'), b = h('button', 'btn', '編輯'); b.type = 'button';
-      t.appendChild(h('b', null, r.t)); t.appendChild(h('span', 'sub', ruleSummary(r)));
+      t.appendChild(h('b', null, expandT(r.t, todayDn))); t.appendChild(h('span', 'sub', ruleSummary(r)));
       b.addEventListener('click', function () { openRule(todayDn, r.id); });
       row.appendChild(t); row.appendChild(b); box.appendChild(row);
     });
   }
   $('rulesClose').addEventListener('click', function () { $('rules').hidden = true; });
-  $('rulesAdd').addEventListener('click', function () { openRule(todayDn); });
+  $('rulesAdd').addEventListener('click', function () { openRule(todayDn, null, listRow); });
   $('rules').addEventListener('mousedown', function (ev) { if (ev.target === $('rules')) $('rules').hidden = true; });
   $('ruleOk').addEventListener('click', ruleSave);
   $('ruleNo').addEventListener('click', closeRule);
@@ -1780,7 +1805,6 @@ details.wm summary { cursor: pointer; font-weight: 500; }
         cols.forEach(function (col) {
           var L = col.L, a = L + r, s = { k: def.k, c: col.i }, txt = textOf(s);
           if (def.k === 'mgr') ws.getCell(a).value = { formula: xMgrF(L), result: txt };
-          else if (def.k === 'field') ws.getCell(a).value = { formula: xFieldF(L), result: txt };
           else if (txt) {
             var its = itemsOf(cellKey(col, def.k));
             if (its.some(function (x) { return x.d; })) {   // finished items keep their strike-through in Excel
