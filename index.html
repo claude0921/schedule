@@ -69,21 +69,23 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   --mgr-ink: #a23a25;
   --red: #c62828;
   --edit: #fffbe6;
+  --hlov: rgba(46, 160, 96, .15);
   --font: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #14171b; --card: #1c2025; --line: #2e343b; --line2: #434b54; --ink: #e8eaed; --ink2: #98a2ae; --accent: #4fbf86; --accent-ink: #0b1a12;
     --star: #ffbf3c; --star-bg: #3a3014; --today: #2c2a14; --today-line: #c9a400; --wk: #1f2328; --chip: #1e3426; --chip-ink: #6fd9a2;
-    --mgr: #3b2420; --mgr-ink: #ff9a85; --red: #ff7b7b; --edit: #2b2a17; color-scheme: dark;
+    --mgr: #3b2420; --mgr-ink: #ff9a85; --red: #ff7b7b; --edit: #2b2a17; --hlov: rgba(79, 191, 134, .22); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #14171b; --card: #1c2025; --line: #2e343b; --line2: #434b54; --ink: #e8eaed; --ink2: #98a2ae; --accent: #4fbf86; --accent-ink: #0b1a12;
   --star: #ffbf3c; --star-bg: #3a3014; --today: #2c2a14; --today-line: #c9a400; --wk: #1f2328; --chip: #1e3426; --chip-ink: #6fd9a2;
-  --mgr: #3b2420; --mgr-ink: #ff9a85; --red: #ff7b7b; --edit: #2b2a17; color-scheme: dark;
+  --mgr: #3b2420; --mgr-ink: #ff9a85; --red: #ff7b7b; --edit: #2b2a17; --hlov: rgba(79, 191, 134, .22); color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -122,10 +124,24 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .chip-s b { font-weight: 700; margin-right: 6px; }
 .chip-s.today-c { background: var(--star); color: #1c1400; }
 .chip-s:hover { filter: brightness(.96); }
+.chip-s { display: flex; align-items: flex-start; gap: 6px; padding: 2px 12px 2px 8px; }
+.cks, .cgo { border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-align: left; }
+.cks { font-size: 16px; line-height: 1.35; flex: none; }
+.cgo { cursor: pointer; min-width: 0; overflow-wrap: anywhere; }
+.chip-s.done .cgo { text-decoration: line-through; opacity: .6; }
+.chip-s.done { background: var(--card); border-color: var(--line2); }
+.ck { border: 0; background: transparent; padding: 0 2px; font-size: 16px; line-height: 1.35; color: var(--ink2); flex: none; }
+.ck:hover { color: var(--accent); }
+.it.done .ck { color: var(--accent); }
+.it.done .tx { text-decoration: line-through; color: var(--ink2); }
+.it.done .st { opacity: .5; }
+/* 置頂工作: one item per line */
+#starChips { flex-direction: column; align-items: flex-start; gap: 4px; }
+#starChips .chip-s { white-space: normal; overflow: visible; border-radius: 12px; }
 .hint { color: var(--ink2); font-size: 13px; padding-top: 3px; }
 
 /* board */
-.sheet { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: max(480px, calc(100vh - 230px)); position: relative; }
+.sheet { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: auto; overscroll-behavior: contain; max-height: max(480px, calc(100vh - 230px)); position: relative; }
 table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 14px; }
 th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--card); padding: 6px 8px; vertical-align: top; text-align: left; font-weight: 400; overflow: hidden; }
 thead th { position: sticky; z-index: 3; text-align: center; vertical-align: middle; padding: 4px; }
@@ -138,23 +154,106 @@ th.b { text-align: left; font-size: 13px; color: var(--ink2); }
 .dd { font-weight: 700; font-size: 15px; line-height: 1.2; }
 .dw { font-size: 12px; color: var(--ink2); }
 th.wk, td.wk { background: var(--wk); }
+th.hol, td.hol { background: #fde8e8; }
+th.hol .dw, th.hol .dd { color: #c0392b; }
+@media (prefers-color-scheme: dark) { th.hol, td.hol { background: #3d2222; } th.hol .dw, th.hol .dd { color: #ff8a80; } }
+.mview th.hol .dw { display: none; }
 th.today, td.today { background: var(--today) !important; }
 thead th.today { box-shadow: inset 0 3px 0 var(--today-line); }
 th.today .dd { color: var(--ink); }
-td.c { position: relative; min-height: 56px; }
+th.mstart, td.mstart { box-shadow: inset 3px 0 0 var(--accent); }
+thead th.today.mstart { box-shadow: inset 0 3px 0 var(--today-line), inset 3px 0 0 var(--accent); }
+#rules { position: fixed; inset: 0; z-index: 54; background: rgba(0, 0, 0, .42); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#rulesList { display: flex; flex-direction: column; gap: 8px; }
+.rli { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line2); border-radius: 10px; padding: 8px 10px; }
+.rli .rt1 { flex: 1; min-width: 0; }
+.rli b { display: block; }
+.rli span.sub { font-size: 12px; }
+#rule { position: fixed; inset: 0; z-index: 55; background: rgba(0, 0, 0, .42); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.rulecard { background: var(--card); width: min(440px, 100%); max-height: calc(100vh - 32px); overflow: auto; border-radius: 16px; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+.rulehead { font-size: 20px; font-weight: 700; }
+.rulebody { display: flex; flex-direction: column; gap: 12px; }
+.rulebody > input[type=text] { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; min-height: 36px; background: var(--card); color: var(--ink); width: 100%; }
+.rrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.rrow > label:first-child { min-width: 72px; color: var(--ink2); }
+.rrow input[type=date], .rrow input[type=number], .rrow select { border: 1px solid var(--line2); border-radius: 8px; padding: 4px 8px; min-height: 32px; background: var(--card); color: var(--ink); }
+.rrow input[type=number] { width: 64px; }
+.rlabel { color: var(--ink2); margin-bottom: 4px; }
+#ruleEndBox { display: flex; flex-direction: column; gap: 6px; }
+.dots { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.dots button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line2); background: var(--card); color: var(--ink); font-size: 13px; padding: 0; }
+.dots button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.dots.wmd { max-width: 100%; }
+.rulefoot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.rulefoot .grow { flex: 1; }
+.rdel { color: var(--red); border-color: var(--red); }
+.rdel.armed { background: var(--red); color: #fff; }
+.rp { border: 0; background: transparent; color: var(--accent); font-size: 14px; padding: 0 3px; cursor: pointer; }
+td.c > .chip.plain { margin-bottom: 3px; }
+.removed { display: inline-flex; align-items: center; gap: 8px; margin-left: 12px; flex-wrap: wrap; }
+.removed .chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.auto { font-size: 12px; color: var(--ink2); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+td.c { position: relative; }
 td.a { vertical-align: top; }
+/* the 子項目／備註 column is pinned next to the 主項目 column while it is shown */
+#tbl th.b, #tbl td.b { position: sticky; left: 150px; z-index: 4; border-right: 1px solid var(--line2); background-clip: padding-box; }
+#tbl thead th.b { z-index: 6; }
+.rz { position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
+.rz:hover, .rz.on { background: var(--accent); opacity: .45; }
+.hb { margin-left: 8px; }
+/* per-item note: underlined when it has one */
+.nt { border: 1px solid var(--line2); background: var(--card); color: var(--ink2); border-radius: 6px; font-size: 11px; line-height: 1.5; padding: 0 6px; opacity: 0; flex: none; align-self: flex-start; }
+.it:hover .nt, .it.hasnote .nt { opacity: .9; }
+.it.hasnote .nt { border-color: var(--accent); color: var(--accent); }
+@media (hover: none) { .nt { opacity: .9; } }
+.it.hasnote .tx, .chip-s.hasnote .cgo { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.it.hasnote.done .tx, .chip-s.hasnote.done .cgo { text-decoration: underline line-through; }
+.noteed { margin: 2px 0 6px 20px; }
+td.editing .noteed textarea { min-height: 64px; width: 100%; border: 1px solid var(--accent); border-radius: 6px; background: var(--edit); padding: 4px 6px; resize: vertical; }
+.noteed .crow { margin-top: 4px; }
+/* row name opens its notepad */
+.rgr { flex: none; border: 0; background: transparent; padding: 0 2px; font-size: 14px; line-height: 1.5; color: var(--ink2); opacity: .45; cursor: grab; touch-action: none; user-select: none; }
+td.a:hover .rgr, .rgr:focus-visible { opacity: 1; color: var(--accent); }
+tr.rowdragging td { opacity: .35; }
+.rowline { position: fixed; height: 3px; background: var(--accent); border-radius: 2px; z-index: 45; pointer-events: none; box-shadow: 0 0 0 1px var(--card); }
+.lbrow { display: flex; align-items: flex-start; gap: 4px; }
+.lbrow .lb { flex: 1; min-width: 0; }
+.pd { flex: none; border: 0; background: transparent; padding: 0 2px; font-size: 14px; line-height: 1.5; opacity: .5; }
+.pd:hover, .pd.on { opacity: 1; }
+.pd.on { filter: none; }
+.lb { cursor: pointer; }
+.lb:hover { color: var(--accent); text-decoration: underline; }
+.mo { display: none; position: absolute; top: 2px; right: 2px; border: 1px solid var(--line2); background: var(--card); border-radius: 6px; font-size: 12px; line-height: 1.4; padding: 0 6px; color: var(--ink2); }
+@media (hover: none) { .mo { display: block; } }
+/* notepad */
+#pad { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .42); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.padcard { background: var(--card); width: min(780px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); overflow: hidden; }
+.padhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.padtitle { font-weight: 700; font-size: 17px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.padarea { flex: 1; min-height: min(60vh, 520px); border: 0; outline: 0; resize: none; padding: 10px 20px; font-size: 15px; line-height: 28px; color: var(--ink); background-color: var(--card);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--line) 27px, var(--line) 28px); background-attachment: local; background-origin: content-box; }
+.padfoot { display: flex; justify-content: space-between; gap: 8px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink2); }
+/* crosshair: the hovered cell's column and row get a light green tint (a translucent layer, so today / weekend colours still show) */
+#tbl .hl, #tbl tr.hl-row > td, #tbl tr.hl-row > th { background-image: linear-gradient(var(--hlov), var(--hlov)); }
+#tbl tr.hl-row > .hl { background-image: linear-gradient(var(--hlov), var(--hlov)), linear-gradient(var(--hlov), var(--hlov)); }
 .lb { white-space: pre-wrap; }
-.rowtools { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; opacity: 0; }
-td.a:hover .rowtools, td.a:focus-within .rowtools { opacity: 1; }
-@media (hover: none) { .rowtools { opacity: 1; } }
+td.a { overflow: visible; }
+td.a:hover, td.a.open, td.a:focus-within { z-index: 5; }   /* so the floating tools are not buried under the rows below */
+.rowtools { position: absolute; top: 2px; left: calc(100% - 1px); display: none; flex-wrap: nowrap; white-space: nowrap; gap: 3px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); z-index: 5; }
+td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display: flex; }
 .rt { border: 1px solid var(--line2); background: var(--card); border-radius: 6px; font-size: 11px; line-height: 1.4; padding: 0 7px; min-height: 22px; color: var(--ink2); font-weight: 400; }
 .rt:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .rt:disabled { opacity: .35; cursor: default; }
 .rtdel.armed { background: var(--red); border-color: var(--red); color: #fff; }
+.hl { color: var(--ink2); }
+.chip-h { background: var(--card); border: 1px dashed var(--line2); border-radius: 999px; padding: 2px 12px; font-size: 13px; color: var(--ink2); }
+.chip-h.has { border-style: solid; border-color: var(--star); background: var(--star-bg); color: var(--ink); }
+.chip-h:hover { border-color: var(--accent); }
+.srow[hidden] { display: none; }
 .addrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .addform { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .addform input { background: var(--card); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; min-height: 34px; width: 240px; max-width: 100%; }
-.gr { cursor: grab; color: var(--ink2); opacity: .35; font-size: 12px; line-height: 1.9; letter-spacing: -2px; padding: 0 3px 0 0; touch-action: none; user-select: none; flex: none; }
+.gr { cursor: grab; color: var(--ink2); opacity: .35; font-size: 13px; line-height: 1.7; padding: 0 3px 0 0; touch-action: none; user-select: none; flex: none; }
 .it:hover .gr { opacity: .9; }
 .it.dragging { opacity: .35; }
 .ghost { position: fixed; z-index: 60; pointer-events: none; background: var(--card); border: 1px solid var(--accent); border-radius: 8px; padding: 2px 10px; box-shadow: 0 6px 18px rgba(0,0,0,.22); max-width: 240px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -163,7 +262,7 @@ td.dropt { box-shadow: inset 0 0 0 2px var(--accent); }
 body.dragmode { user-select: none; cursor: grabbing; }
 body.dragmode * { cursor: grabbing !important; }
 .chip { display: inline-block; background: var(--chip); color: var(--chip-ink); border-radius: 8px; padding: 3px 8px; font-weight: 700; white-space: pre-wrap; font-size: 13px; line-height: 1.4; }
-.chip.mgr { background: var(--mgr); color: var(--mgr-ink); white-space: normal; }
+.chip.mgr { background: var(--mgr); color: var(--mgr-ink); white-space: pre-line; }
 .chip.plain { background: transparent; color: var(--ink2); font-weight: 500; padding: 0; }
 td.b { position: relative; }
 .note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
@@ -172,7 +271,12 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 
 /* items inside a date cell */
 .items { display: flex; flex-direction: column; gap: 2px; }
-.it { display: flex; align-items: flex-start; gap: 4px; padding: 1px 0; }
+.mview .it { font-size: 11px; gap: 1px; }
+.mview th.dh, .mview th.dh * { font-size: 10px; letter-spacing: -.5px; }
+.mview .gr, .mview .rp, .mview .nt { display: none; }
+.it { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; padding: 1px 0; }
+.it > .tx { flex: 1 1 56px; order: 1; }
+.it > .rp, .it > .nt, .it > .x { order: 2; }
 .st { border: 0; background: transparent; padding: 0 2px; font-size: 16px; line-height: 1.35; color: var(--ink2); opacity: .5; }
 .it:hover .st, .it.star .st { opacity: 1; }
 .it.star .st { color: var(--star); }
@@ -181,11 +285,12 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 .x { border: 0; background: transparent; color: var(--ink2); opacity: 0; font-size: 14px; padding: 0 3px; border-radius: 4px; }
 .it:hover .x, .x.armed { opacity: 1; }
 .x.armed { color: #fff; background: var(--red); font-size: 12px; padding: 1px 6px; }
-.add { display: block; margin-top: 4px; border: 1px dashed var(--line2); background: transparent; color: var(--ink2); border-radius: 6px; font-size: 12px; padding: 1px 8px; opacity: 0; }
+.add { display: block; margin-top: 2px; border: 1px dashed var(--line2); background: transparent; color: var(--ink2); border-radius: 6px; font-size: 12px; line-height: 1.3; padding: 0 8px; opacity: 0; }
 td.c:hover .add, td.c.sel .add, td.c:focus-within .add { opacity: 1; }
 .add:hover { border-color: var(--accent); color: var(--accent); }
 @media (hover: none) { .add, .x, .ed { opacity: 1; } .x { opacity: .5; } }
 .composer { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+td.a input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; font-weight: 700; }
 .composer input, .it input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; }
 .crow { display: flex; flex-wrap: wrap; gap: 4px; }
 .crow .btn { min-height: 28px; padding: 1px 8px; font-size: 12px; border-radius: 6px; }
@@ -231,8 +336,11 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       <button class="btn" id="prev">‹ 上一工作月</button>
       <button class="btn primary" id="goToday">回到今天</button>
       <button class="btn" id="next">下一工作月 ›</button>
+      <button class="btn" id="spanBtn" title="切換顯示一週／整個工作月">工作月視角</button>
       <button class="btn" id="toggleB">隱藏子項目欄</button>
+      <select class="btn" id="exportWm" title="選擇要匯出的工作月（一次匯出一個工作月，28 天）"></select>
       <button class="btn" id="exportX">匯出 Excel</button>
+      <label class="auto" id="autoWrap" title="每個工作月第一次開啟這個網頁時（任何一台電腦），自動把上一個工作月匯出成 Excel；同一個月只會匯出一次"><input type="checkbox" id="autoX" checked> 新工作月開頁時自動匯出上個月</label>
       <span class="sync" id="sync"><i></i><span>連線中…</span></span>
     </div>
   </header>
@@ -242,12 +350,13 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   <section class="tstrip" aria-label="今天與置頂工作">
     <div class="tline"><span class="tdate" id="todayDate"></span><span class="sub" id="nextLine"></span></div>
     <div class="srow"><span class="slabel">★ 置頂工作</span><div class="chips" id="starChips"></div></div>
+    <div class="srow" id="hiddenRow" hidden><span class="slabel hl">▫ 已隱藏</span><div class="chips" id="hiddenChips"></div></div>
   </section>
 
   <div class="sheet" id="sheet" aria-label="工作月排程表"><table id="tbl"></table></div>
 
   <div class="addrow">
-    <button class="btn" id="addRow">＋ 新增主要工作項目</button>
+    <button class="btn" id="addRow">＋ 新增主要工作項目</button>    <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
     <span class="addform" id="addForm" hidden>
       <input type="text" id="addName" maxlength="30" placeholder="工作項目名稱，例如：專案 A" aria-label="新工作項目名稱">
       <button class="btn primary" id="addOk" type="button">加入</button>
@@ -278,6 +387,56 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     </div>
   </details>
 </div>
+<div id="rules" hidden role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+  <div class="rulecard">
+    <div class="rulehead" id="rulesTitle">例行公事的重複規則</div>
+    <div id="rulesList"></div>
+    <div class="rulefoot">
+      <button class="btn" id="rulesAdd" type="button">＋ 新增規則</button>
+      <span class="grow"></span>
+      <button class="btn primary" id="rulesClose" type="button">關閉</button>
+    </div>
+  </div>
+</div>
+<div id="rule" hidden role="dialog" aria-modal="true" aria-labelledby="ruleTitle">
+  <div class="rulecard">
+    <div class="rulehead" id="ruleTitle">新增例行公事</div>
+    <div class="rulebody">
+      <input type="text" id="ruleT" maxlength="200" placeholder="工作內容，例如：繳月報" aria-label="工作內容">
+      <div class="rrow"><label for="ruleS">開始日期</label><input type="date" id="ruleS"></div>
+      <div class="rrow"><label for="ruleF">重複</label>
+        <select id="ruleF"><option value="none">不重複（只這一天）</option><option value="day">每天</option><option value="week">每週</option><option value="wm">每工（工作月）</option></select>
+        <span id="ruleIntBox" class="rrow">每 <input type="number" id="ruleN" min="1" max="99" value="1"> <span id="ruleUnit">週</span></span>
+      </div>
+      <div class="rrow" id="ruleWdBox"><label>重複日期</label><span class="dots" id="ruleWd"></span></div>
+      <div class="rrow" id="ruleWmBox"><label>每工第幾天</label><span class="dots wmd" id="ruleWm"></span></div>
+      <div id="ruleEndBox">
+        <div class="rlabel">結束時間</div>
+        <label class="rrow"><input type="radio" name="ruleE" value="never" checked> 持續不停</label>
+        <label class="rrow"><input type="radio" name="ruleE" value="on"> 於 <input type="date" id="ruleEOn"></label>
+        <label class="rrow"><input type="radio" name="ruleE" value="count"> 重複 <input type="number" id="ruleECnt" min="1" max="999" value="13"> 次</label>
+      </div>
+      <label class="rrow"><input type="checkbox" id="ruleSt"> ★ 標星號（出現在最上方的置頂工作）</label>
+    </div>
+    <div class="rulefoot">
+      <button class="btn rdel" id="ruleDel" type="button" hidden>刪除整個重複事項</button>
+      <span class="grow"></span>
+      <button class="btn" id="ruleNo" type="button">取消</button>
+      <button class="btn primary" id="ruleOk" type="button">完成</button>
+    </div>
+  </div>
+</div>
+<div id="pad" hidden role="dialog" aria-modal="true" aria-labelledby="padTitle">
+  <div class="padcard" id="padCard">
+    <div class="padhead">
+      <span class="padtitle" id="padTitle"></span>
+      <button class="btn" id="padDate" type="button">插入今天日期</button>
+      <button class="btn primary" id="padClose" type="button">完成</button>
+    </div>
+    <textarea class="padarea" id="padArea" aria-label="記事本內容" placeholder="在這裡寫下這個工作項目的紀錄、待辦、聯絡人……（輸入後會自動儲存）"></textarea>
+    <div class="padfoot"><span id="padStatus"></span><span id="padCount"></span></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
@@ -304,7 +463,8 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   function localToday() { var d = new Date(); return dnOf(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
 
   var todayDn = localToday();
-  var viewIdx = wmOf(todayDn).idx;
+  var viewIdx = wmOf(todayDn).idx;                       // work month in the middle of the screen
+  var winFirst = viewIdx - 1, winLast = viewIdx + 1;     // work months currently built into the board (grows while scrolling)
 
   /* ---------- formulas (same logic as the Excel cells) ---------- */
   function prevMo(m) { return m === 1 ? 13 : m - 1; }                    // IF(LEFT(C2,2)-1=0,13,LEFT(C2,2)-1)
@@ -329,10 +489,11 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var m = meta.mgr || {};
     return { name: m.name || '淡水經理會議', start: m.start || '2026-12-07', end: m.end || '2026-12-09' };
   }
-  function mgrInfo(dn) {                                                 // row 5 (new formula)
+  function z2(n) { return (n < 10 ? '0' : '') + n; }
+  function mgrInfo(dn) {                                               // row 5 (new formula)
     var c = mgrCfg(), s = isoToDn(c.start), e = isoToDn(c.end);
-    if (dn < s) return { txt: '倒數 ' + (s - dn) + ' 天', note: slash(dn) + ' 距離 ' + c.name + '開始（' + slash(s) + '）還有 ' + (s - dn) + ' 天。' };
-    if (dn <= e) return { txt: c.name + ' 第 ' + (dn - s + 1) + ' 天', note: slash(dn) + ' 在會議期間（' + slash(s) + ' ～ ' + slash(e) + '），是第 ' + (dn - s + 1) + ' 天。' };
+    if (dn < s) return { txt: c.name + '\n剩' + z2(s - dn) + '天', note: slash(dn) + ' 距離 ' + c.name + '開始（' + slash(s) + '）還有 ' + (s - dn) + ' 天。' };
+    if (dn <= e) return { txt: c.name + '\n第' + z2(dn - s + 1) + '天', note: slash(dn) + ' 在會議期間（' + slash(s) + ' ～ ' + slash(e) + '），是第 ' + (dn - s + 1) + ' 天。' };
     return { txt: '', note: slash(dn) + ' 會議已結束（' + slash(e) + '），不再顯示。' };
   }
   var F_WMCODE = '=IFERROR(\n  INDEX($D$3:$D$999,\n    MATCH(1, ($B$3>=$E$3:$E$999)*($B$3<=$AF$3:$AF$999), 0)\n  ),\n"")';
@@ -341,7 +502,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   var BASE = [
     { k: 'mgr', r: 5, label: '重要會議倒數', type: 'meeting' },
     { k: 'field', r: 6, label: '外勤相關行事曆', type: 'calc' },
-    { k: 'routine', r: 7, label: '例行公事', type: 'calc' },
+    { k: 'routine', r: 7, label: '例行公事', type: 'routine' },   // the two built-in rules show as a chip; its own items and repeating items are typed in
     { k: 'temp', r: 8, label: '臨時', type: 'manual' },
     { k: 'ot1', r: 9, label: '人加班', type: 'manual' },
     { k: 'sup', r: 10, rr: '10:11', label: '督導會議', type: 'manual' },
@@ -360,13 +521,18 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   function rows() {
     if (ROWS) return ROWS;
     var lay = meta.layout || {}, order = Array.isArray(lay.order) ? lay.order : [], custom = lay.custom || {}, map = {}, seen = {}, out = [];
-    BASE.forEach(function (d) { map[d.k] = d; });
+    var labels = lay.labels || {};   // renamed built-in rows
+    BASE.forEach(function (d) { map[d.k] = labels[d.k] ? { k: d.k, r: d.r, label: labels[d.k], type: d.type } : d; });
     Object.keys(custom).forEach(function (k) { map[k] = { k: k, label: (custom[k] && custom[k].label) || '新工作項目', type: 'manual', custom: true }; });
     order.forEach(function (k) { if (map[k] && !seen[k]) { out.push(map[k]); seen[k] = 1; } });
     BASE.forEach(function (d) { if (!seen[d.k]) { out.push(d); seen[d.k] = 1; } });
     Object.keys(custom).forEach(function (k) { if (!seen[k]) { out.push(map[k]); seen[k] = 1; } });
-    return (ROWS = out);
+    ROWS_ALL = out;
+    var gone = lay.removed || {};                                    // built-in rows the user deleted (kept here so they can be restored in place)
+    return (ROWS = out.filter(function (d) { return !gone[d.k]; }));
   }
+  var ROWS_ALL = null;
+  function removedSet() { return (meta.layout && meta.layout.removed) || {}; }
   function rowDef(k) { var r = rows(); for (var i = 0; i < r.length; i++) if (r[i].k === k) return r[i]; return null; }
   function isCalc(def) { return def.type === 'calc' || def.type === 'meeting'; }   // computed rows (not typed in)
   function flat(s) { return String(s || '').replace(/\n/g, ''); }
@@ -379,30 +545,96 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   var hideB = false;
   try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) {}
   try { if (window.innerWidth < 700 && localStorage.getItem('sched2.hideB') === null) hideB = true; } catch (e) {}
+  var bw = 400;   // width of the 子項目／備註 column, adjustable by dragging its right edge
+  try { var sv = Number(localStorage.getItem('sched2.bw')); if (sv >= 160 && sv <= 900) bw = sv; } catch (e) {}
 
   function h(tag, cls, text) { var el = document.createElement(tag); if (cls) el.className = cls; if (text != null) el.textContent = text; return el; }
   function toast(msg, ms) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, ms || 2600); }
   function setSync(state, text) { var s = $('sync'); s.className = 'sync ' + state; s.lastChild.textContent = text; }
 
-  function buildCols() {
-    var w = wmOf(ANCHOR + viewIdx * LEN), start = w.start;
-    cols = [];
-    for (var i = 0; i < 29; i++) {
-      var dn = start - 1 + i, o = fromDn(dn);
-      cols.push({ i: i, dn: dn, w: wmOf(dn), wd: o.w, L: colName(2 + i) });
+
+  /* Taiwan national holidays (incl. make-up days off). Source: 人事行政總處辦公日曆表 (2027 announced 2026/5/21). */
+  var HOL = {};
+  (function () {
+    var T = {
+      2025: [[1,1,'元旦'],[1,27,'春節連假'],[1,28,'除夕'],[1,29,'春節'],[1,30,'春節'],[1,31,'春節'],[2,28,'和平紀念日'],[4,3,'兒童節補假'],[4,4,'兒童節清明'],[5,1,'勞動節'],[5,30,'端午補假'],[9,29,'教師節補假'],[10,6,'中秋節'],[10,10,'國慶日'],[10,24,'光復節補假'],[12,25,'行憲紀念日']],
+      2026: [[1,1,'元旦'],[2,16,'除夕'],[2,17,'春節'],[2,18,'春節'],[2,19,'春節'],[2,20,'春節連假'],[2,27,'和平紀念日補假'],[4,3,'兒童節補假'],[4,6,'清明補假'],[5,1,'勞動節'],[6,19,'端午節'],[9,25,'中秋節'],[9,28,'教師節'],[10,9,'國慶日補假'],[10,26,'光復節補假'],[12,25,'行憲紀念日']],
+      2027: [[1,1,'元旦'],[2,4,'小年夜'],[2,5,'除夕'],[2,8,'春節'],[2,9,'春節補假'],[2,10,'春節補假'],[3,1,'和平紀念日補假'],[4,5,'清明節'],[4,6,'兒童節補假'],[4,30,'勞動節補假'],[6,9,'端午節'],[9,15,'中秋節'],[9,28,'教師節'],[10,11,'國慶日補假'],[10,25,'光復節'],[12,24,'行憲紀念日補假'],[12,31,'元旦補假']]
+    };
+    Object.keys(T).forEach(function (y) { T[y].forEach(function (a) { HOL[dnOf(Number(y), a[0], a[1])] = a[2]; }); });
+  })();
+  function makeCols(startDn, n) {
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var dn = startDn + i, o = fromDn(dn);
+      out.push({ i: i, dn: dn, w: wmOf(dn), wd: o.w, L: i < 29 ? colName(2 + i) : '' });
     }
+    return out;
   }
+  /* the one-week view shows 7 weekdays (Mon–Fri) and skips Saturday/Sunday; the work-month view shows every day */
+  function buildCols() {
+    cols = makeCols(ANCHOR + winFirst * LEN, (winLast - winFirst + 1) * LEN);
+    if (span === 7) { cols = cols.filter(function (c) { return c.wd !== 0 && c.wd !== 6; }); cols.forEach(function (c, i) { c.i = i; }); }
+  }
+  function perMonth() { return span === 7 ? 20 : LEN; }
 
   /* ---------- values ---------- */
   function cellKey(col, k) { return iso(col.dn) + '_' + k; }
   // A cell holds a list of items {t: text, s: 1 if starred}. Older records kept one text string.
-  function itemsOf(id) {
+  function storedItems(id) {
     var d = cellsMap[id];
     if (!d) return [];
     if (Array.isArray(d.items)) return d.items.filter(function (x) { return x && x.t; });
     return d.text ? [{ t: String(d.text), s: 0 }] : [];
   }
-  function cellText(items) { return items.map(function (i) { return (i.s ? '★ ' : '') + i.t; }).join('\n'); }
+  function itemsOf(id) { return id.slice(-8) === '_routine' ? routineView(id) : storedItems(id); }
+
+  /* ---------- repeating items (例行公事 row) ----------
+     A rule {id, t, st, start:'YYYY-MM-DD', f:'day'|'week'|'wm', n, wd:[0-6], wm:[1-28], end:{k:'never'|'on'|'count', on, c}} lives in meta.rules.list.
+     Nothing is stored per day until the user touches an occurrence (done / star / note / edit / delete): then that day keeps an item
+     {t, s, d, n, r: ruleId, e: 1 if its text was edited, x: 1 if it was removed}. */
+  function rulesList() { return (meta.rules && meta.rules.list) || []; }
+  function ruleById(id) { var l = rulesList(); for (var i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
+  function weekIdx(dn) { return Math.floor((dn + 3) / 7); }          // weeks start on Monday
+  function ruleBase(r, dn) {
+    var s = isoToDn(r.start), n = Math.max(1, r.n || 1);
+    if (isNaN(s) || dn < s) return false;
+    if (r.f === 'day') return (dn - s) % n === 0;
+    if (r.f === 'week') {
+      var wd = fromDn(dn).w, days = r.wd && r.wd.length ? r.wd : [fromDn(s).w];
+      return (weekIdx(dn) - weekIdx(s)) % n === 0 && days.indexOf(wd) >= 0;
+    }
+    var a = wmOf(dn), b = wmOf(s), ds = r.wm && r.wm.length ? r.wm : [b.dayno];
+    return (a.idx - b.idx) % n === 0 && ds.indexOf(a.dayno) >= 0;
+  }
+  function ruleLast(r) {                                              // last day of a "repeat N times" rule
+    if (r._last !== undefined) return r._last;
+    var s = isoToDn(r.start), cnt = 0, dn = s, lim = s + 366 * 30;
+    r._last = null;
+    for (; dn <= lim; dn++) if (ruleBase(r, dn) && ++cnt >= r.end.c) { r._last = dn; break; }
+    return r._last;
+  }
+  function ruleHits(r, dn) {
+    if (!ruleBase(r, dn)) return false;
+    var e = r.end || { k: 'never' };
+    if (e.k === 'on') return dn <= isoToDn(e.on);
+    if (e.k === 'count') { var l = ruleLast(r); return l !== null && dn <= l; }
+    return true;
+  }
+  function routineView(id) {
+    var stored = storedItems(id), dn = isoToDn(id.slice(0, 10)), out = [], seen = {};
+    stored.forEach(function (it) {
+      if (!it.r) { out.push(it); return; }
+      var r = ruleById(it.r);
+      if (!r || !ruleHits(r, dn)) return;                             // series deleted, or no longer falls on this day
+      seen[it.r] = 1;
+      if (it.x) return;                                               // this day was removed
+      var o = { t: it.e ? it.t : r.t, s: it.s ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; out.push(o);
+    });
+    rulesList().forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: r.t, s: r.st ? 1 : 0, d: 0, r: r.id }); });
+    return out;
+  }
+  function cellText(items) { return items.map(function (i) { return (i.s ? '★ ' : '') + (i.d ? '✓ ' : '') + i.t + (i.n ? '\n　↳ ' + String(i.n).replace(/\n/g, ' ') : ''); }).join('\n'); }
   function textOf(s) {
     if (s.k === 'foot') return (meta.footer && meta.footer.text) || '';
     var def = rowDef(s.k);
@@ -425,15 +657,22 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     td.textContent = '';
     var items = itemsOf(cellKey(col, k)), box = h('div', 'items');
     items.forEach(function (it, i) {
-      var row = h('div', 'it' + (it.s ? ' star' : '')); row.dataset.i = String(i);
-      var gr = h('span', 'gr', '⋮⋮'); gr.title = '按住拖曳：調整順序，或移到別的格子'; gr.setAttribute('aria-label', '拖曳排序');
+      var row = h('div', 'it' + (it.s ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '')); row.dataset.i = String(i);
+      var nt = h('button', 'nt', '備註'); nt.type = 'button'; nt.dataset.act = 'inote';
+      nt.title = it.n ? '修改這項工作的備註' : '為這項工作加備註（有備註的工作會加底線）'; nt.setAttribute('aria-label', nt.title);
+      var ck = h('button', 'ck', it.d ? '☑' : '☐'); ck.type = 'button'; ck.dataset.act = 'done';
+      ck.title = it.d ? '標回未完成' : '標示已完成'; ck.setAttribute('aria-label', ck.title); ck.setAttribute('aria-pressed', it.d ? 'true' : 'false');
+      var gr = h('span', 'gr', '☰'); gr.title = '按住拖曳：調整順序，或移到別的格子'; gr.setAttribute('aria-label', '拖曳排序');
       var st = h('button', 'st', it.s ? '★' : '☆'); st.type = 'button'; st.dataset.act = 'star';
       st.title = it.s ? '取消星號' : '標上星號，會出現在最上方的置頂工作'; st.setAttribute('aria-label', st.title);
-      var tx = h('span', 'tx', it.t); tx.dataset.act = 'edit'; tx.title = '點一下修改';
+      var tx = h('span', 'tx', it.t); tx.dataset.act = 'edit'; tx.title = it.n ? '備註：' + it.n + '\n（點一下修改工作內容）' : '點一下修改';
       var isArmed = armed === cellKey(col, k) + '#' + i;
       var x = h('button', 'x' + (isArmed ? ' armed' : ''), isArmed ? '確定刪除？' : '×'); x.type = 'button'; x.dataset.act = 'del';
       x.setAttribute('aria-label', '刪除這項工作');
-      row.appendChild(gr); row.appendChild(st); row.appendChild(tx); row.appendChild(x); box.appendChild(row);
+      if (it.r) x.title = '只刪除這一天（整個重複事項請點 ⋮）';
+      row.appendChild(gr); row.appendChild(ck); row.appendChild(st); row.appendChild(tx); row.appendChild(nt);
+      if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); row.appendChild(rp); }
+      row.appendChild(x); box.appendChild(row);
     });
     td.appendChild(box);
     var add = h('button', 'add', '＋ 新增'); add.type = 'button'; add.dataset.act = 'add'; td.appendChild(add);
@@ -441,23 +680,28 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   var rowArmed = null, rowArmTimer = null;
   function paintLabel(td, def, i, n) {
     td.textContent = '';
-    td.appendChild(h('div', 'lb', def.label));
+    var lb = h('div', 'lb', def.label); lb.title = '點一下開啟「' + flat(def.label) + '」的記事本';
+    var hasPad = !!((notes['pad-' + def.k] && notes['pad-' + def.k].text) || '');   // the 📓 shows only when the notepad has something in it
+    var pd = h('button', 'pd on', '📓'); pd.type = 'button'; pd.dataset.act = 'rowpad';
+    pd.title = '開啟「' + flat(def.label) + '」的記事本（裡面已有內容）'; pd.setAttribute('aria-label', pd.title);
+    var gr = h('button', 'rgr', '☰'); gr.type = 'button'; gr.dataset.k = def.k;
+    gr.title = '按住上下拖曳，調整這一列的順序（也可以用鍵盤上下鍵）'; gr.setAttribute('aria-label', '拖曳調整順序：' + flat(def.label));
+    var lr = h('div', 'lbrow'); lr.appendChild(gr); lr.appendChild(lb); if (hasPad) lr.appendChild(pd); td.appendChild(lr);
+    var more = h('button', 'mo', '⋮'); more.type = 'button'; more.dataset.act = 'rowmore'; more.title = '設定：記事本、改名、隱藏、刪除'; td.appendChild(more);
     var tools = h('div', 'rowtools');
-    var up = h('button', 'rt', '▲'), dn = h('button', 'rt', '▼');
-    up.type = dn.type = 'button'; up.dataset.act = 'rowup'; dn.dataset.act = 'rowdown';
-    up.title = '整列上移'; dn.title = '整列下移'; up.setAttribute('aria-label', '整列上移'); dn.setAttribute('aria-label', '整列下移');
-    up.disabled = i === 0; dn.disabled = i === n - 1;
-    tools.appendChild(up); tools.appendChild(dn);
-    if (def.custom) {
-      var del = h('button', 'rt rtdel' + (rowArmed === def.k ? ' armed' : ''), rowArmed === def.k ? '確定刪除？' : '刪除'); del.type = 'button'; del.dataset.act = 'rowdel';
-      del.title = '刪除這個自己新增的工作項目'; tools.appendChild(del);
-    }
+    var npd = h('button', 'rt', '記事本'); npd.type = 'button'; npd.dataset.act = 'rowpad'; npd.title = '開啟這個工作項目的記事本'; tools.appendChild(npd);
+    if (def.k === 'routine') { var rr = h('button', 'rt', '重複規則'); rr.type = 'button'; rr.dataset.act = 'rowrules'; rr.title = '查看、修改、刪除例行公事的所有重複規則'; tools.appendChild(rr); }
+    var ren = h('button', 'rt', '改名'); ren.type = 'button'; ren.dataset.act = 'rowrename'; ren.title = '修改這個工作項目的名稱'; tools.appendChild(ren);
+    var hide = h('button', 'rt', '隱藏'); hide.type = 'button'; hide.dataset.act = 'rowhide';
+    hide.title = '先收起這一列，上方會留下標籤提醒'; tools.appendChild(hide);
+    var del = h('button', 'rt rtdel' + (rowArmed === def.k ? ' armed' : ''), rowArmed === def.k ? '確定刪除？' : '刪除'); del.type = 'button'; del.dataset.act = 'rowdel';
+    del.title = def.custom ? '刪除這個自己新增的工作項目' : '刪除這一列（下方會留下「已刪除」標籤，可以還原）'; tools.appendChild(del);
     td.appendChild(tools);
   }
   function paintNote(td, k) {
     td.textContent = '';
     td.appendChild(h('div', 'note', textOf({ k: k, c: -1 })));
-    var b = h('button', 'ed', '編輯'); b.type = 'button'; b.dataset.act = 'note'; td.appendChild(b);
+    var b = h('button', 'ed', '編輯'); b.type = 'button'; b.dataset.act = 'note'; b.title = '修改這一格的子項目／備註'; td.appendChild(b);
   }
   function paintFoot() {
     var f = $('footTxt'); f.textContent = '';
@@ -466,35 +710,47 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   }
   function mk(tag, cls, k, c) { var el = document.createElement(tag); el.className = cls; el.dataset.k = k; el.dataset.c = String(c); return el; }
 
+  /* one week (7 days) fills the visible width */
+  var CW = 150, span = 7;
+  try { if (localStorage.getItem('sched2.span') === '28') span = 28; } catch (e) {}
+  if (span === 28) hideB = true;
+  function fitCW() { var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / span)); var ch = n !== CW; CW = n; return ch; }
   function render() {
+    fitCW();
     buildCols();
     var tbl = $('tbl'); tbl.textContent = '';
     $('sheet').classList.toggle('hideB', hideB);
-    var cg = document.createElement('colgroup'), widths = [150, hideB ? 0 : 400];
+    var cg = document.createElement('colgroup'), widths = [150, hideB ? 0 : bw];
     widths.forEach(function (wd, n) { var c = document.createElement('col'); c.style.width = wd + 'px'; if (n === 1 && hideB) c.style.display = 'none'; cg.appendChild(c); });
-    cols.forEach(function () { var c = document.createElement('col'); c.style.width = '150px'; cg.appendChild(c); });
+    cols.forEach(function () { var c = document.createElement('col'); c.style.width = CW + 'px'; cg.appendChild(c); });
     tbl.appendChild(cg);
-    tbl.style.width = (150 + (hideB ? 0 : 400) + cols.length * 150) + 'px';
+    tbl.style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
 
     var thead = document.createElement('thead'), r1 = h('tr', 'h1'), r2 = h('tr', 'h2');
     var a = h('th', 'a', '主項目'); a.rowSpan = 2; r1.appendChild(a);
-    var b = h('th', 'b', '子項目／備註'); b.rowSpan = 2; r1.appendChild(b);
+    var b = h('th', 'b'); b.rowSpan = 2; b.appendChild(h('span', null, '子項目／備註'));
+    var hb = h('button', 'rt hb', '隱藏'); hb.type = 'button'; hb.title = '隱藏這一欄（上方的按鈕可以再顯示）';
+    hb.addEventListener('click', function () { $('toggleB').click(); });
+    var rz = h('span', 'rz'); rz.title = '拖曳調整欄寬，雙擊還原'; rz.addEventListener('pointerdown', startResize);
+    rz.addEventListener('dblclick', function () { bw = 400; applyBw(); try { localStorage.setItem('sched2.bw', '400'); } catch (e) {} });
+    b.appendChild(hb); b.appendChild(rz); r1.appendChild(b);
     cols.forEach(function (col) {
-      var cls = (todayDn === col.dn ? ' today' : '') + (col.wd === 0 || col.wd === 6 ? ' wk' : '');
-      var th = h('th', 'dh' + cls); th.appendChild(h('div', 'dd', fromDn(col.dn).m + '/' + fromDn(col.dn).d)); th.appendChild(h('div', 'dw', WDN[col.wd].replace('星期', '週')));
+      var cls = (todayDn === col.dn ? ' today' : '') + (col.wd === 0 || col.wd === 6 ? ' wk' : '') + (col.w.dayno === 1 ? ' mstart' : '') + (HOL[col.dn] ? ' hol' : '');
+      var th = h('th', 'dh' + cls); th.dataset.c = String(col.i); th.appendChild(h('div', 'dd', fromDn(col.dn).m + '/' + fromDn(col.dn).d)); th.appendChild(h('div', 'dw', WDN[col.wd].replace('星期', '週') + (HOL[col.dn] ? ' ' + HOL[col.dn] : '')));
+      if (HOL[col.dn]) th.title = HOL[col.dn] + '（國定假日）';
       r1.appendChild(th);
-      var g = h('th', 'dg' + cls, wdLabel(col.w)); g.title = slash(col.dn) + ' 屬於工作月 ' + col.w.code + '（' + slash(col.w.start) + ' ～ ' + slash(col.w.end) + '），第 ' + col.w.dayno + ' 天';
+      var g = h('th', 'dg' + cls, wdLabel(col.w)); g.dataset.c = String(col.i); g.title = slash(col.dn) + ' 屬於工作月 ' + col.w.code + '（' + slash(col.w.start) + ' ～ ' + slash(col.w.end) + '），第 ' + col.w.dayno + ' 天';
       r2.appendChild(g);
     });
     thead.appendChild(r1); thead.appendChild(r2); tbl.appendChild(thead);
 
     var tbody = document.createElement('tbody');
-    rows().forEach(function (def, ri, all) {
+    visibleRows().forEach(function (def, ri, all) {
       var tr = h('tr', isCalc(def) ? 'calc' : '');
       var ta = mk('td', 'a', def.k, -2); paintLabel(ta, def, ri, all.length); tr.appendChild(ta);
       var tb = mk('td', 'b', def.k, -1); paintNote(tb, def.k); tr.appendChild(tb);
       cols.forEach(function (col) {
-        var cls = 'c ' + (isCalc(def) ? 'calc' : 'manual') + (todayDn === col.dn ? ' today' : '') + (col.wd === 0 || col.wd === 6 ? ' wk' : '');
+        var cls = 'c ' + (isCalc(def) ? 'calc' : 'manual') + (todayDn === col.dn ? ' today' : '') + (col.wd === 0 || col.wd === 6 ? ' wk' : '') + (col.w.dayno === 1 ? ' mstart' : '') + (HOL[col.dn] ? ' hol' : '');
         var td = mk('td', cls, def.k, col.i);
         if (isCalc(def)) {
           var txt = textOf({ k: def.k, c: col.i });
@@ -508,21 +764,70 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     tbl.appendChild(tbody);
 
     paintFoot();
+    paintTitle(); fillExportSel();
+    $('spanBtn').textContent = span === 28 ? '一週視角' : '工作月視角';
+    $('sheet').classList.toggle('mview', span === 28);
+    $('toggleB').textContent = hideB ? '顯示子項目欄' : '隱藏子項目欄';
+    var mc = mgrCfg();
+    [['mgrName', mc.name], ['mgrS', mc.start], ['mgrE', mc.end]].forEach(function (p) { if (document.activeElement !== $(p[0])) $(p[0]).value = p[1]; });
+    renderTop(); renderStars(); renderHidden(); renderRemoved(); renderWm(); padSheet();
+  }
+  function renderRemoved() {
+    var rs = removedSet(), box = $('removedChips'); box.textContent = '';
+    var keys = (rows(), ROWS_ALL).filter(function (d) { return rs[d.k]; });
+    $('removedBox').hidden = !keys.length;
+    keys.forEach(function (def) {
+      var b = h('button', 'chip-h', flat(def.label) + '　↺ 還原'); b.type = 'button'; b.dataset.k = def.k;
+      b.title = '把「' + flat(def.label) + '」放回原本的位置（以前輸入的內容都還在）'; box.appendChild(b);
+    });
+  }
+  $('removedChips').addEventListener('click', function (ev) { var b = ev.target.closest('.chip-h'); if (b) rowAction('rowrestore', b.dataset.k); });
+
+  function paintTitle() {
     var w = wmOf(ANCHOR + viewIdx * LEN), t = $('wmTitle'); t.textContent = '';
     t.appendChild(h('span', null, '民國 ' + w.year + ' 年第 ' + w.mo + ' 工作月　代號 '));
     t.appendChild(h('b', null, String(w.code)));
     t.appendChild(h('span', null, '　' + slash(w.start) + ' ～ ' + slash(w.end)));
-    $('toggleB').textContent = hideB ? '顯示子項目欄' : '隱藏子項目欄';
-    var mc = mgrCfg();
-    [['mgrName', mc.name], ['mgrS', mc.start], ['mgrE', mc.end]].forEach(function (p) { if (document.activeElement !== $(p[0])) $(p[0]).value = p[1]; });
-    renderTop(); renderStars(); renderWm();
+    var sel = $('exportWm'); if (!expPick && sel.querySelector('option[value="' + viewIdx + '"]')) sel.value = String(viewIdx);
+  }
+  var expPick = false;   // true once the user chose a month to export by hand (until they scroll to another month)
+  $('exportWm').addEventListener('change', function () { expPick = true; });
+  // the work months offered for export: the last 14 up to the next one, plus whatever is loaded on the board
+  function fillExportSel() {
+    var sel = $('exportWm'), keep = sel.value, cur = wmOf(todayDn).idx, a = Math.min(cur - 14, winFirst), z = Math.max(cur + 1, winLast);
+    sel.textContent = '';
+    for (var i = z; i >= a; i--) {
+      var w = wmOf(ANCHOR + i * LEN), o = h('option', null, w.code + '（' + md(w.start) + ' ～ ' + md(w.end) + '）' + (i === cur ? ' 本月' : ''));
+      o.value = String(i); sel.appendChild(o);
+    }
+    sel.value = keep && sel.querySelector('option[value="' + keep + '"]') ? keep : String(viewIdx);
+    paintTitle();
+  }
+
+  /* tags for work items that are hidden, so they are not forgotten */
+  function renderHidden() {
+    var hs = hiddenSet(), keys = rows().filter(function (d) { return hs[d.k]; }), box = $('hiddenChips');
+    $('hiddenRow').hidden = !keys.length; box.textContent = '';
+    keys.forEach(function (def) {
+      var n = 0;
+      var curIdx = wmOf(todayDn).idx;
+      cols.forEach(function (col) {
+        if (col.w.idx !== curIdx) return;
+        if (isCalc(def)) { if (textOf({ k: def.k, c: col.i })) n++; }
+        else n += itemsOf(cellKey(col, def.k)).filter(function (x) { return !x.d; }).length;
+      });
+      var b = h('button', 'chip-h' + (n ? ' has' : ''), flat(def.label) + (n ? '｜本月 ' + n + ' 項未完成' : ''));
+      b.type = 'button'; b.dataset.k = def.k;
+      b.title = '點一下恢復顯示「' + flat(def.label) + '」' + (n ? '（目前這個工作月還有 ' + n + ' 項未完成）' : '');
+      box.appendChild(b);
+    });
   }
 
   function renderTop() {
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
     var line = '', mc = mgrCfg(), ms = isoToDn(mc.start);
-    if (todayDn < ms) line += mc.name + '倒數 ' + (ms - todayDn) + ' 天';
+    if (todayDn < ms) line += mc.name + ' 剩' + z2(ms - todayDn) + '天';
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, f = fieldInfo(wmOf(dn));
       if (f.txt) { line += (line ? '　' : '') + '下個節點：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + f.txt.replace(/\n/g, ' '); break; }
@@ -533,11 +838,15 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   /* starred items from today onward, soonest first */
   function starredList() {
     var out = [];
-    Object.keys(cellsMap).forEach(function (id) {
+    var ids = Object.keys(cellsMap), have = {}; ids.forEach(function (id) { have[id] = 1; });
+    if (rulesList().some(function (r) { return r.st; })) {            // repeating items marked ★ show up in the next 90 days even before they are touched
+      for (var dd = todayDn; dd <= todayDn + 90; dd++) { var rid = iso(dd) + '_routine'; if (!have[rid]) { ids.push(rid); have[rid] = 1; } }
+    }
+    ids.forEach(function (id) {
       var d = cellsMap[id], parts = id.split('_'), date = (d && d.date) || parts[0], row = (d && d.row) || parts.slice(1).join('_');
       var dn = isoToDn(date), def = rowDef(row);
       if (isNaN(dn) || dn < todayDn || !def) return;
-      itemsOf(id).forEach(function (it, i) { if (it.s) out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, o: rows().indexOf(def) }); });
+      itemsOf(id).forEach(function (it, i) { if (it.s) out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def) }); });
     });
     out.sort(function (a, b) { return a.dn - b.dn || a.o - b.o || a.i - b.i; });
     return out;
@@ -547,17 +856,19 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var list = starredList();
     if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋ 新增」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
     list.forEach(function (s) {
-      var o = fromDn(s.dn), b = h('button', 'chip-s' + (s.dn === todayDn ? ' today-c' : ''));
-      b.type = 'button'; b.dataset.dn = String(s.dn); b.dataset.k = s.k;
-      var d = h('b', null, o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週'));
-      b.appendChild(d); b.appendChild(document.createTextNode(s.label + '：' + s.t));
-      b.title = s.label + '：' + s.t;
-      box.appendChild(b);
+      var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : ''));
+      w.dataset.dn = String(s.dn); w.dataset.k = s.k; w.dataset.i = String(s.i);
+      var ck = h('button', 'cks', s.d ? '☑' : '☐'); ck.type = 'button'; ck.title = s.d ? '標回未完成' : '標示已完成'; ck.setAttribute('aria-label', ck.title);
+      var go = h('button', 'cgo'); go.type = 'button'; go.title = s.label + '：' + s.t + '（點一下跳到那一格）';
+      go.appendChild(h('b', null, o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週'))); go.appendChild(document.createTextNode(s.label + '：' + s.t));
+      if (s.n) { w.classList.add('hasnote'); go.title += '\n備註：' + s.n; }
+      w.appendChild(ck); w.appendChild(go); box.appendChild(w);
     });
   }
   function jumpTo(dn, k) {
     if (editing) commit();
-    viewIdx = wmOf(dn).idx; render();
+    if (hiddenSet()[k]) { var lay = layoutNow(); delete lay.hidden[k]; saveLayout(lay); }
+    ensureIdx(wmOf(dn).idx); render();
     var ci = -1; cols.forEach(function (c) { if (c.dn === dn) ci = c.i; });
     var td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + ci + '"]');
     if (td) { td.scrollIntoView({ block: 'center', inline: 'center' }); td.classList.add('flash'); setTimeout(function () { td.classList.remove('flash'); }, 1700); }
@@ -587,9 +898,14 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   function saveItems(col, k, items) {
     var id = cellKey(col, k), p;
     items = items.filter(function (x) { return x && x.t; });
+    if (k === 'routine') {                                            // an occurrence that is no longer in the list was deleted for this day only
+      var have = {}; items.forEach(function (x) { if (x.r) have[x.r] = 1; });
+      rulesList().forEach(function (r) { if (!have[r.id] && ruleHits(r, col.dn)) items.push({ t: r.t, s: 0, d: 0, r: r.id, x: 1 }); });
+    }
     if (!items.length) { delete cellsMap[id]; p = backend.del('cells', id); }
-    else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { return { t: x.t, s: x.s ? 1 : 0 }; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
+    else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
     p.catch(failToast);
+    if (typeof renderHidden === 'function' && cols.length) renderHidden();
   }
   function saveNote(s, text) {
     var name, id, cur;
@@ -601,12 +917,26 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     else { store[key] = { text: text }; p = backend.put(name, id, { text: text }); }
     p.catch(failToast);
   }
-  function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { return { t: x.t, s: x.s ? 1 : 0 }; }); }
+  function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
+  function toggleDone(dn, k, i) {
+    var col = { dn: dn }, items = itemsNow(col, k); if (!items[i]) return;
+    items[i].d = items[i].d ? 0 : 1; saveItems(col, k, items);
+    cols.forEach(function (c) {
+      if (c.dn !== dn) return;
+      var td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c.i + '"]'); if (td) paintCell(td, c, k);
+    });
+    renderStars();
+  }
 
   /* ---------- editing ---------- */
   function flushPending() { if (pending && !editing) { pending = false; render(); } }
   function repaint(node, e) {
     node.classList.remove('editing');
+    if (e.kind === 'label') { render(); return; }
+    if (e.kind === 'pad') {
+      closePad(); render();
+      return;
+    }
     if (e.kind === 'note') { if (e.s.k === 'foot') paintFoot(); else paintNote(node, e.s.k); }
     else paintCell(node, cols[e.c], e.k);
     renderStars();
@@ -616,10 +946,26 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var e = editing; editing = null;
     if (save) {
       if (e.kind === 'note') saveNote(e.s, e.ta.value.replace(/\s+$/, ''));
+      else if (e.kind === 'pad') saveNote({ k: 'pad-' + e.k, c: -1 }, e.ta.value.replace(/\s+$/, ''));
+      else if (e.kind === 'inote') {
+        var c2 = cols[e.c], its = itemsNow(c2, e.k), nt = e.ta.value.trim();
+        if (its[e.i]) { if (nt) its[e.i].n = nt; else delete its[e.i].n; saveItems(c2, e.k, its); }
+      }
+      else if (e.kind === 'label') {
+        var name = e.inp.value.trim(), def0 = rowDef(e.k), base = null;
+        BASE.forEach(function (d) { if (d.k === e.k) base = d; });
+        if (name && name !== e.orig) {
+          var lay = layoutNow();
+          if (def0.custom) lay.custom[e.k] = { label: name };
+          else if (base && name === flat(base.label)) delete lay.labels[e.k];   // back to the original name
+          else lay.labels[e.k] = name;
+          saveLayout(lay);
+        }
+      }
       else {
         var col = cols[e.c], text = e.inp.value.trim(), items = itemsNow(col, e.k);
         if (e.kind === 'add') { if (text) items.push({ t: text, s: e.star ? 1 : 0 }); }
-        else if (e.kind === 'item') { if (text) items[e.i].t = text; else items.splice(e.i, 1); }
+        else if (e.kind === 'item') { if (text) { if (items[e.i].t !== text && items[e.i].r) items[e.i].e = 1; items[e.i].t = text; } else items.splice(e.i, 1); }
         saveItems(col, e.k, items);
       }
     }
@@ -630,6 +976,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
 
   function startAdd(td, k, c) {
     if (editing) commit();
+    if (k === 'routine') { openRule(cols[c].dn); return; }          // 例行公事 asks for the repeat settings first
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     td.classList.add('editing');
     var add = td.querySelector('.add'); if (add) add.remove();
@@ -655,6 +1002,61 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
     inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
   }
+  function startItemNote(td, k, c, i) {
+    if (editing) commit();
+    td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
+    var row = td.querySelector('.it[data-i="' + i + '"]'); if (!row) return;
+    var items = itemsNow(cols[c], k), cur = (items[i] && items[i].n) || '';
+    var box = h('div', 'noteed'), ta = document.createElement('textarea');
+    ta.value = cur; ta.rows = 3; ta.maxLength = 1000; ta.placeholder = '這項工作的備註（有備註的工作會加底線）'; ta.setAttribute('aria-label', '工作備註');
+    var r = h('div', 'crow'), ok = h('button', 'btn primary', '儲存'), no = h('button', 'btn', '取消'); ok.type = no.type = 'button';
+    r.appendChild(ok); r.appendChild(no); box.appendChild(ta); box.appendChild(r); row.after(box);
+    td.classList.add('editing'); editing = { kind: 'inote', k: k, c: c, i: i, node: td, ta: ta };
+    ok.addEventListener('click', commit); no.addEventListener('click', cancel);
+    ta.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+      else if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); commit(); }
+    });
+    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  }
+
+  /* ---------- notepad: a full-page notebook for one main work item (same text as its 子項目／備註) ---------- */
+  var padTimer = null;
+  function padCount() { $('padCount').textContent = $('padArea').value.length + ' 字'; }
+  function openPad(k) {
+    if (editing) commit();
+    var def = rowDef(k); if (!def) return;
+    var ta = $('padArea'); ta.value = (notes['pad-' + k] && notes['pad-' + k].text) || '';   // its own text, separate from the 子項目／備註 column
+    $('padTitle').textContent = '📓 ' + flat(def.label); $('pad').hidden = false; document.body.style.overflow = 'hidden';
+    editing = { kind: 'pad', k: k, node: $('padCard'), ta: ta };
+    $('padStatus').textContent = '輸入後會自動儲存'; padCount();
+    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); ta.scrollTop = ta.scrollHeight;
+  }
+  function closePad() { $('pad').hidden = true; document.body.style.overflow = ''; clearTimeout(padTimer); }
+  function padSave() {
+    if (!editing || editing.kind !== 'pad') return;
+    saveNote({ k: 'pad-' + editing.k, c: -1 }, $('padArea').value.replace(/\s+$/, ''));
+    var d = new Date(); $('padStatus').textContent = '已儲存 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  $('padArea').addEventListener('input', function () {
+    padCount(); $('padStatus').textContent = '輸入中…'; clearTimeout(padTimer); padTimer = setTimeout(padSave, 700);
+  });
+  $('padArea').addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { ev.preventDefault(); commit(); } });
+  $('padClose').addEventListener('click', commit);
+  $('padDate').addEventListener('click', function () {
+    var ta = $('padArea'), o = fromDn(todayDn), stamp = slash(todayDn) + ' ' + WDN[o.w].replace('星期', '週') + '　';
+    ta.setRangeText(stamp, ta.selectionStart, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input'));
+  });
+
+  function startLabel(k) {
+    if (editing) commit();
+    var td = $('tbl').querySelector('td.a[data-k="' + k + '"]'), def = rowDef(k); if (!td || !def) return;
+    var inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 30; inp.value = flat(def.label); inp.setAttribute('aria-label', '修改工作項目名稱');
+    td.textContent = ''; td.classList.add('editing'); td.appendChild(inp);
+    editing = { kind: 'label', k: k, node: td, inp: inp, orig: inp.value };
+    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
+    inp.focus(); inp.select();
+  }
   function startNote(s) {
     if (editing) commit();
     var node = s.k === 'foot' ? $('footTxt') : $('tbl').querySelector('td.b[data-k="' + s.k + '"]'); if (!node) return;
@@ -679,7 +1081,15 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       var olds = document.querySelectorAll('td.sel'); for (var q = 0; q < olds.length; q++) olds[q].classList.remove('sel');
       td.classList.add('sel');
     }
-    if (btn && td && td.classList.contains('a')) { rowAction(btn.dataset.act, td.dataset.k); return; }
+    if (td && td.classList.contains('a')) {
+      if (btn && btn.dataset.act === 'rowmore') {   // the "⋮" button on touch screens opens / closes the row tools
+        var wasOpen = td.classList.contains('open');
+        var opened = document.querySelectorAll('td.a.open'); for (var o = 0; o < opened.length; o++) opened[o].classList.remove('open');
+        if (!wasOpen) td.classList.add('open');
+      } else if (btn) rowAction(btn.dataset.act, td.dataset.k);
+      else if (ev.target.closest('.lb')) openPad(td.dataset.k);   // click the name: open its notepad
+      return;
+    }
     if (!btn || !td) return;
     if (editing && editing.node === td) { commit(); return; }
     var k = td.dataset.k, c = Number(td.dataset.c), act = btn.dataset.act;
@@ -687,9 +1097,12 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     if (act === 'note') return startNote({ k: k, c: -1 });
     var row = btn.closest('.it'); if (!row) return;
     var i = Number(row.dataset.i), col = cols[c];
+    if (act === 'rule') { var it0 = itemsNow(col, k)[i]; if (it0 && it0.r) openRule(col.dn, it0.r); return; }
     if (act === 'edit') return startItem(td, k, c, i);
+    if (act === 'inote') return startItemNote(td, k, c, i);
     var items = itemsNow(col, k);
-    if (act === 'star') { items[i].s = items[i].s ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
+    if (act === 'done') { items[i].d = items[i].d ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
+    else if (act === 'star') { items[i].s = items[i].s ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
     else if (act === 'del') {
       var key = cellKey(col, k) + '#' + i;
       if (armed === key) { armed = null; clearTimeout(armTimer); items.splice(i, 1); saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
@@ -697,30 +1110,185 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     }
   });
   $('tbl').addEventListener('dblclick', function (ev) {
-    var td = ev.target.closest('td.b'); if (td && !editing) startNote({ k: td.dataset.k, c: -1 });
+    if (editing) return;
+    var tb = ev.target.closest('td.b'); if (tb) startNote({ k: tb.dataset.k, c: -1 });
   });
   $('footTxt').addEventListener('click', function (ev) { if (ev.target.dataset && ev.target.dataset.act === 'foot') startNote({ k: 'foot', c: -2 }); });
   $('footTxt').addEventListener('dblclick', function (ev) { if (!editing && ev.target.tagName !== 'TEXTAREA') startNote({ k: 'foot', c: -2 }); });
-  $('starChips').addEventListener('click', function (ev) {
-    var b = ev.target.closest('.chip-s'); if (b) jumpTo(Number(b.dataset.dn), b.dataset.k);
+  $('hiddenChips').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.chip-h'); if (b) rowAction('rowshow', b.dataset.k);
   });
+  $('starChips').addEventListener('click', function (ev) {
+    var w = ev.target.closest('.chip-s'); if (!w) return;
+    if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
+    if (ev.target.closest('.cgo')) jumpTo(Number(w.dataset.dn), w.dataset.k);
+  });
+  /* ---------- wheel over the board scrolls only the board (no click needed, never the page behind it) ---------- */
+  $('sheet').addEventListener('wheel', function (ev) {
+    var s = $('sheet');
+    if (ev.ctrlKey || ev.shiftKey) return;                                  // zoom / native horizontal scroll
+    var canV = s.scrollHeight > s.clientHeight + 1;
+    if (!canV && Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {               // nothing to scroll vertically: use the wheel for the dates
+      var before = s.scrollLeft; s.scrollLeft += ev.deltaY;
+      if (s.scrollLeft !== before) ev.preventDefault();
+    }
+  }, { passive: false });
+
+  /* ---------- crosshair highlight for the hovered cell ---------- */
+  var hlRow = null, hlCol = -99, hlCells = [];
+  function clearHl() {
+    hlCells.forEach(function (el) { el.classList.remove('hl'); });
+    if (hlRow) hlRow.classList.remove('hl-row');
+    hlCells = []; hlRow = null; hlCol = -99;
+  }
+  function setHl(ev) {
+    var cell = ev.target.closest ? ev.target.closest('#tbl td, #tbl th') : null;
+    if (!cell) { clearHl(); return; }
+    var c = cell.dataset.c === undefined ? -99 : Number(cell.dataset.c);
+    var tr = cell.closest('tbody tr'), col = c >= 0 ? c : -99;
+    if (tr === hlRow && col === hlCol) return;
+    clearHl();
+    if (tr) { tr.classList.add('hl-row'); hlRow = tr; }
+    if (col >= 0) {
+      hlCells = [].slice.call($('tbl').querySelectorAll('[data-c="' + col + '"]'));
+      hlCells.forEach(function (el) { el.classList.add('hl'); });
+      hlCol = col;
+    }
+  }
+  $('tbl').addEventListener('mouseover', setHl);
+  $('tbl').addEventListener('mouseleave', clearHl);
+
+  /* ---------- resize the 子項目／備註 column ---------- */
+  var rs = null;
+  function applyBw() {
+    var col = $('tbl').querySelector('colgroup col:nth-child(2)');
+    if (col && !hideB) col.style.width = bw + 'px';
+    $('tbl').style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
+    padSheet();
+  }
+  function moveResize(ev) { if (!rs) return; bw = Math.max(160, Math.min(900, Math.round(rs.w + ev.clientX - rs.x))); applyBw(); }
+  function endResize() {
+    if (!rs) return;
+    rs.el.classList.remove('on'); rs = null; document.body.style.userSelect = '';
+    document.removeEventListener('pointermove', moveResize); document.removeEventListener('pointerup', endResize); document.removeEventListener('pointercancel', endResize);
+    try { localStorage.setItem('sched2.bw', String(bw)); } catch (e) {}
+    refit();
+  }
+  function refit() {
+    var sheet = $('sheet'), k = Math.max(0, Math.min(cols.length - 1, Math.floor(sheet.scrollLeft / CW))), dn = cols[k] && cols[k].dn;
+    if (fitCW() && dn != null) { render(); scrollToDn(dn); }
+  }
+  function startResize(ev) {
+    ev.preventDefault(); ev.stopPropagation();
+    rs = { x: ev.clientX, w: bw, el: ev.currentTarget }; rs.el.classList.add('on'); document.body.style.userSelect = 'none';
+    document.addEventListener('pointermove', moveResize); document.addEventListener('pointerup', endResize); document.addEventListener('pointercancel', endResize);
+  }
+
+  /* ---------- drag a whole row by its ☰ grip (pointer events: mouse and touch) ---------- */
+  var rdrag = null, rowLine = null;
+  function rdTick() {
+    if (!rdrag) return;
+    if (rdrag.sy) $('sheet').scrollTop += rdrag.sy;
+    rdrag.raf = requestAnimationFrame(rdTick);
+  }
+  function rdMove(ev) {
+    if (!rdrag) return;
+    if (!rdrag.on) {
+      if (Math.abs(ev.clientX - rdrag.x0) + Math.abs(ev.clientY - rdrag.y0) < 5) return;
+      rdrag.on = true;
+      rdrag.ghost = h('div', 'ghost', rdrag.text); document.body.appendChild(rdrag.ghost);
+      rdrag.tr.classList.add('rowdragging'); document.body.classList.add('dragmode');
+      rowLine = h('div', 'rowline'); document.body.appendChild(rowLine);
+      rdrag.raf = requestAnimationFrame(rdTick);
+    }
+    rdrag.ghost.style.left = (ev.clientX + 12) + 'px'; rdrag.ghost.style.top = (ev.clientY + 8) + 'px';
+    var trs = [].slice.call($('tbl').querySelectorAll('tbody tr')), idx = 0;
+    for (var i = 0; i < trs.length; i++) { var r = trs[i].getBoundingClientRect(); if (ev.clientY > r.top + r.height / 2) idx = i + 1; }
+    rdrag.idx = idx;
+    var sh = $('sheet').getBoundingClientRect();
+    var by = idx < trs.length ? trs[idx].getBoundingClientRect().top : trs[trs.length - 1].getBoundingClientRect().bottom;
+    by = Math.max(sh.top + 40, Math.min(sh.bottom, by));
+    rowLine.style.left = sh.left + 'px'; rowLine.style.width = sh.width + 'px'; rowLine.style.top = (by - 1) + 'px';
+    rdrag.sy = ev.clientY > sh.bottom - 40 ? 16 : (ev.clientY < sh.top + 80 ? -16 : 0);
+  }
+  function rdEnd(cancelIt) {
+    if (!rdrag) return;
+    var d = rdrag; rdrag = null;
+    document.removeEventListener('pointermove', rdMove); document.removeEventListener('pointerup', rdUp);
+    document.removeEventListener('pointercancel', rdCancel); document.removeEventListener('keydown', rdKey);
+    cancelAnimationFrame(d.raf); document.body.classList.remove('dragmode');
+    if (d.ghost) d.ghost.remove();
+    if (rowLine) { rowLine.remove(); rowLine = null; }
+    d.tr.classList.remove('rowdragging');
+    if (!d.on || cancelIt) return;
+    var vis = visibleRows().map(function (x) { return x.k; }), from = vis.indexOf(d.k); if (from < 0) return;
+    var idx = d.idx; if (idx > from) idx -= 1;
+    if (idx === from) return;
+    var rest = vis.filter(function (k) { return k !== d.k; }); if (!rest.length) return;
+    var lay = layoutNow();
+    lay.order.splice(lay.order.indexOf(d.k), 1);
+    if (idx < rest.length) lay.order.splice(lay.order.indexOf(rest[idx]), 0, d.k);        // hidden rows keep their place relative to the others
+    else lay.order.splice(lay.order.indexOf(rest[rest.length - 1]) + 1, 0, d.k);
+    saveLayout(lay); render();
+  }
+  function rdUp() { rdEnd(false); }
+  function rdCancel() { rdEnd(true); }
+  function rdKey(ev) { if (ev.key === 'Escape') rdEnd(true); }
+  $('tbl').addEventListener('pointerdown', function (ev) {
+    var g = ev.target.closest('.rgr'); if (!g || (ev.button && ev.button !== 0)) return;
+    if (editing) { commit(); return; }
+    var tr = g.closest('tr'), def = rowDef(g.dataset.k); if (!tr || !def) return;
+    ev.preventDefault();
+    rdrag = { k: def.k, tr: tr, text: flat(def.label), x0: ev.clientX, y0: ev.clientY, on: false, idx: 0, sy: 0 };
+    document.addEventListener('pointermove', rdMove); document.addEventListener('pointerup', rdUp);
+    document.addEventListener('pointercancel', rdCancel); document.addEventListener('keydown', rdKey);
+  });
+  $('tbl').addEventListener('keydown', function (ev) {   // keyboard: arrow keys on the grip move the row one step
+    var g = ev.target.closest ? ev.target.closest('.rgr') : null;
+    if (!g || (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+    ev.preventDefault();
+    var k = g.dataset.k; rowAction(ev.key === 'ArrowUp' ? 'rowup' : 'rowdown', k);
+    var ng = $('tbl').querySelector('td.a[data-k="' + k + '"] .rgr'); if (ng) ng.focus();
+  });
+
   /* ---------- rows: add / move up and down / delete the ones the user added ---------- */
   function layoutNow() {
-    var r = rows(), custom = {};
+    var r = (rows(), ROWS_ALL), custom = {}, removed = {}, rs = removedSet();
+    Object.keys(rs).forEach(function (k) { if (rs[k]) removed[k] = 1; });
     r.forEach(function (d) { if (d.custom) custom[d.k] = { label: d.label }; });
-    return { order: r.map(function (d) { return d.k; }), custom: custom };
+    var hidden = {}, hs = hiddenSet(); Object.keys(hs).forEach(function (k) { if (hs[k]) hidden[k] = 1; });
+    var labels = {}, ls = (meta.layout && meta.layout.labels) || {}; Object.keys(ls).forEach(function (k) { if (ls[k]) labels[k] = ls[k]; });
+    return { order: r.map(function (d) { return d.k; }), custom: custom, hidden: hidden, labels: labels, removed: removed };
   }
+  function hiddenSet() { return (meta.layout && meta.layout.hidden) || {}; }
+  function visibleRows() { var hs = hiddenSet(); return rows().filter(function (d) { return !hs[d.k]; }); }
   function saveLayout(lay) { meta.layout = lay; ROWS = null; backend.put('meta', 'layout', lay).catch(failToast); }
   function rowAction(act, k) {
     if (editing) commit();
+    if (act === 'rowrename') { startLabel(k); return; }
+    if (act === 'rowpad') { openPad(k); return; }
+    if (act === 'rowrules') { renderRuleList(); $('rules').hidden = false; return; }
     var lay = layoutNow(), i = lay.order.indexOf(k);
-    if (act === 'rowup' && i > 0) lay.order.splice(i - 1, 0, lay.order.splice(i, 1)[0]);
-    else if (act === 'rowdown' && i >= 0 && i < lay.order.length - 1) lay.order.splice(i + 1, 0, lay.order.splice(i, 1)[0]);
+    if ((act === 'rowup' || act === 'rowdown') && i >= 0) {
+      // move past the neighbouring visible row, skipping rows that are hidden
+      var vis = visibleRows().map(function (d) { return d.k; }), vi = vis.indexOf(k), nb = vis[vi + (act === 'rowup' ? -1 : 1)];
+      if (vi < 0 || nb === undefined) return;
+      lay.order.splice(i, 1);
+      var j = lay.order.indexOf(nb); lay.order.splice(act === 'rowup' ? j : j + 1, 0, k);
+    }
+    else if (act === 'rowhide' && i >= 0) { lay.hidden[k] = 1; toast('已隱藏「' + flat(rowDef(k).label) + '」，上方會留下標籤，點標籤就能恢復', 5000); }
+    else if (act === 'rowshow') { delete lay.hidden[k]; }
     else if (act === 'rowdel' && i >= 0) {
       if (rowArmed !== k) { rowArmed = k; clearTimeout(rowArmTimer); rowArmTimer = setTimeout(function () { rowArmed = null; if (!editing) render(); }, 3000); render(); return; }
       rowArmed = null; clearTimeout(rowArmTimer);
-      lay.order.splice(i, 1); delete lay.custom[k];
-    } else return;
+      var gone = flat(rowDef(k).label);
+      if (rowDef(k).custom) { lay.order.splice(i, 1); delete lay.custom[k]; }
+      else lay.removed[k] = 1;                                        // built-in: only taken off the board, its entries stay saved
+      delete lay.hidden[k];
+      toast('已刪除「' + gone + '」' + (rowDef(k) && rowDef(k).custom ? '' : '，要找回請點最下方的「已刪除」標籤'), 5000);
+    }
+    else if (act === 'rowrestore') { delete lay.removed[k]; }
+    else return;
     saveLayout(lay); render();
     var td = $('tbl').querySelector('td.a[data-k="' + k + '"]'); if (td && td.scrollIntoView) td.scrollIntoView({ block: 'nearest' });
   }
@@ -739,6 +1307,127 @@ details.wm summary { cursor: pointer; font-weight: 500; }
   $('addOk').addEventListener('click', doAdd);
   $('addNo').addEventListener('click', closeAdd);
   $('addName').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); doAdd(); } else if (ev.key === 'Escape') { ev.preventDefault(); closeAdd(); } });
+
+  /* ---------- repeating items: the settings dialog ---------- */
+  var ruleEd = null, WDS = [[1, '一'], [2, '二'], [3, '三'], [4, '四'], [5, '五'], [6, '六'], [0, '日']];
+  function buildDots(id, list) {
+    var box = $(id); box.textContent = '';
+    list.forEach(function (p) {
+      var b = h('button', null, p[1]); b.type = 'button'; b.dataset.v = String(p[0]);
+      b.addEventListener('click', function () { b.classList.toggle('on'); });
+      box.appendChild(b);
+    });
+  }
+  function setDots(id, vals) { Array.prototype.forEach.call($(id).children, function (b) { b.classList.toggle('on', vals.indexOf(Number(b.dataset.v)) >= 0); }); }
+  function getDots(id) { var out = []; Array.prototype.forEach.call($(id).children, function (b) { if (b.classList.contains('on')) out.push(Number(b.dataset.v)); }); return out; }
+  (function () {
+    buildDots('ruleWd', WDS);
+    var l = []; for (var i = 1; i <= LEN; i++) l.push([i, String(i)]);
+    buildDots('ruleWm', l);
+  })();
+  function ruleSync() {
+    var f = $('ruleF').value;
+    $('ruleIntBox').hidden = f === 'none'; $('ruleWdBox').hidden = f !== 'week'; $('ruleWmBox').hidden = f !== 'wm'; $('ruleEndBox').hidden = f === 'none';
+    $('ruleUnit').textContent = f === 'day' ? '天' : f === 'week' ? '週' : '個工作月';
+  }
+  $('ruleF').addEventListener('change', ruleSync);
+  function closeRule() { $('rule').hidden = true; ruleEd = null; if (!$('rules').hidden) renderRuleList(); var d = $('ruleDel'); d.classList.remove('armed'); d.textContent = '刪除整個重複事項'; }
+  function openRule(dn, rid) {
+    if (editing) commit();
+    var r = rid ? ruleById(rid) : null; if (rid && !r) return;
+    ruleEd = { id: r ? r.id : null };
+    $('ruleTitle').textContent = r ? '修改重複事項' : '新增例行公事';
+    $('ruleT').value = r ? r.t : '';
+    $('ruleS').value = r ? r.start : iso(dn);
+    $('ruleF').value = r ? r.f : 'none';
+    $('ruleF').options[0].disabled = !!r;
+    $('ruleN').value = r ? (r.n || 1) : 1;
+    setDots('ruleWd', r && r.wd && r.wd.length ? r.wd : [fromDn(dn).w]);
+    setDots('ruleWm', r && r.wm && r.wm.length ? r.wm : [wmOf(dn).dayno]);
+    var e = (r && r.end) || { k: 'never' };
+    Array.prototype.forEach.call(document.getElementsByName('ruleE'), function (x) { x.checked = x.value === e.k; });
+    $('ruleEOn').value = e.on || ''; $('ruleECnt').value = e.c || 13;
+    $('ruleSt').checked = !!(r && r.st);
+    $('ruleDel').hidden = !r;
+    ruleSync(); $('rule').hidden = false; $('ruleT').focus();
+  }
+  function writeRules(list) {
+    list = list.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = x[k]; }); return o; });   // drop the cached "_last"
+    meta.rules = { list: list };
+    backend.put('meta', 'rules', meta.rules).catch(failToast);        // kept even when empty, so the two starter rules are not put back
+  }
+  // The two rules the original workbook had (週三提醒交週報, 每工第 19 天 5PR報表) start out as ordinary repeating items the user can edit or delete.
+  function seedRules() {
+    if (meta.rules || !(live.meta && live.cells)) return;
+    writeRules([
+      { id: 'sys-weekly', t: '提醒交週報', st: 0, start: '2020-01-01', f: 'week', n: 1, wd: [3], end: { k: 'never' } },
+      { id: 'sys-5pr', t: '5PR報表', st: 0, start: '2020-01-01', f: 'wm', n: 1, wm: [19], end: { k: 'never' } }
+    ]);
+  }
+  function ruleSave() {
+    var t = $('ruleT').value.trim(), s = $('ruleS').value, f = $('ruleF').value;
+    if (!t) { $('ruleT').focus(); toast('請輸入工作內容'); return; }
+    if (!s) { toast('請選開始日期'); return; }
+    if (f === 'none') {                                               // no repeat: an ordinary item on that day
+      var col = { dn: isoToDn(s) }, items = itemsNow(col, 'routine');
+      items.push({ t: t, s: $('ruleSt').checked ? 1 : 0 }); saveItems(col, 'routine', items);
+      closeRule(); render(); return;
+    }
+    var r = { id: ruleEd.id || 'r' + Date.now().toString(36), t: t, st: $('ruleSt').checked ? 1 : 0, start: s, f: f, n: Math.max(1, Math.min(99, Math.floor(Number($('ruleN').value)) || 1)) };
+    if (f === 'week') { r.wd = getDots('ruleWd'); if (!r.wd.length) { toast('請至少選一個星期'); return; } }
+    if (f === 'wm') { r.wm = getDots('ruleWm'); if (!r.wm.length) { toast('請至少選一個「每工第幾天」'); return; } }
+    var ek = 'never'; Array.prototype.forEach.call(document.getElementsByName('ruleE'), function (x) { if (x.checked) ek = x.value; });
+    r.end = { k: ek };
+    if (ek === 'on') { r.end.on = $('ruleEOn').value; if (!r.end.on || r.end.on < s) { toast('結束日期要在開始日期之後'); return; } }
+    if (ek === 'count') r.end.c = Math.max(1, Math.min(999, Math.floor(Number($('ruleECnt').value)) || 1));
+    var list = rulesList().filter(function (x) { return x.id !== r.id; });
+    var at = rulesList().map(function (x) { return x.id; }).indexOf(r.id);
+    list.splice(at < 0 ? list.length : at, 0, r);
+    writeRules(list); closeRule(); render(); renderStars();
+  }
+  function ruleDelete() {
+    var d = $('ruleDel'), id = ruleEd && ruleEd.id; if (!id) return;
+    if (!d.classList.contains('armed')) { d.classList.add('armed'); d.textContent = '確定刪除整個重複事項？'; return; }
+    writeRules(rulesList().filter(function (x) { return x.id !== id; }));
+    Object.keys(cellsMap).forEach(function (cid) {                    // drop the per-day leftovers (done marks, notes) of this series
+      if (cid.slice(-8) !== '_routine') return;
+      var its = storedItems(cid), keep = its.filter(function (x) { return x.r !== id; });
+      if (keep.length === its.length) return;
+      if (!keep.length) { delete cellsMap[cid]; backend.del('cells', cid).catch(failToast); }
+      else { var data = { date: cid.slice(0, 10), row: 'routine', items: keep }; cellsMap[cid] = data; backend.put('cells', cid, data).catch(failToast); }
+    });
+    closeRule(); render(); renderStars(); toast('已刪除這個重複事項');
+  }
+  function ruleSummary(r) {
+    var n = r.n || 1, s = r.f === 'day' ? (n === 1 ? '每天' : '每 ' + n + ' 天')
+      : r.f === 'week' ? (n === 1 ? '每週 ' : '每 ' + n + ' 週 ') + WDS.filter(function (p) { return (r.wd || []).indexOf(p[0]) >= 0; }).map(function (p) { return p[1]; }).join('、')
+      : (n === 1 ? '每個工作月 ' : '每 ' + n + ' 個工作月 ') + '第 ' + (r.wm || []).slice().sort(function (a, b) { return a - b; }).join('、') + ' 天';
+    var e = r.end || {};
+    return s + '　' + (e.k === 'on' ? '到 ' + e.on.replace(/-/g, '/') : e.k === 'count' ? '共 ' + e.c + ' 次' : '持續不停') + (r.st ? '　★' : '');
+  }
+  function renderRuleList() {
+    var box = $('rulesList'); box.textContent = '';
+    var list = rulesList();
+    if (!list.length) box.appendChild(h('div', 'hint', '目前沒有重複規則。按「＋ 新增規則」，或在例行公事列的格子按「＋ 新增」。'));
+    list.forEach(function (r) {
+      var row = h('div', 'rli'), t = h('div', 'rt1'), b = h('button', 'btn', '編輯'); b.type = 'button';
+      t.appendChild(h('b', null, r.t)); t.appendChild(h('span', 'sub', ruleSummary(r)));
+      b.addEventListener('click', function () { openRule(todayDn, r.id); });
+      row.appendChild(t); row.appendChild(b); box.appendChild(row);
+    });
+  }
+  $('rulesClose').addEventListener('click', function () { $('rules').hidden = true; });
+  $('rulesAdd').addEventListener('click', function () { openRule(todayDn); });
+  $('rules').addEventListener('mousedown', function (ev) { if (ev.target === $('rules')) $('rules').hidden = true; });
+  $('ruleOk').addEventListener('click', ruleSave);
+  $('ruleNo').addEventListener('click', closeRule);
+  $('ruleDel').addEventListener('click', ruleDelete);
+  $('rule').addEventListener('mousedown', function (ev) { if (ev.target === $('rule')) closeRule(); });
+  $('ruleT').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); ruleSave(); } });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') return;
+    if (!$('rule').hidden) closeRule(); else if (!$('rules').hidden) $('rules').hidden = true;
+  });
 
   /* ---------- drag: reorder inside a cell, or move to another cell (pointer events, so touch works too) ---------- */
   var drag = null;
@@ -776,7 +1465,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
       if (t.idx < items.length) items[t.idx].parentNode.insertBefore(line, items[t.idx]);
       else { var box = t.td.querySelector('.items'); if (box) box.appendChild(line); }
     }
-    var sh = $('sheet').getBoundingClientRect(), stick = 150 + (hideB ? 0 : 400) + 40;
+    var sh = $('sheet').getBoundingClientRect(), stick = 150 + (hideB ? 0 : bw) + 40;
     drag.sx = ev.clientX > sh.right - 50 ? 18 : (ev.clientX < sh.left + stick ? -18 : 0);
     drag.sy = ev.clientY > sh.bottom - 40 ? 18 : (ev.clientY < sh.top + 90 ? -18 : 0);
   }
@@ -792,6 +1481,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     var dstC = Number(d.t.td.dataset.c), dstK = d.t.td.dataset.k, srcCol = cols[d.c], dstCol = cols[dstC];
     var src = itemsNow(srcCol, d.k), item = src.splice(d.i, 1)[0];
     if (!item) return;
+    if (item.r && (dstC !== d.c || dstK !== d.k)) { delete item.r; delete item.e; }   // moved elsewhere: becomes an ordinary item, the repeat skips this day
     if (dstC === d.c && dstK === d.k) {
       var idx = d.t.idx; if (idx > d.i) idx -= 1;
       if (idx === d.i) return;
@@ -829,19 +1519,77 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     render();
   }
   ['mgrName', 'mgrS', 'mgrE'].forEach(function (id) { $(id).addEventListener('change', saveMgr); });
-  function go(delta) { if (editing) commit(); viewIdx += delta; render(); }
+  /* The board is endless: it holds a run of whole work months (winFirst..winLast) and builds more when the scroll gets near an end. */
+  function ensureIdx(idx) { if (idx < winFirst) winFirst = idx; if (idx > winLast) winLast = idx; }
+  function stickW() { return 150 + (hideB ? 0 : bw); }
+  function scrollToDn(dn) {
+    var sheet = $('sheet'), ci = -1; cols.forEach(function (c) { if (ci < 0 && c.dn >= dn) ci = c.i; });
+    var th = ci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + ci + '"]');
+    if (th) sheet.scrollTo({ left: Math.max(0, th.offsetLeft - stickW()), behavior: 'auto' });
+  }
+  function go(delta) {
+    if (editing) commit();
+    var t = viewIdx + delta, before = winFirst + ':' + winLast;
+    ensureIdx(t);
+    if (before !== winFirst + ':' + winLast) render();
+    scrollToDn(ANCHOR + t * LEN);
+    viewIdx = t; expPick = false; paintTitle(); renderWm();
+  }
   $('prev').addEventListener('click', function () { go(-1); });
   $('next').addEventListener('click', function () { go(1); });
   $('goToday').addEventListener('click', function () {
     if (editing) commit();
-    todayDn = localToday(); viewIdx = wmOf(todayDn).idx; render();
-    var ci = -1; cols.forEach(function (c) { if (c.dn === todayDn) ci = c.i; });
-    var th = $('tbl').querySelector('thead th.dh.today'); if (th) th.scrollIntoView({ block: 'nearest', inline: 'center' });
+    todayDn = localToday(); viewIdx = wmOf(todayDn).idx; winFirst = viewIdx - 1; winLast = viewIdx + 1; expPick = false; render();
+    centerToday(false);
+  });
+  var scrollBusy = false;
+  $('sheet').addEventListener('scroll', function () {
+    if (scrollBusy) return;
+    scrollBusy = true;
+    requestAnimationFrame(function () {
+      scrollBusy = false;
+      var sheet = $('sheet'), vis = sheet.clientWidth - stickW();
+      if (!cols.length || vis <= 0) return;
+      var k = Math.max(0, Math.min(cols.length - 1, Math.floor((sheet.scrollLeft + vis / 2) / CW)));
+      var idx = cols[k].w.idx;
+      if (idx !== viewIdx) { viewIdx = idx; expPick = false; paintTitle(); renderWm(); }
+      if (editing || drag || rdrag) return;
+      var right = sheet.scrollWidth - sheet.scrollLeft - sheet.clientWidth;
+      if (sheet.scrollLeft < 1800) { winFirst--; render(); sheet.scrollLeft += perMonth() * CW; }
+      else if (right < 1800) { winLast++; render(); }
+    });
+  });
+  function padSheet() { $('sheet').style.paddingRight = '0px'; }
+  var rzT = 0;
+  window.addEventListener('resize', function () {
+    padSheet();
+    clearTimeout(rzT);
+    rzT = setTimeout(function () {
+      if (editing) return;
+      refit();
+    }, 200);
+  });
+  function centerToday(smooth) {
+    var sheet = $('sheet'), tci = -1; cols.forEach(function (c) { if (tci < 0 && c.dn >= todayDn) tci = c.i; });
+    var th = tci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + tci + '"]'); if (!th) return;
+    padSheet();
+    var stick = 150 + (hideB ? 0 : bw), vis = Math.max(sheet.clientWidth - stick, th.offsetWidth);
+    var left = th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
+    sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
+  }
+  $('spanBtn').addEventListener('click', function () {
+    if (editing) commit();
+    span = span === 28 ? 7 : 28;
+    try { localStorage.setItem('sched2.span', String(span)); } catch (e) {}
+    if (span === 28) hideB = true;
+    else { try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; } }
+    fitCW(); render();
+    if (span === 28) scrollToDn(wmOf(todayDn).start); else centerToday(false);
   });
   $('toggleB').addEventListener('click', function () {
     if (editing) commit();
     hideB = !hideB; try { localStorage.setItem('sched2.hideB', hideB ? '1' : '0'); } catch (e) {}
-    render();
+    render(); centerToday(false);
   });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
@@ -882,12 +1630,20 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     return 'TEXT(MOD(INDEX(工作月!$D$3:$D$999,' + m + '),100),"00")&"工第"&TEXT(' + L + '$3-INDEX(工作月!$E$3:$E$999,' + m + ')+1,"00")&"天"';
   }
   function xMgrF(L) {
-    return 'IF(' + L + '3<工作月!$B$11,"倒數 "&(工作月!$B$11-' + L + '3)&" 天",' +
-      'IF(' + L + '3<=工作月!$B$12,工作月!$B$10&" 第 "&(' + L + '3-工作月!$B$11+1)&" 天",""))';
+    return 'IF(' + L + '3<工作月!$B$11,工作月!$B$10&CHAR(10)&"剩"&TEXT(工作月!$B$11-' + L + '3,"00")&"天",' +
+      'IF(' + L + '3<=工作月!$B$12,工作月!$B$10&CHAR(10)&"第"&TEXT(' + L + '3-工作月!$B$11+1,"00")&"天",""))';
   }
-  function buildXlsx() {
+  // one work month per file: the day before it (as the original does) plus its 28 days
+  function buildXlsx(idx) {
     return loadExcelJS().then(function (X) {
-      buildCols();
+      var saved = cols, wb;
+      cols = makeCols(ANCHOR + idx * LEN - 1, 29);          // textOf() and the export below read the columns from here
+      try { wb = buildWb(X); } finally { cols = saved; }
+      return wb.xlsx.writeBuffer();
+    });
+  }
+  function buildWb(X) {
+    {
       var wb = new X.Workbook(); wb.creator = '工作排程';
       var ws = wb.addWorksheet('工作表1', { views: [{ zoomScale: 60 }] });
       var wsm = wb.addWorksheet('工作月');
@@ -945,8 +1701,14 @@ details.wm summary { cursor: pointer; font-weight: 500; }
           var L = col.L, a = L + r, s = { k: def.k, c: col.i }, txt = textOf(s);
           if (def.k === 'mgr') ws.getCell(a).value = { formula: xMgrF(L), result: txt };
           else if (def.k === 'field') ws.getCell(a).value = { formula: xFieldF(L), result: txt };
-          else if (def.k === 'routine') ws.getCell(a).value = { formula: xRoutineF(L), result: txt };
-          else if (txt) ws.getCell(a).value = txt;
+          else if (txt) {
+            var its = itemsOf(cellKey(col, def.k));
+            if (its.some(function (x) { return x.d; })) {   // finished items keep their strike-through in Excel
+              ws.getCell(a).value = { richText: its.map(function (it, ix) {
+                return { text: (it.s ? '★ ' : '') + it.t + (it.n ? '\n　↳ ' + String(it.n).replace(/\n/g, ' ') : '') + (ix < its.length - 1 ? '\n' : ''), font: { name: FONT, size: 12, strike: !!it.d, color: { argb: it.d ? 'FF888888' : 'FF000000' } } };
+              }) };
+            } else ws.getCell(a).value = txt;
+          }
         });
       });
       var lastR = 4 + RW.length, fr = lastR + 2;
@@ -985,23 +1747,74 @@ details.wm summary { cursor: pointer; font-weight: 500; }
         ws.getRow(5 + idx).height = Math.max(ORIGH[def.k] || 20, need);
       });
       ws.getRow(fr).height = Math.max(20, estLines(foot, 82) * LINE + 4);
-      return wb.xlsx.writeBuffer();
-    });
+
+      /* sheet 3: 記事本 (each main work item's notepad, only the ones that have text) */
+      var padRows = RW.filter(function (d) { return notes['pad-' + d.k] && notes['pad-' + d.k].text; });
+      if (padRows.length) {
+        var wsn = wb.addWorksheet('記事本');
+        wsn.getColumn(1).width = 24; wsn.getColumn(2).width = 100;
+        wsn.getCell('A1').value = '工作項目'; wsn.getCell('B1').value = '記事本內容';
+        padRows.forEach(function (d, idx) {
+          var r = idx + 2, t = notes['pad-' + d.k].text;
+          wsn.getCell('A' + r).value = flat(d.label); wsn.getCell('B' + r).value = t;
+          wsn.getRow(r).height = Math.max(20, estLines(t, 98) * LINE + 4);
+        });
+        wsn.eachRow(function (row, rn) {
+          row.eachCell(function (c) {
+            c.font = { name: FONT, size: 12, bold: rn === 1 }; c.border = border;
+            c.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+          });
+        });
+      }
+      return wb;
+    }
   }
-  $('exportX').addEventListener('click', function () {
-    if (editing) commit();
-    var btn = $('exportX'), code = wmOf(ANCHOR + viewIdx * LEN).code;
-    btn.disabled = true; btn.textContent = '產生中…';
-    buildXlsx().then(function (buf) {
+  function downloadMonth(idx, auto) {
+    var code = wmOf(ANCHOR + idx * LEN).code;
+    return buildXlsx(idx).then(function (buf) {
       var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       var url = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = url; a.download = code + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
-      toast('已匯出 ' + code + '.xlsx（請到瀏覽器的下載資料夾找）', 5000);
-    }).catch(function (err) { toast('匯出失敗：' + ((err && err.message) || '請稍後再試'), 7000); })
+      toast((auto ? '已自動匯出 ' : '已匯出 ') + code + '.xlsx（請到瀏覽器的下載資料夾找）', 8000);
+    });
+  }
+  $('exportX').addEventListener('click', function () {
+    if (editing) commit();
+    var btn = $('exportX'), idx = Number($('exportWm').value);
+    btn.disabled = true; btn.textContent = '產生中…';
+    downloadMonth(idx, false).catch(function (err) { toast('匯出失敗：' + ((err && err.message) || '請稍後再試'), 7000); })
       .then(function () { btn.disabled = false; btn.textContent = '匯出 Excel'; });
   });
-  if (window.claude) $('exportX').hidden = true;   // downloads are blocked inside claude.ai artifacts
+  if (window.claude) { $('exportX').hidden = true; $('exportWm').hidden = true; $('autoWrap').hidden = true; }   // downloads are blocked inside claude.ai artifacts
+
+  /* ---------- auto export: on the first day of a work month, the finished one is exported (needs this page open) ---------- */
+  var autoOn = true, autoBusy = false, live = {};
+  try { autoOn = localStorage.getItem('sched2.auto') !== '0'; } catch (e) {}
+  $('autoX').checked = autoOn;
+  $('autoX').addEventListener('change', function () {
+    autoOn = $('autoX').checked;
+    try { localStorage.setItem('sched2.auto', autoOn ? '1' : '0'); } catch (e) {}
+    if (autoOn) checkAuto();
+  });
+  function checkAuto() {
+    if (!autoOn || autoBusy || window.claude || window.__schedLocal || editing) return;   // the offline preview file never auto-downloads
+    if (!(live.cells && live.rowNotes && live.meta)) return;     // wait for the real data, so an empty month is never exported
+    var prev = wmOf(localToday()).idx - 1;
+    var last = meta.autoExp && typeof meta.autoExp.idx === 'number' ? meta.autoExp.idx : null;   // shared by every computer: the first one to open the page in a new work month does the export
+    if (last !== null && last >= prev) return;
+    autoBusy = true;
+    downloadMonth(prev, true).then(function () {
+      meta.autoExp = { idx: prev, at: iso(localToday()) };
+      backend.put('meta', 'autoExp', meta.autoExp).catch(failToast);
+    }).catch(function (err) { toast('自動匯出失敗：' + ((err && err.message) || '請稍後再試'), 7000); })
+      .then(function () { autoBusy = false; });
+  }
+  setInterval(function () {                                      // crosses midnight → new day, maybe a new work month
+    var n = localToday();
+    if (n !== todayDn && !editing) { todayDn = n; render(); }
+    checkAuto();
+  }, 30000);
 
   /* ---------- storage ---------- */
   function dbBackend(db) {
@@ -1107,7 +1920,10 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     return function (o, cached) {
       if (which === 'cells') cellsMap = o; else if (which === 'rowNotes') notes = o; else { meta = o; ROWS = null; }
       if (which === 'cells' && !cached && !window.__schedLocal) setSync('on', '已同步');
+      if (!cached || window.__schedLocal) live[which] = true;
+      if (which === 'meta' || which === 'cells') seedRules();
       if (editing) pending = true; else render();
+      checkAuto();
     };
   }
   function start(db) {
@@ -1135,7 +1951,7 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     }
   }
 
-  render();
+  render(); centerToday(false);
   if (window.claude && window.claude.use) window.claude.use('db').then(start, function () { start(null); });
   else start(null);
 })();
