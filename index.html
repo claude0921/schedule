@@ -331,6 +331,11 @@ td.flash { animation: flash 1.6s ease-out; }
 .mgrset #mgrName { width: 160px; }
 details.wm { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px; }
 details.wm summary { cursor: pointer; font-weight: 500; }
+details.fold { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px; }
+details.fold summary { cursor: pointer; font-weight: 500; }
+details.fold[open] summary { margin-bottom: 6px; }
+details.fold .foot-h { border-top: 1px solid var(--line); margin: 0 -14px; }
+details.fold .foot-txt { margin: 0 -14px -8px; }
 .wm-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; margin-top: 10px; }
 @media (max-width: 760px) { .wm-body { grid-template-columns: minmax(0, 1fr); } }
 .wm table { table-layout: auto; width: 100%; }
@@ -389,11 +394,6 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
   </div>
 
-  <section class="foot" aria-label="備註">
-    <div class="foot-h"><span>※ 備註</span><span>雙擊或點「編輯」修改</span></div>
-    <div class="foot-txt" id="footTxt" data-k="foot"></div>
-  </section>
-
   <section class="mgrset" aria-label="重要會議設定">
     <b>重要會議設定</b>
     <input type="text" id="mgrName" maxlength="20" aria-label="會議名稱">
@@ -402,6 +402,12 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     <input type="date" id="mgrE" aria-label="結束日">
     <span class="sub">「重要會議倒數」那一列依這三個欄位計算</span>
   </section>
+
+  <details class="fold" id="footBox" open>
+    <summary>※ 備註</summary>
+    <div class="foot-h"><span></span><span>雙擊或點「編輯」修改</span></div>
+    <div class="foot-txt" id="footTxt" data-k="foot"></div>
+  </details>
 
   <details class="wm" id="wmBox">
     <summary>工作月對照表</summary>
@@ -745,6 +751,11 @@ details.wm summary { cursor: pointer; font-weight: 500; }
     f.appendChild(document.createTextNode(textOf({ k: 'foot', c: -2 })));
     var b = h('button', 'ed', '編輯'); b.type = 'button'; b.dataset.act = 'foot'; f.appendChild(b);
   }
+  (function () {                                                       // remember whether the 備註 box was folded (per viewer)
+    var fb = $('footBox');
+    try { if (localStorage.getItem('sched2.footOpen') === '0') fb.open = false; } catch (e) {}
+    fb.addEventListener('toggle', function () { try { localStorage.setItem('sched2.footOpen', fb.open ? '1' : '0'); } catch (e) {} });
+  })();
   function mk(tag, cls, k, c) { var el = document.createElement(tag); el.className = cls; el.dataset.k = k; el.dataset.c = String(c); return el; }
 
   /* one week (7 days) fills the visible width */
