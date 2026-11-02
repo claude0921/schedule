@@ -60,7 +60,7 @@ html { zoom: .8; }   /* default view size = the browser at 80% */
   --accent: #1d6b48;
   --accent-ink: #ffffff;
   --star: #e09500;
-  --star-bg: #fff4d6;
+  --star-bg: #fff4d6; --star-today: #ffd98a;
   --today: #fff8dc;
   --today-line: #e6b800;
   --wk: #f8f9fa;
@@ -123,7 +123,7 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; flex: 1; }
 .chip-s { background: var(--star-bg); border: 1px solid var(--star); border-radius: 999px; padding: 2px 12px; font-size: 13px; max-width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chip-s b { font-weight: 700; margin-right: 6px; }
-.chip-s.today-c { background: var(--star); color: #1c1400; }
+.chip-s.today-c { background: var(--star-today, var(--star)); color: #1c1400; }
 .chip-s:hover { filter: brightness(.96); }
 .chip-s { display: flex; align-items: flex-start; gap: 6px; padding: 2px 12px 2px 8px; }
 .cks, .cgo { border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-align: left; }
