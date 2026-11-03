@@ -1274,10 +1274,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function startColResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
-    czs = { x: ev.clientX, w: CW, el: ev.currentTarget }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
+    var th0 = ev.currentTarget.closest('th');
+    czs = { x: ev.clientX, w: CW, el: ev.currentTarget, i: th0 ? Number(th0.dataset.c) || 0 : 0 }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
     document.addEventListener('pointermove', moveColResize); document.addEventListener('pointerup', endColResize); document.addEventListener('pointercancel', endColResize);
   }
-  function moveColResize(ev) { if (czs) applyCW(Math.max(span === 28 ? 24 : 70, Math.min(600, Math.round(czs.w + (ev.clientX - czs.x) / UZ)))); }
+  function moveColResize(ev) {
+    if (!czs) return;
+    var old = CW;
+    applyCW(Math.max(span === 28 ? 24 : 70, Math.min(600, Math.round(czs.w + (ev.clientX - czs.x) / UZ))));
+    $('sheet').scrollLeft += czs.i * (CW - old);   // every column to the left grows too: scroll by that much so the left edge of the dragged column stays put and its right edge follows the mouse
+  }
   function endColResize() {
     if (!czs) return;
     czs.el.classList.remove('on'); czs = null; document.body.style.userSelect = '';
