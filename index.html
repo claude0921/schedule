@@ -623,7 +623,17 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function isRR(k) { var c = meta.layout && meta.layout.custom && meta.layout.custom[k]; return k === 'routine' || k === 'field' || !!(c && c.rep); }   // rows driven by repeat rules
   function rowOfId(id) { var k = id.slice(11); return k && id.charAt(10) === '_' && isRR(k) ? k : ''; }
-  function itemsOf(id) { var rk = rowOfId(id); return rk ? routineView(id, rk) : storedItems(id); }
+  /* The 子項目／備註 column is one more cell per row, stored like a date cell under a fixed date (c = -1). Old free-text notes show as one item per line until the cell is first edited. */
+  var NOTE_ISO = '2000-01-01', NOTECOL = null;
+  function noteCol() { return NOTECOL || (NOTECOL = { dn: isoToDn(NOTE_ISO), i: -1 }); }
+  function colAt(c) { return c === -1 ? noteCol() : cols[c]; }
+  function isNoteId(id) { return id.slice(0, 10) === NOTE_ISO; }
+  function noteItems(id) {
+    if (cellsMap[id]) return storedItems(id);
+    var k = id.slice(11), t = (notes[k] && notes[k].text) || '';
+    return t.split('\n').filter(function (ln) { return ln.trim(); }).map(function (ln) { return { t: ln.trim(), s: 0, d: 0 }; });
+  }
+  function itemsOf(id) { if (isNoteId(id)) return noteItems(id); var rk = rowOfId(id); return rk ? routineView(id, rk) : storedItems(id); }
 
   /* ---------- repeating items (例行公事 row) ----------
      A rule {id, t, st, start:'YYYY-MM-DD', f:'day'|'week'|'wm', n, wd:[0-6], wm:[1-28], end:{k:'never'|'on'|'count', on, c}} lives in meta.rules.list.
@@ -681,7 +691,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (s.k === 'foot') return (meta.footer && meta.footer.text) || '';
     var def = rowDef(s.k);
     if (s.c === -2) return def.label || '';
-    if (s.c === -1) return (notes[s.k] && notes[s.k].text) || '';
+    if (s.c === -1) return cellText(itemsOf(cellKey(noteCol(), s.k)));
     var col = cols[s.c];
     if (isCalc(def)) return s.k === 'field' ? fieldInfo(col.w).txt : s.k === 'mgr' ? mgrInfo(col.dn).txt : routineInfo(col.w, col.wd).txt;
     return cellText(itemsOf(cellKey(col, s.k)));
@@ -745,18 +755,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     del.title = def.custom ? '刪除這個自己新增的工作項目' : '刪除這一列（下方會留下「已刪除」標籤，可以還原）'; tools.appendChild(del);
     td.appendChild(tools);
   }
-  function paintNote(td, k) {
-    td.textContent = '';
-    var box = h('div', 'note');
-    textOf({ k: k, c: -1 }).split('\n').forEach(function (ln) {         // one bullet per line (display only; lines that already start with a marker or number are left alone)
-      if (!ln.trim()) { box.appendChild(h('div', 'nl gap', ' ')); return; }
-      var row = h('div', 'nl');
-      if (!/^\s*([•・●◦▪■□\-–—*＊※★☆▶►]|[(（]?\d+[)）.、．]|[一二三四五六七八九十]+[、.．])/.test(ln)) row.appendChild(h('span', 'nb', '•'));
-      row.appendChild(h('span', 'nt2', ln)); box.appendChild(row);
-    });
-    td.appendChild(box);
-    var b = h('button', 'ed', '編輯'); b.type = 'button'; b.dataset.act = 'note'; b.title = '修改這一格的子項目／備註'; td.appendChild(b);
-  }
+  function paintNote(td, k) { paintCell(td, noteCol(), k); }   // 子項目／備註 works like any other cell: one item per bullet
   function paintFoot() {
     var f = $('footTxt'); f.textContent = '';
     f.appendChild(document.createTextNode(textOf({ k: 'foot', c: -2 })));
@@ -812,7 +811,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     visibleRows().forEach(function (def, ri, all) {
       var tr = h('tr', isCalc(def) ? 'calc' : '');
       var ta = mk('td', 'a', def.k, -2); paintLabel(ta, def, ri, all.length); tr.appendChild(ta);
-      var tb = mk('td', 'b', def.k, -1); paintNote(tb, def.k); tr.appendChild(tb);
+      var tb = mk('td', 'b c manual', def.k, -1); paintNote(tb, def.k); tr.appendChild(tb);
       cols.forEach(function (col) {
         var cls = 'c ' + (isCalc(def) ? 'calc' : 'manual') + (todayDn === col.dn ? ' today' : '') + (col.wd === 0 || col.wd === 6 ? ' wk' : '') + (col.w.dayno === 1 ? ' mstart' : '') + (HOL[col.dn] ? ' hol' : '');
         var td = mk('td', cls, def.k, col.i);
@@ -996,7 +995,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var have = {}; items.forEach(function (x) { if (x.r) have[x.r] = 1; });
       rulesFor(k).forEach(function (r) { if (!have[r.id] && ruleHits(r, col.dn)) items.push({ t: r.t, s: 0, d: 0, r: r.id, x: 1 }); });
     }
-    if (!items.length) { delete cellsMap[id]; p = backend.del('cells', id); }
+    var legacyNote = isNoteId(id) && notes[k] && notes[k].text;
+    if (!items.length && !legacyNote) { delete cellsMap[id]; p = backend.del('cells', id); }
     else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
     p.catch(failToast);
     if (typeof renderHidden === 'function' && cols.length) renderHidden();
@@ -1033,7 +1033,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       return;
     }
     if (e.kind === 'note') { if (e.s.k === 'foot') paintFoot(); else paintNote(node, e.s.k); }
-    else paintCell(node, cols[e.c], e.k);
+    else paintCell(node, colAt(e.c), e.k);
     renderStars();
   }
   function finishEdit(save) {
@@ -1043,7 +1043,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (e.kind === 'note') saveNote(e.s, e.ta.value.replace(/\s+$/, ''));
       else if (e.kind === 'pad') saveNote({ k: 'pad-' + e.k, c: -1 }, e.ta.value.replace(/\s+$/, ''));
       else if (e.kind === 'inote') {
-        var c2 = cols[e.c], its = itemsNow(c2, e.k), nt = e.ta.value.trim();
+        var c2 = colAt(e.c), its = itemsNow(c2, e.k), nt = e.ta.value.trim();
         if (its[e.i]) { if (nt) its[e.i].n = nt; else delete its[e.i].n; saveItems(c2, e.k, its); }
       }
       else if (e.kind === 'label') {
@@ -1058,7 +1058,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         }
       }
       else {
-        var col = cols[e.c], text = e.inp.value.trim(), items = itemsNow(col, e.k);
+        var col = colAt(e.c), text = e.inp.value.trim(), items = itemsNow(col, e.k);
         if (e.kind === 'add') { if (text) items.push({ t: text, s: e.star ? 1 : 0 }); }
         else if (e.kind === 'item') { if (text) { if (items[e.i].t !== text && items[e.i].r) items[e.i].e = 1; items[e.i].t = text; } else items.splice(e.i, 1); }
         saveItems(col, e.k, items);
@@ -1071,7 +1071,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   function startAdd(td, k, c) {
     if (editing) commit();
-    if (isRR(k)) { openRule(cols[c].dn, null, k); return; }          // 例行公事 asks for the repeat settings first
+    if (c !== -1 && isRR(k)) { openRule(cols[c].dn, null, k); return; }          // 例行公事 asks for the repeat settings first
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     td.classList.add('editing');
     var add = td.querySelector('.add'); if (add) add.remove();
@@ -1101,7 +1101,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (editing) commit();
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     var row = td.querySelector('.it[data-i="' + i + '"]'); if (!row) return;
-    var items = itemsNow(cols[c], k), cur = (items[i] && items[i].n) || '';
+    var items = itemsNow(colAt(c), k), cur = (items[i] && items[i].n) || '';
     var box = h('div', 'noteed'), ta = document.createElement('textarea');
     ta.value = cur; ta.rows = 3; ta.maxLength = 1000; ta.placeholder = '這項工作的備註（有備註的工作會加底線）'; ta.setAttribute('aria-label', '工作備註');
     var r = h('div', 'crow'), ok = h('button', 'btn primary', '儲存'), no = h('button', 'btn', '取消'); ok.type = no.type = 'button';
@@ -1189,9 +1189,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (editing && editing.node === td) { commit(); return; }
     var k = td.dataset.k, c = Number(td.dataset.c), act = btn.dataset.act;
     if (act === 'add') return startAdd(td, k, c);
-    if (act === 'note') return startNote({ k: k, c: -1 });
     var row = btn.closest('.it'); if (!row) return;
-    var i = Number(row.dataset.i), col = cols[c];
+    var i = Number(row.dataset.i), col = colAt(c);
     if (act === 'rule') { var it0 = itemsNow(col, k)[i]; if (it0 && it0.r) openRule(col.dn, it0.r); return; }
     if (act === 'edit') return startItem(td, k, c, i);
     if (act === 'inote') return startItemNote(td, k, c, i);
@@ -1203,10 +1202,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (armed === key) { armed = null; clearTimeout(armTimer); items.splice(i, 1); saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
       else { armed = key; clearTimeout(armTimer); paintCell(td, col, k); armTimer = setTimeout(function () { armed = null; if (!editing) paintCell(td, col, k); }, 3000); }
     }
-  });
-  $('tbl').addEventListener('dblclick', function (ev) {
-    if (editing) return;
-    var tb = ev.target.closest('td.b'); if (tb) startNote({ k: tb.dataset.k, c: -1 });
   });
   $('footTxt').addEventListener('click', function (ev) { if (ev.target.dataset && ev.target.dataset.act === 'foot') startNote({ k: 'foot', c: -2 }); });
   $('footTxt').addEventListener('dblclick', function (ev) { if (!editing && ev.target.tagName !== 'TEXTAREA') startNote({ k: 'foot', c: -2 }); });
@@ -1630,7 +1625,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (d.ghost) d.ghost.remove();
     if (d.row) d.row.classList.remove('dragging');
     if (!d.on || cancelIt || !d.t) return;
-    var dstC = Number(d.t.td.dataset.c), dstK = d.t.td.dataset.k, srcCol = cols[d.c], dstCol = cols[dstC];
+    var dstC = Number(d.t.td.dataset.c), dstK = d.t.td.dataset.k, srcCol = colAt(d.c), dstCol = colAt(dstC);
     var src = itemsNow(srcCol, d.k), item = src.splice(d.i, 1)[0];
     if (!item) return;
     if (item.r && (dstC !== d.c || dstK !== d.k)) { delete item.r; delete item.e; }   // moved elsewhere: becomes an ordinary item, the repeat skips this day
@@ -1644,7 +1639,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }
     [[d.k, d.c], [dstK, dstC]].forEach(function (p) {
       var td = $('tbl').querySelector('td.c[data-k="' + p[0] + '"][data-c="' + p[1] + '"]');
-      if (td) paintCell(td, cols[p[1]], p[0]);
+      if (td) paintCell(td, colAt(p[1]), p[0]);
     });
     renderStars();
   }
@@ -1852,7 +1847,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       RW.forEach(function (def, idx) {
         var r = 5 + idx; keyAt[r] = def.k;
         ws.getCell('A' + r).value = def.label;
-        var note = (notes[def.k] && notes[def.k].text) || '';
+        var note = textOf({ k: def.k, c: -1 });
         if (note) ws.getCell('B' + r).value = note;
         cols.forEach(function (col) {
           var L = col.L, a = L + r, s = { k: def.k, c: col.i }, txt = textOf(s);
@@ -1898,7 +1893,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var ORIGH = { field: 86.4, temp: 17.4, bud: 31.2, health: 202.8, award: 156.0, sup: 300 }, LINE = 16.5;
       RW.forEach(function (def, idx) {
         var need = estLines(def.label, 19) * LINE + 4;
-        need = Math.max(need, estLines((notes[def.k] && notes[def.k].text) || '', 62) * LINE + 4);
+        need = Math.max(need, estLines(textOf({ k: def.k, c: -1 }), 62) * LINE + 4);
         cols.forEach(function (col) { need = Math.max(need, estLines(textOf({ k: def.k, c: col.i }), 10) * LINE + 4); });
         ws.getRow(5 + idx).height = Math.max(ORIGH[def.k] || 20, need);
       });
