@@ -280,6 +280,9 @@ body.dragmode * { cursor: grabbing !important; }
 .chip.plain { background: transparent; color: var(--ink2); font-weight: 500; padding: 0; }
 td.b { position: relative; }
 .note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.nl { display: flex; gap: 4px; align-items: flex-start; }
+.nl .nb { flex: none; width: 12px; text-align: center; color: var(--ink2); }
+.nl .nt2 { flex: 1; min-width: 0; }
 .ed { position: absolute; top: 4px; right: 4px; opacity: 0; font-size: 12px; background: var(--card); border: 1px solid var(--line2); border-radius: 6px; padding: 1px 8px; }
 td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 
@@ -744,7 +747,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function paintNote(td, k) {
     td.textContent = '';
-    td.appendChild(h('div', 'note', textOf({ k: k, c: -1 })));
+    var box = h('div', 'note');
+    textOf({ k: k, c: -1 }).split('\n').forEach(function (ln) {         // one bullet per line (display only; lines that already start with a marker or number are left alone)
+      if (!ln.trim()) { box.appendChild(h('div', 'nl gap', ' ')); return; }
+      var row = h('div', 'nl');
+      if (!/^\s*([•・●◦▪■□\-–—*＊※★☆▶►]|[(（]?\d+[)）.、．]|[一二三四五六七八九十]+[、.．])/.test(ln)) row.appendChild(h('span', 'nb', '•'));
+      row.appendChild(h('span', 'nt2', ln)); box.appendChild(row);
+    });
+    td.appendChild(box);
     var b = h('button', 'ed', '編輯'); b.type = 'button'; b.dataset.act = 'note'; b.title = '修改這一格的子項目／備註'; td.appendChild(b);
   }
   function paintFoot() {
