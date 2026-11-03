@@ -877,8 +877,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var curIdx = wmOf(todayDn).idx;
       cols.forEach(function (col) {
         if (col.w.idx !== curIdx) return;
-        if (isCalc(def)) { if (textOf({ k: def.k, c: col.i })) n++; }
-        else n += itemsOf(cellKey(col, def.k)).filter(function (x) { return !x.d; }).length;
+        if (isCalc(def)) return;                                     // a countdown is not a to-do: nothing to count
+        n += itemsOf(cellKey(col, def.k)).filter(function (x) { return !x.d; }).length;
       });
       var b = h('button', 'chip-h' + (n ? ' has' : ''), flat(def.label) + (n ? '｜本月 ' + n + ' 項未完成' : ''));
       b.type = 'button'; b.dataset.k = def.k;
