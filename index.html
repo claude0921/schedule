@@ -361,6 +361,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="prev">‹ 上一工作月</button>
       <button class="btn primary" id="goToday">回到今天</button>
       <button class="btn" id="next">下一工作月 ›</button>
+      <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶ 復原</button>
       <button class="btn" id="spanBtn" title="切換顯示一週／整個工作月">工作月視角</button>
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
       <button class="btn" id="resetRH" title="所有列高還原成預設">預設列高</button>
@@ -949,10 +950,39 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   /* ---------- saving ---------- */
   function failToast(err) { toast('未存到雲端：' + ((err && err.message) || '請稍後再試'), 7000); }
+  /* ---------- undo (item changes only): every save remembers what the cell held before; saves within 0.5 s count as one action ---------- */
+  var undoStack = [], undoing = false;
+  function pushUndo(id) {
+    var now = Date.now(), last = undoStack[undoStack.length - 1], prev = cellsMap[id] ? JSON.parse(JSON.stringify(cellsMap[id])) : null;
+    if (last && now - last.t < 500) { if (!last.list.some(function (x) { return x.id === id; })) last.list.push({ id: id, prev: prev }); last.t = now; }
+    else { undoStack.push({ t: now, list: [{ id: id, prev: prev }] }); if (undoStack.length > 50) undoStack.shift(); }
+    syncUndoBtn();
+  }
+  function syncUndoBtn() { var b = $('undoBtn'); if (b) b.disabled = !undoStack.length; }
+  function undoLast() {
+    if (editing) cancel();
+    var g = undoStack.pop(); syncUndoBtn();
+    if (!g) { toast('沒有可以復原的動作'); return; }
+    undoing = true;
+    try {
+      g.list.slice().reverse().forEach(function (x) {
+        if (x.prev) { cellsMap[x.id] = x.prev; backend.put('cells', x.id, x.prev).catch(failToast); }
+        else { delete cellsMap[x.id]; backend.del('cells', x.id).catch(failToast); }
+      });
+    } finally { undoing = false; }
+    render(); toast('已復原上一個動作');
+  }
+  $('undoBtn').addEventListener('click', undoLast);
+  document.addEventListener('keydown', function (ev) {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.shiftKey || ev.altKey || ev.key.toLowerCase() !== 'z') return;
+    var t = ev.target && ev.target.tagName; if (t === 'INPUT' || t === 'TEXTAREA' || (ev.target && ev.target.isContentEditable)) return;   // inside a text box Ctrl+Z keeps its normal meaning
+    ev.preventDefault(); undoLast();
+  });
   function saveItems(col, k, items) {
     var id = cellKey(col, k), p;
     items = items.filter(function (x) { return x && x.t; });
-    if (isRR(k)) {                                                    // an occurrence that is no longer in the list was deleted for this day only
+    if (!undoing) pushUndo(id);
+    if (isRR(k)) {                                                   // an occurrence that is no longer in the list was deleted for this day only
       var have = {}; items.forEach(function (x) { if (x.r) have[x.r] = 1; });
       rulesFor(k).forEach(function (r) { if (!have[r.id] && ruleHits(r, col.dn)) items.push({ t: r.t, s: 0, d: 0, r: r.id, x: 1 }); });
     }
@@ -974,7 +1004,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
   function toggleDone(dn, k, i) {
     var col = { dn: dn }, items = itemsNow(col, k); if (!items[i]) return;
-    items[i].d = items[i].d ? 0 : 1; saveItems(col, k, items);
+    items[i].d = items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0;   // finished → drops off the 置頂 list
+    saveItems(col, k, items);
     cols.forEach(function (c) {
       if (c.dn !== dn) return;
       var td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c.i + '"]'); if (td) paintCell(td, c, k);
@@ -1155,7 +1186,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (act === 'edit') return startItem(td, k, c, i);
     if (act === 'inote') return startItemNote(td, k, c, i);
     var items = itemsNow(col, k);
-    if (act === 'done') { items[i].d = items[i].d ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
+    if (act === 'done') { items[i].d = items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0; saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
     else if (act === 'star') { items[i].s = items[i].s ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
     else if (act === 'del') {
       var key = cellKey(col, k) + '#' + i;
