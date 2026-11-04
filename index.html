@@ -921,6 +921,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
           var txt = textOf({ k: def.k, c: col.i });
           td.title = calcWhy(def.k, col);
           if (def.k === 'mgr') mgrInfos(col.dn).forEach(function (o) { var ln = o.txt.split('\n'), ch = h('span', 'chip mgr mc-' + (o.m.color || 'red'), ln[0].charAt(0) + '，' + ln[1]); ch.appendChild(h('span', 'full', o.txt)); td.classList.add('mg'); ch.dataset.act = 'mgrset'; ch.dataset.mid = o.m.id; ch.title = '點一下修改「' + o.m.name + '」'; td.appendChild(ch); });
+          if (def.k === 'mgr') { var mp = h('button', 'add', '＋'); mp.type = 'button'; mp.dataset.act = 'mgrset'; mp.dataset.dn = String(col.dn); mp.title = '新增倒數會議'; mp.setAttribute('aria-label', mp.title); td.appendChild(mp); }
           else if (txt) { var chip = h('span', 'chip' + (def.k === 'routine' ? ' plain' : ''), txt); td.appendChild(chip); }
         } else paintCell(td, col, def.k);
         tr.appendChild(td);
@@ -1363,7 +1364,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!btn || !td) return;
     if (editing && editing.node === td) { commit(); return; }
     var k = td.dataset.k, c = Number(td.dataset.c), act = btn.dataset.act;
-    if (act === 'mgrset') return openMgr(btn.dataset.mid);
+    if (act === 'mgrset') return openMgr(btn.dataset.mid, btn.dataset.dn);
     if (act === 'add') return startAdd(td, k, c);
     var row = btn.closest('.it'); if (!row) return;
     var i = Number(row.dataset.i), col = colAt(c);
@@ -1905,11 +1906,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var box = $('mgrColors'); box.textContent = '';
     MC.forEach(function (c) { var b = h('button', 'mc-' + c + (c === mgrColor ? ' on' : ''), c === mgrColor ? '✓' : ''); b.type = 'button'; b.title = MCN[c]; b.addEventListener('click', function () { mgrColor = c; paintMgrColors(); }); box.appendChild(b); });
   }
-  function openMgr(id) {                                               // id: edit that meeting; none: add a new one
+  function openMgr(id, dn) {                                              // id: edit that meeting; none: add a new one
     if (editing) commit();
     var m = id ? mgrById(id) : null; mgrEdit = m ? m.id : null;
     $('mgrTitle').textContent = m ? '編輯倒數會議' : '新增倒數會議';
-    $('mgrName').value = m ? m.name : ''; $('mgrS').value = m ? m.start : ''; $('mgrE').value = m ? m.end : '';
+    $('mgrName').value = m ? m.name : ''; var day = !m && dn ? iso(Number(dn)) : ''; $('mgrS').value = m ? m.start : day; $('mgrE').value = m ? m.end : day;
     mgrColor = m ? (m.color || 'red') : MC[mgrList().length % MC.length];
     $('mgrOne').checked = !!m && m.start === m.end; syncOne();
     $('mgrDel').style.display = m ? '' : 'none';
