@@ -328,7 +328,7 @@ body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .a
 td.c.manual { overflow: visible; position: relative; }   /* so the floating tool buttons above an item are not cut off by the cell */
 td.c.manual:hover, td.c.manual.editing { z-index: 5; }
 .itb { display: none; position: absolute; left: 100%; top: 0; z-index: 9; align-items: center; gap: 2px; padding: 1px 4px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; }
-.it:hover .itb { display: flex; }
+.it:hover .itb, .it.hot .itb { display: flex; }
 .it.flip .itb { left: auto; right: 100%; }   /* no room on the right (last visible column): open to the left instead */
 .itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
 @media (hover: none) { .it { flex-wrap: wrap; } .itb { display: flex; position: static; flex-basis: 100%; box-shadow: none; border: 0; padding: 0; background: transparent; } .bul { display: none; } }
@@ -1331,15 +1331,20 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   $('hiddenChips').addEventListener('click', function (ev) {
     var b = ev.target.closest('.chip-h'); if (b) rowAction('rowshow', b.dataset.k);
   });
-  $('tbl').addEventListener('mouseover', function (ev) {   // tool buttons sit to the right of the item; flip them to the left when the sheet edge is in the way
-    var it = ev.target.closest && ev.target.closest('.it'); if (!it) return;
+  $('tbl').addEventListener('mouseover', function (ev) {   // tool buttons sit to the right of the item; flip them to the left only when the sheet edge is in the way
+    var hot = $('tbl').querySelector('.it.hot'), it = ev.target.closest && ev.target.closest('.it');
+    if (!it) {                                                     // over the cell's own ＋ button: keep the tools of the item just left, so the mouse can still get across to them
+      if (hot && !(hot.closest('td') && hot.closest('td').contains(ev.target))) hot.classList.remove('hot');
+      return;
+    }
+    if (hot && hot !== it) hot.classList.remove('hot');
+    it.classList.add('hot');
     var tb = it.querySelector('.itb'); if (!tb) return;
     it.classList.remove('flip');                                   // decide again every time: the sheet may have been scrolled since the last hover
     var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect();
-    var add = it.closest('td') && it.closest('td').querySelector(':scope > .add'), ar = add ? add.getBoundingClientRect() : null, ir = it.getBoundingClientRect();
-    var blocked = ar && ar.width && ar.left < ir.right && ar.right > ir.left && ar.top < ir.bottom && ar.bottom > ir.top;   // the "＋" button sits over the item's right end: the mouse could not get across to the tools
-    if (r.width && (r.right > sr.right || blocked)) it.classList.add('flip');
+    if (r.width && r.right > sr.right) it.classList.add('flip');
   });
+  $('tbl').addEventListener('mouseleave', function () { var hot = $('tbl').querySelector('.it.hot'); if (hot) hot.classList.remove('hot'); });
   $('starChips').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
