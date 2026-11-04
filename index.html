@@ -304,10 +304,17 @@ td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display
 .rt:disabled { opacity: .35; cursor: default; }
 .rtdel.armed { background: var(--red); border-color: var(--red); color: #fff; }
 .hl { color: var(--ink2); }
+.chip-w { display: inline-flex; gap: 4px; align-items: center; }
+.chip-x { color: var(--red); border-color: var(--red); }
+.chip-x.armed { background: var(--red); color: #fff; }
 .chip-h { background: var(--card); border: 1px dashed var(--line2); border-radius: 999px; padding: 2px 12px; font-size: 13px; color: var(--ink2); }
 .chip-h.has { border-style: solid; border-color: var(--star); background: var(--star-bg); color: var(--ink); }
 .chip-h:hover { border-color: var(--accent); }
 .srow[hidden] { display: none; }
+.hbtn { border: 0; background: transparent; cursor: pointer; font: inherit; font-weight: 700; padding: 3px 0 0; }
+.hbtn:hover { text-decoration: underline; }
+#hiddenChips[hidden], #hiddenRow[hidden] { display: none; }
+.hiddenwrap { display: inline-flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .addrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .addform { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .addform input { background: var(--card); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; min-height: 34px; width: 240px; max-width: 100%; }
@@ -464,7 +471,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   <section class="tstrip" aria-label="今天與置頂工作">
     <div class="tline"><span class="tdate" id="todayDate"></span><span class="sub" id="nextLine"></span></div>
     <div class="srow"><span class="slabel">★ 置頂工作</span><div class="chips" id="starChips"></div></div>
-    <div class="srow" id="hiddenRow" hidden><span class="slabel hl">▫ 已隱藏</span><div class="chips" id="hiddenChips"></div></div>
   </section>
 
   <div class="midbar">
@@ -498,6 +504,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   <div class="mcal" id="mcal" aria-label="工作月月曆" hidden></div>
 
   <div class="addrow">
+    <span class="hiddenwrap" id="hiddenRow" hidden><button type="button" class="slabel hl hbtn" id="hiddenToggle" aria-expanded="false">▫ 隱藏工作項目</button><span class="chips" id="hiddenChips" hidden></span></span>
     <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
   </div>
 
@@ -681,7 +688,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     Object.keys(custom).forEach(function (k) { if (!seen[k]) { out.push(map[k]); seen[k] = 1; } });
     ROWS_ALL = out;
     var gone = lay.removed || {};                                    // built-in rows the user deleted (kept here so they can be restored in place)
-    return (ROWS = out.filter(function (d) { return !gone[d.k]; }));
+    var purged = lay.purged || {};                                   // deleted for good: gone from the board and from the 「已刪除」 list
+    return (ROWS = out.filter(function (d) { return !gone[d.k] && !purged[d.k]; }));
   }
   var ROWS_ALL = null;
   function removedSet() { return (meta.layout && meta.layout.removed) || {}; }
@@ -1012,14 +1020,37 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   });
   function renderRemoved() {
     var rs = removedSet(), box = $('removedChips'); box.textContent = '';
-    var keys = (rows(), ROWS_ALL).filter(function (d) { return rs[d.k]; });
+    var pg = (meta.layout && meta.layout.purged) || {};
+    var keys = (rows(), ROWS_ALL).filter(function (d) { return rs[d.k] && !pg[d.k]; });
     $('removedBox').hidden = !keys.length;
     keys.forEach(function (def) {
       var b = h('button', 'chip-h', flat(def.label) + '　↺ 還原'); b.type = 'button'; b.dataset.k = def.k;
-      b.title = '把「' + flat(def.label) + '」放回原本的位置（以前輸入的內容都還在）'; box.appendChild(b);
+      b.title = '把「' + flat(def.label) + '」放回原本的位置（以前輸入的內容都還在）';
+      var armedP = purgeArmed === def.k, x = h('button', 'chip-h chip-x' + (armedP ? ' armed' : ''), armedP ? '確定永久刪除？' : '永久刪除'); x.type = 'button'; x.dataset.k = def.k; x.dataset.act = 'purge';
+      x.title = '連同這一列以前輸入的所有內容一起刪掉，不能還原';
+      var w = h('span', 'chip-w'); w.appendChild(b); w.appendChild(x); box.appendChild(w);
     });
   }
-  $('removedChips').addEventListener('click', function (ev) { var b = ev.target.closest('.chip-h'); if (b) rowAction('rowrestore', b.dataset.k); });
+  var purgeArmed = null, purgeTimer = null;
+  function purgeRow(k) {                                               // delete a 「已刪除」 row for good, together with everything typed into it
+    var lay = layoutNow(); delete lay.removed[k]; delete lay.hidden[k]; lay.purged = {};
+    var ps = (meta.layout && meta.layout.purged) || {}; Object.keys(ps).forEach(function (x) { if (ps[x]) lay.purged[x] = 1; }); lay.purged[k] = 1;
+    Object.keys(cellsMap).forEach(function (id) { if (id.charAt(10) === '_' && id.slice(11) === k) { delete cellsMap[id]; backend.del('cells', id).catch(failToast); } });
+    [k, 'pad-' + k].forEach(function (id) { if (notes[id]) { delete notes[id]; backend.del('rowNotes', id).catch(failToast); } });
+    var rl = rulesList(), keep = rl.filter(function (r) { return (r.row || 'routine') !== k; });
+    if (keep.length !== rl.length) writeRules(keep);
+    saveLayout(lay); render(); renderStars();
+    toast('已永久刪除這個工作項目和裡面的內容', 5000);
+  }
+  $('removedChips').addEventListener('click', function (ev) {
+    var x = ev.target.closest('.chip-x');
+    if (x) {
+      var k = x.dataset.k;
+      if (purgeArmed !== k) { purgeArmed = k; clearTimeout(purgeTimer); purgeTimer = setTimeout(function () { purgeArmed = null; renderRemoved(); }, 3000); renderRemoved(); return; }
+      purgeArmed = null; clearTimeout(purgeTimer); purgeRow(k); return;
+    }
+    var b = ev.target.closest('.chip-h'); if (b) rowAction('rowrestore', b.dataset.k);
+  });
 
   function paintTitle() {
     var w = wmOf(ANCHOR + viewIdx * LEN), t = $('wmTitle'); t.textContent = '';
@@ -1048,9 +1079,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
 
   /* tags for work items that are hidden, so they are not forgotten */
+  var hiddenOpen = false;                                                // the hidden-row labels are folded away until 「隱藏工作項目」 is clicked
+  $('hiddenToggle').addEventListener('click', function () { hiddenOpen = !hiddenOpen; renderHidden(); });
   function renderHidden() {
     var hs = hiddenSet(), keys = rows().filter(function (d) { return hs[d.k]; }), box = $('hiddenChips');
     $('hiddenRow').hidden = !keys.length; box.textContent = '';
+    box.hidden = !hiddenOpen; $('hiddenToggle').textContent = '▫ ' + (hiddenOpen ? '顯示工作項目' : '隱藏工作項目'); $('hiddenToggle').setAttribute('aria-expanded', hiddenOpen ? 'true' : 'false');
     keys.forEach(function (def) {
       var n = 0;
       var curIdx = wmOf(todayDn).idx;
@@ -1680,7 +1714,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     r.forEach(function (d) { if (d.custom) { custom[d.k] = { label: d.label }; if (d.rep) custom[d.k].rep = 1; } });
     var hidden = {}, hs = hiddenSet(); Object.keys(hs).forEach(function (k) { if (hs[k]) hidden[k] = 1; });
     var labels = {}, ls = (meta.layout && meta.layout.labels) || {}; Object.keys(ls).forEach(function (k) { if (ls[k]) labels[k] = ls[k]; });
-    return { order: r.map(function (d) { return d.k; }), custom: custom, hidden: hidden, labels: labels, removed: removed };
+    var purged = {}, pgs = (meta.layout && meta.layout.purged) || {}; Object.keys(pgs).forEach(function (k) { if (pgs[k]) purged[k] = 1; });
+    return { order: r.map(function (d) { return d.k; }), custom: custom, hidden: hidden, labels: labels, removed: removed, purged: purged };
   }
   function hiddenSet() { return (meta.layout && meta.layout.hidden) || {}; }
   function visibleRows() { var hs = hiddenSet(); return rows().filter(function (d) { return !hs[d.k]; }); }
