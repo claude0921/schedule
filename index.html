@@ -465,7 +465,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     <button class="btn" id="addRow">＋ 新增主要工作項目</button>
     <span class="addform" id="addForm" hidden>
       <input type="text" id="addName" maxlength="30" placeholder="工作項目名稱，例如：專案 A" aria-label="新工作項目名稱">
-      <label class="rep" title="勾選後，這一列就像「例行公事」「外勤行事曆」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
+      <label class="rep" title="勾選後，這一列就像「例行公事」「大金馬」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
       <button class="btn primary" id="addOk" type="button">加入</button>
       <button class="btn" id="addNo" type="button">取消</button>
       <span class="sub">會加在最後一列，之後可以按住列名稱旁的 ☰ 上下拖曳移動</span>
@@ -647,7 +647,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   /* ---------- rows (r = row number in the original workbook, used by the Excel export) ---------- */
   var BASE = [
     { k: 'mgr', r: 5, label: '重要會議倒數', type: 'meeting' },
-    { k: 'field', r: 6, label: '外勤行事曆', type: 'routine' },   // repeat rules like 例行公事 (starter rules: 每工第 9、12、15、16、23 天)
+    { k: 'field', r: 6, label: '大金馬', type: 'routine' },   // repeat rules like 例行公事 (starter rules: 每工第 9、12、15、16、23 天)
     { k: 'routine', r: 7, label: '例行公事', type: 'routine' },   // the two built-in rules show as a chip; its own items and repeating items are typed in
     { k: 'temp', r: 8, label: '臨時', type: 'manual' },
     { k: 'ot1', r: 9, label: '人加班', type: 'manual' },
@@ -1067,7 +1067,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms) line += (line ? '　' : '') + mc.name + ' 剩' + z2(ms - todayDn) + '天'; });
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
-      if (fi.length) { line += (line ? '　' : '') + '下個外勤：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
+      if (fi.length) { line += (line ? '　' : '') + '大金馬：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
     }
     $('nextLine').textContent = line;
   }
@@ -2273,7 +2273,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (autoOn) checkAuto();
   });
   function checkAuto() {
-    if (!autoOn || autoBusy || window.claude || window.__schedLocal || editing) return;   // the offline preview file never auto-downloads
+    if (!autoOn || autoBusy || window.claude || window.__schedLocal || window.SCHED_READONLY || editing) return;   // the offline preview file never auto-downloads
     if (!(live.cells && live.rowNotes && live.meta)) return;     // wait for the real data, so an empty month is never exported
     var prev = wmOf(localToday()).idx - 1;
     var last = meta.autoExp && typeof meta.autoExp.idx === 'number' ? meta.autoExp.idx : null;   // shared by every computer: the first one to open the page in a new work month does the export
@@ -2317,7 +2317,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     };
   }
   /* Google Apps Script + Google Sheet as the shared store (used when the page is hosted outside claude.ai). */
-  function gasBackend(url) {
+  function gasBackend(url, ro) {                                         // ro: the preview copy: reads the live data again and again, never writes
     var subs = {}, inflight = 0, lastW = 0, timer = null, KEY = 'sched2.key', authed = false, needKey = false, queue = [];
     function getKey() { try { return localStorage.getItem(KEY) || ''; } catch (e) { return ''; } }
     function post(body) {
@@ -2357,7 +2357,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     function applyAll(j) {
       saveCache(j);
       ['cells', 'rowNotes', 'meta'].forEach(function (n) { if (subs[n]) subs[n](j[n] || {}, false); });
-      var d = new Date(); setSync('on', '已同步 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
+      var d = new Date(); setSync('on', (ro ? '已同步正式版 ' : '已同步 ') + pad(d.getHours()) + ':' + pad(d.getMinutes()));
     }
     function pull(force) {
       if (!force && (inflight || editing || Date.now() - lastW < 4000)) return;
@@ -2365,7 +2365,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         authed = true; needKey = false;
         if (queue.length) { return flush().then(function () { lastW = 0; pull(true); }); }
         var empty = !Object.keys(j.cells || {}).length && !Object.keys(j.rowNotes || {}).length && !Object.keys(j.meta || {}).length;
-        if (empty && window.SCHED_SEED) {
+        if (empty && window.SCHED_SEED && !ro) {
           var seed = window.SCHED_SEED, jobs = [];
           Object.keys(seed).forEach(function (n) { Object.keys(seed[n]).forEach(function (id) { jobs.push(post({ op: 'put', name: n, id: id, data: seed[n][id] })); }); });
           Promise.all(jobs).then(function () { applyAll(seed); });
@@ -2373,6 +2373,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       }).catch(function (e) { if (!/密碼/.test(e.message)) setSync('warn', '連不上 Google，稍後自動重試'); });
     }
     function write(op, name, id, data) {
+      if (ro) return Promise.resolve();                                // preview: changes stay on this screen only and are replaced by the next sync
       var job = { op: op, name: name, id: id, data: data };
       if (!authed) {
         queue.push(job);
@@ -2419,7 +2420,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         backend.sub(n, function (o, cached) { if (!cached) clearTimeout(timer); onData(n)(o, cached); }, fail);
       });
     } else if (window.SCHED_API) {
-      backend = gasBackend(window.SCHED_API);
+      backend = gasBackend(window.SCHED_API, !!window.SCHED_READONLY);
       setSync('', '連線 Google…');
       ['cells', 'rowNotes', 'meta'].forEach(function (n) { backend.sub(n, onData(n)); });
     } else {
