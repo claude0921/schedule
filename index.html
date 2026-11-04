@@ -196,7 +196,7 @@ td.c > .chip.plain { margin-bottom: 0; }
 .removed .chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .auto { font-size: 12px; color: var(--ink2); display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 td.c { position: relative; padding-top: 2px; padding-bottom: 2px; }
-td.c > .add { position: absolute; right: 3px; bottom: 1px; margin: 0; background: var(--card); z-index: 2; }   /* never takes up row height, like Excel */
+td.a > .add, td.c > .add { position: absolute; right: 3px; bottom: 1px; margin: 0; background: var(--card); z-index: 2; }   /* never takes up row height, like Excel */
 td.a { vertical-align: top; }
 /* the 子項目／備註 column is pinned next to the 主項目 column while it is shown */
 #tbl th.b, #tbl td.b { position: sticky; left: 150px; z-index: 4; border-right: 1px solid var(--line2); background-clip: padding-box; }
@@ -341,7 +341,7 @@ td.c.manual:hover, td.c.manual.editing { z-index: 5; }
 .it:hover .x, .x.armed { opacity: 1; }
 .x.armed { color: #fff; background: var(--red); font-size: 12px; padding: 1px 6px; }
 .add { display: block; margin-top: 2px; border: 1px dashed var(--line2); background: transparent; color: var(--ink2); border-radius: 6px; font-size: 12px; line-height: 1.3; padding: 0 8px; opacity: 0; }
-td.c:hover .add, td.c.sel .add, td.c:focus-within .add { opacity: 1; }
+td.c:hover .add, td.c.sel .add, td.c:focus-within .add, td.a:hover > .add { opacity: 1; }
 .add:hover { border-color: var(--accent); color: var(--accent); }
 @media (hover: none) { .add, .x, .ed { opacity: 1; } .x { opacity: .5; } }
 .composer { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
@@ -799,6 +799,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var del = h('button', 'rt rtdel' + (rowArmed === def.k ? ' armed' : ''), rowArmed === def.k ? '確定刪除？' : '刪除'); del.type = 'button'; del.dataset.act = 'rowdel';
     del.title = def.custom ? '刪除這個自己新增的工作項目' : '刪除這一列（下方會留下「已刪除」標籤，可以還原）'; tools.appendChild(del);
     td.appendChild(tools);
+    if (def.k === 'mgr') { var mb = h('button', 'add', '＋'); mb.type = 'button'; mb.dataset.act = 'mgrset'; mb.title = '設定重要會議（名稱、開始日、結束日）'; mb.setAttribute('aria-label', mb.title); td.appendChild(mb); }   // hover the row name: a ＋ at its bottom right opens the meeting settings
   }
   function paintNote(td, k) { paintCell(td, noteCol(), k); }   // 子項目／備註 works like any other cell: one item per bullet
   function paintFoot() {
@@ -1586,6 +1587,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function saveLayout(lay) { meta.layout = lay; ROWS = null; backend.put('meta', 'layout', lay).catch(failToast); }
   function rowAction(act, k) {
     if (editing) commit();
+    if (act === 'mgrset') { openMgr(); return; }
     if (act === 'rowrename') { startLabel(k); return; }
     if (act === 'rowpad') { openPad(k); return; }
     if (act === 'rowrules') { listRow = k; renderRuleList(); $('rules').hidden = false; return; }
