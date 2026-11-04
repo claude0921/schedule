@@ -1405,12 +1405,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
     if (ev.target.closest('.cgo')) jumpTo(Number(w.dataset.dn), w.dataset.k);
   });
-  /* ---------- wheel scrolls up/down as usual; Shift + wheel scrolls the dates sideways ---------- */
+  /* ---------- one wheel notch = exactly one row (up/down) or one date column (Shift + wheel, or a sideways wheel) ---------- */
+  var wheelStep = null;                                                 // set by the scroll-step block below
   $('sheet').addEventListener('wheel', function (ev) {
-    if (!ev.shiftKey || ev.ctrlKey) return;
-    var s = $('sheet'), d = ev.deltaX || ev.deltaY;
+    if (ev.ctrlKey || !wheelStep) return;
+    var dx = ev.deltaX, dy = ev.deltaY;
+    if (ev.deltaMode === 1) { dx *= 100; dy *= 100; } else if (ev.deltaMode === 2) { dx *= 600; dy *= 600; }
+    var axis = (ev.shiftKey || Math.abs(dx) > Math.abs(dy)) ? 'x' : 'y', d = axis === 'x' ? (dx || dy) : dy;
     if (!d) return;
-    s.scrollLeft += d; ev.preventDefault();
+    ev.preventDefault();
+    wheelStep(axis, d, ev.timeStamp);
   }, { passive: false });
 
 
@@ -1423,18 +1427,28 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       else { var hh = t.tHead ? t.tHead.offsetHeight : 72, tds = t.querySelectorAll('tbody td.a'); for (i = 0; i < tds.length; i++) out.push(tds[i].offsetTop - hh); }
       return out;
     }
+    var tgt = { x: null, y: null }, tgtT = { x: 0, y: 0 }, acc = { x: 0, y: 0 }, accT = { x: 0, y: 0 };
     function stepTo(axis, dir, again) {
-      var cur = axis === 'x' ? sh.scrollLeft : sh.scrollTop, pts = points(axis), best = null, max = axis === 'x' ? sh.scrollWidth - sh.clientWidth : sh.scrollHeight - sh.clientHeight;
+      var now = Date.now(), cur = axis === 'x' ? sh.scrollLeft : sh.scrollTop, pts = points(axis), best = null, max = axis === 'x' ? sh.scrollWidth - sh.clientWidth : sh.scrollHeight - sh.clientHeight;
+      if (tgt[axis] !== null && now - tgtT[axis] < 450) cur = tgt[axis];   // still gliding to the last target: count from there so quick notches are not lost
       for (var i = 0; i < pts.length; i++) {
         if (dir > 0 && pts[i] > cur + 1 && (best === null || pts[i] < best)) best = pts[i];
         if (dir < 0 && pts[i] < cur - 1 && (best === null || pts[i] > best)) best = pts[i];
       }
       if (best === null) best = dir > 0 ? max : 0;
       best = Math.max(0, Math.min(max, best));
-      var go = function () { if (axis === 'x') sh.scrollTo({ left: best, behavior: 'smooth' }); else sh.scrollTo({ top: best, behavior: 'smooth' }); };
+      tgt[axis] = best; tgtT[axis] = now;
+      var go =function () { if (axis === 'x') sh.scrollTo({ left: best, behavior: 'smooth' }); else sh.scrollTo({ top: best, behavior: 'smooth' }); };
       go();
       if (again) again.forEach(function (ms) { setTimeout(go, ms); });   // the browser's own step may start a moment later: say it again so ours wins
     }
+    wheelStep = function (axis, d, t) {
+      if (t - accT[axis] > 200) acc[axis] = 0;                          // a pause ends the previous gesture
+      accT[axis] = t; acc[axis] += d;
+      if (Math.abs(acc[axis]) < 60) return;                             // a mouse notch is 100+; a touchpad adds up small moves
+      var dir = acc[axis] > 0 ? 1 : -1; acc[axis] = 0;
+      stepTo(axis, dir);
+    };
     function stop() { clearTimeout(holdTimer); clearInterval(repTimer); holdTimer = repTimer = null; }
     sh.addEventListener('pointerdown', function (ev) {
       if (ev.target !== sh || ev.button !== 0) return;               // only a click on the scrollbar itself lands on the sheet element
