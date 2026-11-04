@@ -143,6 +143,7 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 
 /* board */
 .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: auto; overscroll-behavior: contain; max-height: max(480px, calc(100vh - 230px)); position: relative; }
+#sheet.nosnap { }
 table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 14px; }
 th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--card); padding: 6px 8px; vertical-align: top; text-align: left; font-weight: 400; overflow: hidden; }
 thead th { position: sticky; z-index: 3; text-align: center; vertical-align: middle; padding: 4px; }
@@ -296,8 +297,9 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 .it.done .bul { color: var(--accent); }
 td.c.manual { overflow: visible; position: relative; }   /* so the floating tool buttons above an item are not cut off by the cell */
 td.c.manual:hover, td.c.manual.editing { z-index: 5; }
-.itb { display: none; position: absolute; left: 0; bottom: 100%; z-index: 9; align-items: center; gap: 2px; padding: 1px 4px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; }
+.itb { display: none; position: absolute; left: 100%; top: 0; z-index: 9; align-items: center; gap: 2px; padding: 1px 4px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; }
 .it:hover .itb { display: flex; }
+.it.flip .itb { left: auto; right: 100%; }   /* no room on the right (last visible column): open to the left instead */
 .itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
 @media (hover: none) { .it { flex-wrap: wrap; } .itb { display: flex; position: static; flex-basis: 100%; box-shadow: none; border: 0; padding: 0; background: transparent; } .bul { display: none; } }
 .st { border: 0; background: transparent; padding: 0 2px; font-size: 16px; line-height: 1.35; color: var(--ink2); opacity: .5; }
@@ -1208,6 +1210,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   $('hiddenChips').addEventListener('click', function (ev) {
     var b = ev.target.closest('.chip-h'); if (b) rowAction('rowshow', b.dataset.k);
   });
+  $('tbl').addEventListener('mouseover', function (ev) {   // tool buttons sit to the right of the item; flip them to the left when the sheet edge is in the way
+    var it = ev.target.closest && ev.target.closest('.it'); if (!it) return;
+    var tb = it.querySelector('.itb'); if (!tb) return;
+    it.classList.remove('flip');                                   // decide again every time: the sheet may have been scrolled since the last hover
+    var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect();
+    if (r.width && r.right > sr.right) it.classList.add('flip');
+  });
   $('starChips').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
@@ -1220,6 +1229,41 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!d) return;
     s.scrollLeft += d; ev.preventDefault();
   }, { passive: false });
+
+  /* ---------- one click on a scrollbar arrow (or an arrow key) moves exactly one date column sideways / one row up or down ---------- */
+  (function () {
+    var sh = $('sheet'), lastL = sh.scrollLeft, lastT = sh.scrollTop, timer = null;
+    function colPts() {
+      var pad = 150 + (hideB ? 0 : bw), out = [], ths = $('tbl').querySelectorAll('thead th.dh');
+      for (var i = 0; i < ths.length; i++) out.push(ths[i].offsetLeft - pad);
+      return out;
+    }
+    function rowPts() {
+      var hh = $('tbl').tHead ? $('tbl').tHead.offsetHeight : 72, out = [], tds = $('tbl').querySelectorAll('tbody td.a');
+      for (var i = 0; i < tds.length; i++) out.push(tds[i].offsetTop - hh);
+      return out;
+    }
+    function step(pts, from, to) {                                  // the next point past `from`, in the direction of the small move to `to`
+      var dir = to > from ? 1 : -1, best = null;
+      for (var i = 0; i < pts.length; i++) {
+        if (dir > 0 && pts[i] > from + 1 && (best === null || pts[i] < best)) best = pts[i];
+        if (dir < 0 && pts[i] < from - 1 && (best === null || pts[i] > best)) best = pts[i];
+      }
+      return best;
+    }
+    function settle() {
+      timer = null;
+      if (sh.classList.contains('nosnap')) { lastL = sh.scrollLeft; lastT = sh.scrollTop; return; }
+      var L = sh.scrollLeft, T = sh.scrollTop, dl = Math.abs(L - lastL), dt = Math.abs(T - lastT), tl = null, tt = null;
+      if (dl >= 1 && dl <= Math.max(60, CW) && dt < 1) tl = step(colPts(), lastL, L);   // a small sideways move = an arrow click
+      if (dt >= 1 && dt <= 100 && dl < 1) tt = step(rowPts(), lastT, T);                 // a small up/down move = an arrow click
+      if (tl !== null) sh.scrollLeft = Math.max(0, Math.min(sh.scrollWidth - sh.clientWidth, tl));
+      if (tt !== null) sh.scrollTop = Math.max(0, Math.min(sh.scrollHeight - sh.clientHeight, tt));
+      lastL = sh.scrollLeft; lastT = sh.scrollTop;
+    }
+    sh.addEventListener('scroll', function () { clearTimeout(timer); timer = setTimeout(settle, 130); });
+    sh.addEventListener('snapsync', function () { clearTimeout(timer); timer = null; lastL = sh.scrollLeft; lastT = sh.scrollTop; });   // a drag that scrolled on purpose is not an arrow click
+  })();
 
   /* ---------- crosshair highlight for the hovered cell ---------- */
   var hlRow = null, hlCol = -99, hlCells = [];
@@ -1275,6 +1319,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function startColResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
     var th0 = ev.currentTarget.closest('th');
+    $('sheet').classList.add('nosnap');
     czs = { x: ev.clientX, w: CW, el: ev.currentTarget, i: th0 ? Number(th0.dataset.c) || 0 : 0 }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
     document.addEventListener('pointermove', moveColResize); document.addEventListener('pointerup', endColResize); document.addEventListener('pointercancel', endColResize);
   }
@@ -1286,7 +1331,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function endColResize() {
     if (!czs) return;
-    czs.el.classList.remove('on'); czs = null; document.body.style.userSelect = '';
+    $('sheet').classList.remove('nosnap'); $('sheet').dispatchEvent(new Event('snapsync')); czs.el.classList.remove('on'); czs = null; document.body.style.userSelect = '';
     document.removeEventListener('pointermove', moveColResize); document.removeEventListener('pointerup', endColResize); document.removeEventListener('pointercancel', endColResize);
     cwUser[span] = CW; saveSizes();
   }
