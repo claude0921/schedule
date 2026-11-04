@@ -333,7 +333,15 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 .mcal .mnav .mprev { grid-column: 1; grid-row: 1; }
 .mcal .mnav .mnext { grid-column: 7; grid-row: 1; }
 .mcal .mnav .mtoday { grid-column: 1 / -1; grid-row: 1; justify-self: center; min-width: 140px; text-align: center; }   /* centred on the whole row, same line as prev / next */
-body.monthv #prev, body.monthv #next, body.monthv #goToday { display: none; }
+body.monthv #addRow { display: none; }   /* the button group then starts at the calendar's left edge */
+.mlabel { display: none; align-items: center; gap: 8px; margin-left: 12px; white-space: nowrap; line-height: 1.1; }
+body.monthv .mlabel { display: inline-flex; }
+.midbar { position: relative; }
+@media (min-width: 1100px) { body.monthv .mlabel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; } }   /* centred over the calendar */
+.mlabel .ml-l { display: flex; flex-direction: column; align-items: center; }
+.mlabel .ml-y { font-size: 22px; }   /* same size as the 工作排程 title; the other two scale from the sample picture */
+.mlabel .ml-r { font-size: 13px; }
+.mlabel .ml-m { font-size: 40px; }
 .mcal .mh { text-align: center; font-weight: 700; padding: 6px 4px; color: var(--ink2); background: var(--wk); border-bottom: 1px solid var(--line2); border-right: 1px solid var(--line); }
 .mcal .md { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px 8px 8px; min-height: 110px; min-width: 0; cursor: pointer; }
 .mcal .md:hover { background: var(--hlov); }
@@ -355,7 +363,7 @@ body.monthv #prev, body.monthv #next, body.monthv #goToday { display: none; }
 .mcal .mt { min-width: 0; overflow-wrap: anywhere; }
 .mcal .mt .mk { color: var(--ink2); }
 .mcal .empty { color: var(--ink2); font-size: 12px; }
-body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .addrow, body.monthv #addRow, body.monthv #addForm { display: none; }
+body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .addrow, body.monthv #addForm { display: none; }
 .seg { display: inline-flex; gap: 0; }
 .seg .btn { border-radius: 0; margin-left: -1px; }
 .seg .btn:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
@@ -433,10 +441,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 <div class="page">
   <header class="top">
     <div>
-      <h1>工作排程</h1>
+      <h1>工作行事曆</h1>
       <div class="sub" id="wmTitle"></div>
     </div>
     <div class="hright">
+      <select class="btn" id="exportWm" title="選擇要匯出的工作月（一次匯出一個工作月，28 天）"></select>
       <button class="btn" id="exportX">匯出 Excel</button>
       <label class="auto" id="autoWrap" title="每個工作月第一次開啟這個網頁時（任何一台電腦），自動把上一個工作月匯出成 Excel；同一個月只會匯出一次"><input type="checkbox" id="autoX" checked> 新工作月開頁時自動匯出上個月</label>
       <span class="sync" id="sync"><i></i><span>連線中…</span></span>
@@ -455,7 +464,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     <button class="btn" id="addRow">＋ 新增主要工作項目</button>
     <span class="addform" id="addForm" hidden>
       <input type="text" id="addName" maxlength="30" placeholder="工作項目名稱，例如：專案 A" aria-label="新工作項目名稱">
-      <label class="rep" title="勾選後，這一列就像「例行公事」「外勤相關行事曆」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
+      <label class="rep" title="勾選後，這一列就像「例行公事」「外勤行事曆」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
       <button class="btn primary" id="addOk" type="button">加入</button>
       <button class="btn" id="addNo" type="button">取消</button>
       <span class="sub">會加在最後一列，之後可以按住列名稱旁的 ☰ 上下拖曳移動</span>
@@ -474,7 +483,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
       <button class="btn" id="resetRH" title="所有列高還原成預設">預設列高</button>
       <button class="btn" id="toggleB">隱藏待定事項欄</button>
-      <select class="btn" id="exportWm" title="選擇要匯出的工作月（一次匯出一個工作月，28 天）"></select>
+      <span class="mlabel" id="mLabel"></span>
     </div>
   </div>
 
@@ -544,6 +553,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         <label class="rrow"><input type="radio" name="ruleE" value="count"> 重複 <input type="number" id="ruleECnt" min="1" max="999" value="13"> 次</label>
       </div>
       <label class="rrow"><input type="checkbox" id="ruleSt"> ★ 標星號（出現在最上方的置頂工作）</label>
+      <label class="rrow" title="平常不標星號，到了那一天才自動加上星號，那天就會出現在最上方的置頂工作"><input type="checkbox" id="ruleSt1"> 當天標星號（到了當天才自動加星號）</label>
     </div>
     <div class="rulefoot">
       <button class="btn rdel" id="ruleDel" type="button" hidden>刪除整個重複事項</button>
@@ -578,7 +588,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function dnOf(y, m, d) { return Math.round(Date.UTC(y, m - 1, d) / DAY); }
   function fromDn(dn) { var o = new Date(dn * DAY); return { y: o.getUTCFullYear(), m: o.getUTCMonth() + 1, d: o.getUTCDate(), w: o.getUTCDay() }; }
   function iso(dn) { var o = fromDn(dn); return o.y + '-' + pad(o.m) + '-' + pad(o.d); }
-  function slash(dn) { var o = fromDn(dn); return o.y + '/' + pad(o.m) + '/' + pad(o.d); }
+  function slash(dn) { var o = fromDn(dn); return (o.y - 1911) + '/' + pad(o.m) + '/' + pad(o.d); }   // shown with the Republic of China year
   function md(dn) { var o = fromDn(dn); return o.m + '月' + o.d + '日'; }
   var ANCHOR = dnOf(2025, 8, 14), LEN = 28, N0 = 114 * 13 + 8;
   function wmOf(dn) {
@@ -636,7 +646,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   /* ---------- rows (r = row number in the original workbook, used by the Excel export) ---------- */
   var BASE = [
     { k: 'mgr', r: 5, label: '重要會議倒數', type: 'meeting' },
-    { k: 'field', r: 6, label: '外勤相關行事曆', type: 'routine' },   // repeat rules like 例行公事 (starter rules: 每工第 9、12、15、16、23 天)
+    { k: 'field', r: 6, label: '外勤行事曆', type: 'routine' },   // repeat rules like 例行公事 (starter rules: 每工第 9、12、15、16、23 天)
     { k: 'routine', r: 7, label: '例行公事', type: 'routine' },   // the two built-in rules show as a chip; its own items and repeating items are typed in
     { k: 'temp', r: 8, label: '臨時', type: 'manual' },
     { k: 'ot1', r: 9, label: '人加班', type: 'manual' },
@@ -782,9 +792,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (!r || (r.row || 'routine') !== rk || !ruleHits(r, dn)) return;   // series deleted, or no longer falls on this day
       seen[it.r] = 1;
       if (it.x) return;                                               // this day was removed
-      var o = { t: it.e ? it.t : expandT(r.t, dn), s: it.s ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; out.push(o);
+      var o = { t: it.e ? it.t : expandT(r.t, dn), s: (it.s || (r.st1 && dn === todayDn)) ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; out.push(o);
     });
-    rulesFor(rk).forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: expandT(r.t, dn), s: r.st ? 1 : 0, d: 0, r: r.id }); });
+    rulesFor(rk).forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: expandT(r.t, dn), s: (r.st || (r.st1 && dn === todayDn)) ? 1 : 0, d: 0, r: r.id }); });
     return out;
   }
   function cellText(items) { return items.map(function (i) { return (i.s ? '★ ' : '') + (i.d ? '✓ ' : '') + i.t + (i.n ? '\n　↳ ' + String(i.n).replace(/\n/g, ' ') : ''); }).join('\n'); }
@@ -952,12 +962,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function renderMcal() {
     var box = $('mcal'); box.textContent = '';
     box.style.setProperty('--gcols', mode === 'cm' ? 'repeat(5, minmax(0, 1fr)) minmax(0, .5fr) minmax(0, .5fr)' : 'repeat(2, minmax(0, 1fr)) minmax(0, .5fr) minmax(0, .5fr) repeat(3, minmax(0, 1fr))');   // Saturday / Sunday half as wide
-    var nv = h('div', 'mnav'); nv.style.gridColumn = '1 / -1';        // previous / today / next sit right above the first and last weekday columns
-    var nb = function (txt, cls, fn) { var b = h('button', 'btn ' + cls, txt); b.type = 'button'; b.addEventListener('click', fn); return b; };
-    nv.appendChild(nb(mode === 'cm' ? '‹ 上個月' : '‹ 上一工作月', 'mprev', function () { go(-1); }));
-    nv.appendChild(nb('回到今天', 'primary mtoday', function () { $('goToday').click(); }));
-    nv.appendChild(nb(mode === 'cm' ? '下個月 ›' : '下一工作月 ›', 'mnext', function () { go(1); }));
-    box.appendChild(nv);
     var w = wmOf(ANCHOR + viewIdx * LEN), days = [], dn, lead = 0, trail = 0;
     if (mode === 'cm') {                                              // a calendar month: Mon..Fri columns, blank cells before the 1st and after the last
       var y = Math.floor(cmIdx / 12), mo = cmIdx % 12 + 1, first = dnOf(y, mo, 1), last = dnOf(y, mo + 1, 1) - 1;
@@ -1012,12 +1016,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   function paintTitle() {
     var w = wmOf(ANCHOR + viewIdx * LEN), t = $('wmTitle'); t.textContent = '';
-    if (mode === 'cm') { t.appendChild(h('b', null, Math.floor(cmIdx / 12) + ' 年 ' + (cmIdx % 12 + 1) + ' 月')); t.appendChild(h('span', null, '　（曆月）')); }
+    if (mode === 'cm') { t.appendChild(h('b', null, (Math.floor(cmIdx / 12) - 1911) + '年' + (cmIdx % 12 + 1) + '月')); t.appendChild(h('span', null, '　（曆月）')); }
     else {
-      t.appendChild(h('span', null, '民國 ' + w.year + ' 年第 ' + w.mo + ' 工作月　代號 '));
-      t.appendChild(h('b', null, String(w.code)));
-      t.appendChild(h('span', null, '　' + slash(w.start) + ' ～ ' + slash(w.end)));
+      t.appendChild(h('span', null, w.year + '年' + w.mo + '工'));
     }
+    var ml = $('mLabel'), my, mm;
+    if (mode === 'cm') { my = Math.floor(cmIdx / 12); mm = cmIdx % 12 + 1; } else { my = w.year + 1911; mm = w.mo; }
+    ml.textContent = ''; var ll = h('span', 'ml-l'); ll.appendChild(h('span', 'ml-y', (my - 1911) + '年')); ll.appendChild(h('span', 'ml-r', '(' + my + '年)'));
+    ml.appendChild(ll); ml.appendChild(h('span', 'ml-m', mm + (mode === 'cm' ? '月' : '工')));   // work month: 11工 (up to 13工)
     var sel = $('exportWm'); if (!expPick && sel.querySelector('option[value="' + viewIdx + '"]')) sel.value = String(viewIdx);
   }
   var expPick = false;   // true once the user chose a month to export by hand (until they scroll to another month)
@@ -1060,7 +1066,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms) line += (line ? '　' : '') + mc.name + ' 剩' + z2(ms - todayDn) + '天'; });
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
-      if (fi.length) { line += (line ? '　' : '') + '下個節點：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
+      if (fi.length) { line += (line ? '　' : '') + '下個外勤：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
     }
     $('nextLine').textContent = line;
   }
@@ -1069,7 +1075,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function starredList() {
     var out = [];
     var ids = Object.keys(cellsMap), have = {}; ids.forEach(function (id) { have[id] = 1; });
-    if (rulesList().some(function (r) { return r.st; })) {            // repeating items marked ★ show up in the next 90 days even before they are touched
+    if (rulesList().some(function (r) { return r.st || r.st1; })) {            // repeating items marked ★ show up in the next 90 days even before they are touched
       for (var dd = todayDn; dd <= todayDn + 90; dd++) rows().filter(function (d) { return isRR(d.k); }).forEach(function (d) { var rid = iso(dd) + '_' + d.k; if (!have[rid]) { ids.push(rid); have[rid] = 1; } });
     }
     ids.forEach(function (id) {
@@ -1751,10 +1757,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var e = (r && r.end) || { k: 'never' };
     Array.prototype.forEach.call(document.getElementsByName('ruleE'), function (x) { x.checked = x.value === e.k; });
     $('ruleEOn').value = e.on || ''; $('ruleECnt').value = e.c || 13;
-    $('ruleSt').checked = !!(r && r.st);
+    $('ruleSt').checked = !!(r && r.st); $('ruleSt1').checked = !!(r && r.st1 && !r.st);
     $('ruleDel').hidden = !r;
     ruleSync(); $('rule').hidden = false; $('ruleT').focus();
   }
+  $('ruleSt').addEventListener('change', function () { if ($('ruleSt').checked) $('ruleSt1').checked = false; });   // always-starred already covers the day itself
+  $('ruleSt1').addEventListener('change', function () { if ($('ruleSt1').checked) $('ruleSt').checked = false; });
   function writeRules(list) {
     list = list.map(function (x) { var o = {}; Object.keys(x).forEach(function (k) { if (k.charAt(0) !== '_') o[k] = x[k]; }); return o; });   // drop the cached "_last"
     meta.rules = { list: list, fs: 1 };
@@ -1763,7 +1771,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   // The two rules the original workbook had (週三提醒交週報, 每工第 19 天 5PR報表) start out as ordinary repeating items the user can edit or delete.
   function seedRules() {
     if (!(live.meta && live.cells)) return;
-    var FIELD = [   // the 外勤相關行事曆 row of the original workbook, as repeat rules ({上}/{本} = work-month number)
+    var FIELD = [   // the 外勤行事曆 row of the original workbook, as repeat rules ({上}/{本} = work-month number)
       { id: 'fld-9', t: '{上}工 業績核實(跑資料)', wm: [9] },
       { id: 'fld-12', t: '{上}工 業績核實(可查詢)', wm: [12] },
       { id: 'fld-15', t: '{本}工 組織核實', wm: [15] },
@@ -1783,10 +1791,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!s) { toast('請選開始日期'); return; }
     if (f === 'none') {                                               // no repeat: an ordinary item on that day
       var col = { dn: isoToDn(s) }, items = itemsNow(col, ruleEd.row);
-      items.push({ t: t, s: $('ruleSt').checked ? 1 : 0 }); saveItems(col, ruleEd.row, items);
+      items.push({ t: t, s: ($('ruleSt').checked || ($('ruleSt1').checked && isoToDn(s) === todayDn)) ? 1 : 0 }); saveItems(col, ruleEd.row, items);
       closeRule(); render(); return;
     }
-    var r = { id: ruleEd.id || 'r' + Date.now().toString(36), t: t, st: $('ruleSt').checked ? 1 : 0, start: s, f: f, n: Math.max(1, Math.min(99, Math.floor(Number($('ruleN').value)) || 1)) };
+    var r = { id: ruleEd.id || 'r' + Date.now().toString(36), t: t, st: $('ruleSt').checked ? 1 : 0, st1: (!$('ruleSt').checked && $('ruleSt1').checked) ? 1 : 0, start: s, f: f, n: Math.max(1, Math.min(99, Math.floor(Number($('ruleN').value)) || 1)) };
     if (ruleEd.row !== 'routine') r.row = ruleEd.row;
     if (f === 'week') { r.wd = getDots('ruleWd'); if (!r.wd.length) { toast('請至少選一個星期'); return; } }
     if (f === 'wm') { r.wm = getDots('ruleWm'); if (!r.wm.length) { toast('請至少選一個「每工第幾天」'); return; } }
@@ -1817,7 +1825,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       : r.f === 'week' ? (n === 1 ? '每週 ' : '每 ' + n + ' 週 ') + WDS.filter(function (p) { return (r.wd || []).indexOf(p[0]) >= 0; }).map(function (p) { return p[1]; }).join('、')
       : (n === 1 ? '每個工作月 ' : '每 ' + n + ' 個工作月 ') + '第 ' + (r.wm || []).slice().sort(function (a, b) { return a - b; }).join('、') + ' 天';
     var e = r.end || {};
-    return s + '　' + (e.k === 'on' ? '到 ' + e.on.replace(/-/g, '/') : e.k === 'count' ? '共 ' + e.c + ' 次' : '持續不停') + (r.st ? '　★' : '');
+    return s + '　' + (e.k === 'on' ? '到 ' + e.on.replace(/-/g, '/') : e.k === 'count' ? '共 ' + e.c + ' 次' : '持續不停') + (r.st ? '　★' : r.st1 ? '　當天★' : '');
   }
   function renderRuleList() {
     var box = $('rulesList'); box.textContent = '';
