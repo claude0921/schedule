@@ -288,6 +288,35 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 
 /* items inside a date cell */
 .items { display: flex; flex-direction: column; gap: 2px; }
+/* 工作月: one calendar page = 7 weekday headers + 4 rows x 7 days (a work month is exactly 28 days) */
+.mcal { --gcols: repeat(7, minmax(0, 1fr)); background: var(--card); border: 1px solid var(--line); border-radius: 12px; display: grid; grid-template-columns: var(--gcols); overflow: hidden; }
+.mcal .mh { text-align: center; font-weight: 700; padding: 6px 4px; color: var(--ink2); background: var(--wk); border-bottom: 1px solid var(--line2); border-right: 1px solid var(--line); }
+.mcal .md { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px 8px 8px; min-height: 110px; min-width: 0; cursor: pointer; }
+.mcal .md:hover { background: var(--hlov); }
+.mcal .md.blank { background: var(--wk); cursor: default; min-height: 0; }
+.mcal .md.blank:hover { background: var(--wk); }
+.mcal .md.wk { background: var(--wk); }
+.mcal .md.today { background: var(--today); box-shadow: inset 0 3px 0 var(--today-line); }
+.mcal .md.hol { background: #fde8e8; }
+.mcal .md.meet { background: var(--mgr); }
+.mcal .mdh { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 2px; color: var(--ink2); font-size: 12px; }
+.mcal .mdh b { color: var(--ink); font-size: 15px; }
+.mcal .mdh .hn { color: #c0392b; }
+.mcal .mtag { display: inline-block; background: var(--mgr-ink); color: var(--card); border-radius: 6px; padding: 0 8px; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+.mcal .mi { display: flex; gap: 4px; font-size: 13px; line-height: 1.45; padding: 1px 0; }
+.mcal .mi .bul { flex: none; width: 12px; text-align: center; color: var(--ink2); }
+.mcal .mi.star .bul { color: var(--star); }
+.mcal .mi.star .mt { font-weight: 700; }
+.mcal .mi.done .mt { text-decoration: line-through; opacity: .6; }
+.mcal .mt { min-width: 0; overflow-wrap: anywhere; }
+.mcal .mt .mk { color: var(--ink2); }
+.mcal .empty { color: var(--ink2); font-size: 12px; }
+body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .addrow { display: none; }
+.seg { display: inline-flex; gap: 0; }
+.seg .btn { border-radius: 0; margin-left: -1px; }
+.seg .btn:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.seg .btn:last-child { border-radius: 0 8px 8px 0; }
+.seg .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); position: relative; z-index: 1; }
 .mview .it { font-size: 11px; gap: 1px; }
 .mview th.dh, .mview th.dh * { font-size: 10px; letter-spacing: -.5px; }
 .it { display: flex; align-items: flex-start; gap: 4px; padding: 1px 0; position: relative; }
@@ -366,7 +395,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn primary" id="goToday">回到今天</button>
       <button class="btn" id="next">下一工作月 ›</button>
       <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶ 復原</button>
-      <button class="btn" id="spanBtn" title="切換顯示一週／整個工作月">工作月視角</button>
+      <button class="btn" id="redoBtn" title="重做剛剛復原的動作（Ctrl+Y）" disabled>↷ 重做</button>
+      <span class="seg" id="viewSeg" role="group" aria-label="切換顯示方式">
+        <button class="btn" type="button" data-mode="week" title="一次看一週（可以編輯）">週</button>
+        <button class="btn" type="button" data-mode="wm" title="整個工作月一頁：4 週 × 7 天">工作月</button>
+        <button class="btn" type="button" data-mode="cm" title="像一般月曆：一個曆月一頁">曆月</button>
+      </span>
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
       <button class="btn" id="resetRH" title="所有列高還原成預設">預設列高</button>
       <button class="btn" id="toggleB">隱藏子項目欄</button>
@@ -386,6 +420,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   </section>
 
   <div class="sheet" id="sheet" aria-label="工作月排程表"><table id="tbl"></table></div>
+  <div class="mcal" id="mcal" aria-label="工作月月曆" hidden></div>
 
   <div class="addrow">
     <button class="btn" id="addRow">＋ 新增主要工作項目</button>
@@ -609,9 +644,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   /* the one-week view shows 7 weekdays (Mon–Fri) and skips Saturday/Sunday; the work-month view shows every day */
   function buildCols() {
     cols = makeCols(ANCHOR + winFirst * LEN, (winLast - winFirst + 1) * LEN);
-    if (span === 7) { cols = cols.filter(function (c) { return c.wd !== 0 && c.wd !== 6; }); cols.forEach(function (c, i) { c.i = i; }); }
   }
-  function perMonth() { return span === 7 ? 20 : LEN; }
+  function perMonth() { return LEN; }
+  function colsOfMonth(idx) { var t = 0, st = ANCHOR + idx * LEN; for (var d = st; d < st + LEN; d++) { var w = fromDn(d).w; t += (w === 0 || w === 6) ? Math.round(CW / 2) : CW; } return t; }   // width of one whole work month of columns
 
   /* ---------- values ---------- */
   function cellKey(col, k) { return iso(col.dn) + '_' + k; }
@@ -770,24 +805,32 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function mk(tag, cls, k, c) { var el = document.createElement(tag); el.className = cls; el.dataset.k = k; el.dataset.c = String(c); return el; }
 
   /* one week (7 days) fills the visible width */
-  var CW = 150, span = 7;
-  try { if (localStorage.getItem('sched2.span') === '28') span = 28; } catch (e) {}
+  var CW = 150, span = 7, mode = 'week';                          // mode: 'week' (the editable sheet) | 'wm' (work-month page) | 'cm' (calendar-month page); span = 7 for the sheet, 28 for the pages
+  try { var m0 = localStorage.getItem('sched2.mode'); if (m0 === 'wm' || m0 === 'cm') mode = m0; else if (localStorage.getItem('sched2.span') === '28') mode = 'wm'; } catch (e) {}
+  if (mode !== 'week') span = 28;
+  var cmIdx = fromDn(todayDn).y * 12 + fromDn(todayDn).m - 1;     // calendar month shown on the 曆月 page
   if (span === 28) hideB = true;
   var UZ = .8;   // = the html { zoom } above: mouse movement is in screen pixels, sizes are in zoomed pixels
   var cwUser = {}, rhUser = {};   // per-viewer: date-column width (per view) and row heights (per row), set by dragging
   try { cwUser = JSON.parse(localStorage.getItem('sched2.cw') || '{}') || {}; rhUser = JSON.parse(localStorage.getItem('sched2.rh') || '{}') || {}; } catch (e) {}
   function saveSizes() { try { localStorage.setItem('sched2.cw', JSON.stringify(cwUser)); localStorage.setItem('sched2.rh', JSON.stringify(rhUser)); } catch (e) {} }
-  function fitCW() { if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / span)); var ch = n !== CW; CW = n; return ch; }
+  function fitCW() { if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / (span === 7 ? 6 : span))); var ch = n !== CW; CW = n; return ch; }
+  /* Saturday and Sunday columns are half as wide as the others */
+  function colW(c) { return (c.wd === 0 || c.wd === 6) ? Math.round(CW / 2) : CW; }
+  function colsW() { var t = 0; for (var i = 0; i < cols.length; i++) t += colW(cols[i]); return t; }
+  function leftOf(i) { var t = 0; for (var j = 0; j < i && j < cols.length; j++) t += colW(cols[j]); return t; }
+  function colIndexAt(x) { var t = 0; for (var i = 0; i < cols.length; i++) { t += colW(cols[i]); if (x < t) return i; } return Math.max(0, cols.length - 1); }
   function render() {
+    $('sheet').hidden = mode !== 'week'; $('mcal').hidden = mode === 'week'; document.body.classList.toggle('monthv', mode !== 'week');   // set first: the width fit below needs the visible sheet
     fitCW();
     buildCols();
     var tbl = $('tbl'); tbl.textContent = '';
     $('sheet').classList.toggle('hideB', hideB);
     var cg = document.createElement('colgroup'), widths = [150, hideB ? 0 : bw];
     widths.forEach(function (wd, n) { var c = document.createElement('col'); c.style.width = wd + 'px'; if (n === 1 && hideB) c.style.display = 'none'; cg.appendChild(c); });
-    cols.forEach(function () { var c = document.createElement('col'); c.style.width = CW + 'px'; cg.appendChild(c); });
+    cols.forEach(function (cc) { var c = document.createElement('col'); c.style.width = colW(cc) + 'px'; cg.appendChild(c); });
     tbl.appendChild(cg);
-    tbl.style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
+    tbl.style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
 
     var thead = document.createElement('thead'), r1 = h('tr', 'h1'), r2 = h('tr', 'h2');
     var a = h('th', 'a', '主項目'); a.rowSpan = 2; r1.appendChild(a);
@@ -830,13 +873,61 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
     paintFoot();
     paintTitle(); fillExportSel();
-    $('spanBtn').textContent = span === 28 ? '一週視角' : '工作月視角';
+    Array.prototype.forEach.call(document.querySelectorAll('#viewSeg .btn'), function (b) { b.classList.toggle('on', b.dataset.mode === mode); });
+    $('prev').textContent = mode === 'cm' ? '‹ 上個月' : '‹ 上一工作月'; $('next').textContent = mode === 'cm' ? '下個月 ›' : '下一工作月 ›';
     $('sheet').classList.toggle('mview', span === 28);
     $('toggleB').textContent = hideB ? '顯示子項目欄' : '隱藏子項目欄';
     var mc = mgrCfg();
     [['mgrName', mc.name], ['mgrS', mc.start], ['mgrE', mc.end]].forEach(function (p) { if (document.activeElement !== $(p[0])) $(p[0]).value = p[1]; });
     renderTop(); renderStars(); renderHidden(); renderRemoved(); renderWm(); padSheet();
+    if (mode !== 'week') renderMcal();
   }
+  /* 工作月視角: the whole work month as a calendar; each item reads "• 主項目 - 工作事項"; weekends are left out; the days of the important meeting are marked */
+  function renderMcal() {
+    var box = $('mcal'); box.textContent = '';
+    box.style.setProperty('--gcols', mode === 'cm' ? 'repeat(5, minmax(0, 1fr)) minmax(0, .5fr) minmax(0, .5fr)' : 'repeat(2, minmax(0, 1fr)) minmax(0, .5fr) minmax(0, .5fr) repeat(3, minmax(0, 1fr))');   // Saturday / Sunday half as wide
+    var w = wmOf(ANCHOR + viewIdx * LEN), days = [], dn, lead = 0, trail = 0;
+    if (mode === 'cm') {                                              // a calendar month: Mon..Fri columns, blank cells before the 1st and after the last
+      var y = Math.floor(cmIdx / 12), mo = cmIdx % 12 + 1, first = dnOf(y, mo, 1), last = dnOf(y, mo + 1, 1) - 1;
+      for (dn = first; dn <= last; dn++) days.push(dn);
+      ['週一', '週二', '週三', '週四', '週五', '週六', '週日'].forEach(function (n) { box.appendChild(h('div', 'mh', n)); });
+      lead = (fromDn(first).w + 6) % 7; trail = (7 - (lead + days.length) % 7) % 7;               // weeks run Monday..Sunday
+      for (var li = 0; li < lead; li++) box.appendChild(h('div', 'md blank'));
+    } else {
+      for (dn = w.start; dn <= w.end; dn++) days.push(dn);
+      days.slice(0, 7).forEach(function (d) { box.appendChild(h('div', 'mh', WDN[fromDn(d).w].replace('星期', '週'))); });
+    }
+    var mc = mgrCfg(), ms = isoToDn(mc.start), me = isoToDn(mc.end);
+    var shown = visibleRows().filter(function (d) { return d.k !== 'mgr'; });
+    days.forEach(function (d) {
+      var o = fromDn(d), meet = d >= ms && d <= me;
+      var cell = h('div', 'md' + (o.w === 0 || o.w === 6 ? ' wk' : '') + (d === todayDn ? ' today' : '') + (HOL[d] ? ' hol' : '') + (meet ? ' meet' : '')); cell.dataset.dn = String(d);
+      var hd = h('div', 'mdh'); hd.appendChild(h('b', null, mode === 'cm' ? String(o.d) : o.m + '/' + o.d)); hd.appendChild(h('span', HOL[d] ? 'hn' : null, HOL[d] || (mode === 'cm' ? wdLabel(wmOf(d)) : '第 ' + wmOf(d).dayno + ' 天'))); cell.appendChild(hd);
+      if (meet) cell.appendChild(h('div', 'mtag', mc.name + ' 第' + (d - ms + 1) + '天'));
+      var any = false;
+      shown.forEach(function (def) {
+        itemsOf(cellKey({ dn: d }, def.k)).forEach(function (it) {
+          any = true;
+          var row = h('div', 'mi' + (it.s ? ' star' : '') + (it.d ? ' done' : '')); row.dataset.k = def.k;
+          row.appendChild(h('span', 'bul', it.s ? '★' : it.d ? '☑' : '•'));
+          var t = h('span', 'mt'); t.appendChild(h('span', 'mk', flat(def.label) + ' - ')); t.appendChild(document.createTextNode(it.t)); row.appendChild(t);
+          cell.appendChild(row);
+        });
+      });
+      if (!any && !meet) cell.appendChild(h('div', 'empty', ' '));
+      box.appendChild(cell);
+    });
+    for (var ti = 0; ti < trail; ti++) box.appendChild(h('div', 'md blank'));
+  }
+  $('mcal').addEventListener('click', function (ev) {                    // click a day or an item: open the week view there
+    var c = ev.target.closest('.md'); if (!c) return;
+    var mi = ev.target.closest('.mi'), k = mi ? mi.dataset.k : null;
+    if (!k) { var f = visibleRows().filter(function (d) { return !isCalc(d); })[0]; k = f ? f.k : 'temp'; }
+    if (editing) commit();
+    mode = 'week'; span = 7; try { localStorage.setItem('sched2.mode', 'week'); localStorage.setItem('sched2.span', '7'); } catch (e) {}
+    try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; }
+    render(); jumpTo(Number(c.dataset.dn), k);
+  });
   function renderRemoved() {
     var rs = removedSet(), box = $('removedChips'); box.textContent = '';
     var keys = (rows(), ROWS_ALL).filter(function (d) { return rs[d.k]; });
@@ -850,9 +941,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   function paintTitle() {
     var w = wmOf(ANCHOR + viewIdx * LEN), t = $('wmTitle'); t.textContent = '';
-    t.appendChild(h('span', null, '民國 ' + w.year + ' 年第 ' + w.mo + ' 工作月　代號 '));
-    t.appendChild(h('b', null, String(w.code)));
-    t.appendChild(h('span', null, '　' + slash(w.start) + ' ～ ' + slash(w.end)));
+    if (mode === 'cm') { t.appendChild(h('b', null, Math.floor(cmIdx / 12) + ' 年 ' + (cmIdx % 12 + 1) + ' 月')); t.appendChild(h('span', null, '　（曆月）')); }
+    else {
+      t.appendChild(h('span', null, '民國 ' + w.year + ' 年第 ' + w.mo + ' 工作月　代號 '));
+      t.appendChild(h('b', null, String(w.code)));
+      t.appendChild(h('span', null, '　' + slash(w.start) + ' ～ ' + slash(w.end)));
+    }
     var sel = $('exportWm'); if (!expPick && sel.querySelector('option[value="' + viewIdx + '"]')) sel.value = String(viewIdx);
   }
   var expPick = false;   // true once the user chose a month to export by hand (until they scroll to another month)
@@ -961,32 +1055,50 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   /* ---------- saving ---------- */
   function failToast(err) { toast('未存到雲端：' + ((err && err.message) || '請稍後再試'), 7000); }
   /* ---------- undo (item changes only): every save remembers what the cell held before; saves within 0.5 s count as one action ---------- */
-  var undoStack = [], undoing = false;
+  var undoStack = [], redoStack = [], undoing = false;
+  function snap(id) { return cellsMap[id] ? JSON.parse(JSON.stringify(cellsMap[id])) : null; }
   function pushUndo(id) {
-    var now = Date.now(), last = undoStack[undoStack.length - 1], prev = cellsMap[id] ? JSON.parse(JSON.stringify(cellsMap[id])) : null;
+    var now = Date.now(), last = undoStack[undoStack.length - 1], prev = snap(id);
+    redoStack.length = 0;                                            // a new action ends the redo chain
     if (last && now - last.t < 500) { if (!last.list.some(function (x) { return x.id === id; })) last.list.push({ id: id, prev: prev }); last.t = now; }
     else { undoStack.push({ t: now, list: [{ id: id, prev: prev }] }); if (undoStack.length > 50) undoStack.shift(); }
     syncUndoBtn();
   }
-  function syncUndoBtn() { var b = $('undoBtn'); if (b) b.disabled = !undoStack.length; }
-  function undoLast() {
-    if (editing) cancel();
-    var g = undoStack.pop(); syncUndoBtn();
-    if (!g) { toast('沒有可以復原的動作'); return; }
+  function syncUndoBtn() { var b = $('undoBtn'), r = $('redoBtn'); if (b) b.disabled = !undoStack.length; if (r) r.disabled = !redoStack.length; }
+  function restoreGroup(g, field) {                                  // put every cell of the group back to its saved state
     undoing = true;
     try {
       g.list.slice().reverse().forEach(function (x) {
-        if (x.prev) { cellsMap[x.id] = x.prev; backend.put('cells', x.id, x.prev).catch(failToast); }
+        var v = x[field];
+        if (v) { cellsMap[x.id] = v; backend.put('cells', x.id, v).catch(failToast); }
         else { delete cellsMap[x.id]; backend.del('cells', x.id).catch(failToast); }
       });
     } finally { undoing = false; }
-    render(); toast('已復原上一個動作');
+    render();
+  }
+  function undoLast() {
+    if (editing) cancel();
+    var g = undoStack.pop();
+    if (!g) { syncUndoBtn(); toast('沒有可以復原的動作'); return; }
+    g.list.forEach(function (x) { x.cur = snap(x.id); });            // remember the state we are leaving, for 重做
+    redoStack.push(g); syncUndoBtn();
+    restoreGroup(g, 'prev'); toast('已復原上一個動作');
+  }
+  function redoLast() {
+    if (editing) cancel();
+    var g = redoStack.pop();
+    if (!g) { syncUndoBtn(); toast('沒有可以重做的動作'); return; }
+    undoStack.push(g); syncUndoBtn();
+    restoreGroup(g, 'cur'); toast('已重做');
   }
   $('undoBtn').addEventListener('click', undoLast);
+  $('redoBtn').addEventListener('click', redoLast);
   document.addEventListener('keydown', function (ev) {
-    if (!(ev.ctrlKey || ev.metaKey) || ev.shiftKey || ev.altKey || ev.key.toLowerCase() !== 'z') return;
-    var t = ev.target && ev.target.tagName; if (t === 'INPUT' || t === 'TEXTAREA' || (ev.target && ev.target.isContentEditable)) return;   // inside a text box Ctrl+Z keeps its normal meaning
-    ev.preventDefault(); undoLast();
+    if (!(ev.ctrlKey || ev.metaKey) || ev.altKey) return;
+    var k = ev.key.toLowerCase(), isUndo = k === 'z' && !ev.shiftKey, isRedo = k === 'y' || (k === 'z' && ev.shiftKey);
+    if (!isUndo && !isRedo) return;
+    var t = ev.target && ev.target.tagName; if (t === 'INPUT' || t === 'TEXTAREA' || (ev.target && ev.target.isContentEditable)) return;   // inside a text box Ctrl+Z / Ctrl+Y keep their normal meaning
+    ev.preventDefault(); if (isUndo) undoLast(); else redoLast();
   });
   function saveItems(col, k, items) {
     var id = cellKey(col, k), p;
@@ -1304,7 +1416,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function applyBw() {
     var col = $('tbl').querySelector('colgroup col:nth-child(2)');
     if (col && !hideB) col.style.width = bw + 'px';
-    $('tbl').style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
+    $('tbl').style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
     padSheet();
   }
   function moveResize(ev) { if (!rs) return; bw = Math.max(160, Math.min(900, Math.round(rs.w + (ev.clientX - rs.x) / UZ))); applyBw(); }
@@ -1316,27 +1428,28 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     refit();
   }
   function refit() {
-    var sheet = $('sheet'), k = Math.max(0, Math.min(cols.length - 1, Math.floor(sheet.scrollLeft / CW))), dn = cols[k] && cols[k].dn;
+    var sheet = $('sheet'), k = colIndexAt(sheet.scrollLeft), dn = cols[k] && cols[k].dn;
     if (fitCW() && dn != null) { render(); scrollToDn(dn); }
   }
   /* date columns: drag the right edge of any date header; every date column gets the same width */
   var czs = null;
   function applyCW(w) {
     CW = w; var cs = $('tbl').querySelectorAll('colgroup col');
-    for (var i = 2; i < cs.length; i++) cs[i].style.width = w + 'px';
-    $('tbl').style.width = (150 + (hideB ? 0 : bw) + cols.length * CW) + 'px';
+    for (var i = 2; i < cs.length; i++) cs[i].style.width = colW(cols[i - 2]) + 'px';
+    $('tbl').style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
   }
   function startColResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
     var th0 = ev.currentTarget.closest('th');
-        czs = { x: ev.clientX, w: CW, el: ev.currentTarget, i: th0 ? Number(th0.dataset.c) || 0 : 0 }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
+        var ci0 = th0 ? Number(th0.dataset.c) || 0 : 0;
+    czs = { x: ev.clientX, w: CW, el: ev.currentTarget, i: ci0, f: cols[ci0] && colW(cols[ci0]) !== CW ? 2 : 1 }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
     document.addEventListener('pointermove', moveColResize); document.addEventListener('pointerup', endColResize); document.addEventListener('pointercancel', endColResize);
   }
   function moveColResize(ev) {
     if (!czs) return;
-    var old = CW;
-    applyCW(Math.max(span === 28 ? 24 : 70, Math.min(600, Math.round(czs.w + (ev.clientX - czs.x) / UZ))));
-    $('sheet').scrollLeft += czs.i * (CW - old);   // every column to the left grows too: scroll by that much so the left edge of the dragged column stays put and its right edge follows the mouse
+    var oldLeft = leftOf(czs.i);
+    applyCW(Math.max(span === 28 ? 24 : 70, Math.min(600, Math.round(czs.w + czs.f * (ev.clientX - czs.x) / UZ))));
+    $('sheet').scrollLeft += leftOf(czs.i) - oldLeft;   // every column to the left grows too: scroll by that much so the left edge of the dragged column stays put and its right edge follows the mouse
   }
   function endColResize() {
     if (!czs) return;
@@ -1346,7 +1459,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function resetCW() {
     delete cwUser[span]; saveSizes();
-    var sheet = $('sheet'), k = Math.max(0, Math.min(cols.length - 1, Math.floor(sheet.scrollLeft / CW))), dn = cols[k] && cols[k].dn;
+    var sheet = $('sheet'), k = colIndexAt(sheet.scrollLeft), dn = cols[k] && cols[k].dn;
     fitCW(); render(); if (dn != null) scrollToDn(dn);
   }
   /* row heights: drag the bottom edge of a row's name cell (a row can never get shorter than what it holds) */
@@ -1736,6 +1849,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function go(delta) {
     if (editing) commit();
+    if (mode !== 'week') { if (mode === 'cm') cmIdx += delta; else viewIdx += delta; expPick = false; paintTitle(); renderWm(); renderMcal(); return; }   // a calendar page just changes month
     var t = viewIdx + delta, before = winFirst + ':' + winLast;
     ensureIdx(t);
     if (before !== winFirst + ':' + winLast) render();
@@ -1746,7 +1860,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   $('next').addEventListener('click', function () { go(1); });
   $('goToday').addEventListener('click', function () {
     if (editing) commit();
-    todayDn = localToday(); viewIdx = wmOf(todayDn).idx; winFirst = viewIdx - 1; winLast = viewIdx + 1; expPick = false; render();
+    todayDn = localToday(); viewIdx = wmOf(todayDn).idx; cmIdx = fromDn(todayDn).y * 12 + fromDn(todayDn).m - 1; winFirst = viewIdx - 1; winLast = viewIdx + 1; expPick = false; render();
     centerToday(false);
   });
   var scrollBusy = false;
@@ -1757,12 +1871,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       scrollBusy = false;
       var sheet = $('sheet'), vis = sheet.clientWidth - stickW();
       if (!cols.length || vis <= 0) return;
-      var k = Math.max(0, Math.min(cols.length - 1, Math.floor((sheet.scrollLeft + vis / 2) / CW)));
+      var k = colIndexAt(sheet.scrollLeft + vis / 2);
       var idx = cols[k].w.idx;
       if (idx !== viewIdx) { viewIdx = idx; expPick = false; paintTitle(); renderWm(); }
       if (editing || drag || rdrag) return;
       var right = sheet.scrollWidth - sheet.scrollLeft - sheet.clientWidth;
-      if (sheet.scrollLeft < 1800) { winFirst--; render(); sheet.scrollLeft += perMonth() * CW; }
+      if (sheet.scrollLeft < 1800) { winFirst--; render(); sheet.scrollLeft += colsOfMonth(winFirst); }
       else if (right < 1800) { winLast++; render(); }
     });
   });
@@ -1789,15 +1903,28 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   $('resetRH').addEventListener('click', function () {
     rhUser = {}; saveSizes(); Array.prototype.forEach.call($('tbl').querySelectorAll('tbody tr'), function (tr) { clearRowH(tr); });
   });
-  $('spanBtn').addEventListener('click', function () {
+  function setMode(to) {
     if (editing) commit();
-    span = span === 28 ? 7 : 28;
-    try { localStorage.setItem('sched2.span', String(span)); } catch (e) {}
+    if (to === mode) return;
+    var today = fromDn(todayDn), todayCm = today.y * 12 + today.m - 1;
+    if (mode === 'week' && cols.length) {                           // leaving the sheet: the month in the middle of the screen (today's when today is within a week of it)
+      var sh0 = $('sheet'), vis0 = sh0.clientWidth - stickW(), k0 = colIndexAt(sh0.scrollLeft + vis0 / 2), mid = cols[k0].dn;
+      if (Math.abs(mid - todayDn) <= 7) mid = todayDn;
+      viewIdx = wmOf(mid).idx; var fm = fromDn(mid); cmIdx = fm.y * 12 + fm.m - 1;
+    } else if (mode === 'wm' && to === 'cm') {                      // work-month page -> calendar month: today's month if today is on this page, else the page's middle
+      var wv = wmOf(ANCHOR + viewIdx * LEN), mdn = (todayDn >= wv.start && todayDn <= wv.end) ? todayDn : wv.start + 14, fo = fromDn(mdn); cmIdx = fo.y * 12 + fo.m - 1;
+    } else if (mode === 'cm' && to === 'wm') {                      // calendar month -> work-month page: the one holding today, else the one holding the 15th
+      var cy = Math.floor(cmIdx / 12), cmo = cmIdx % 12 + 1, anchor = (cmIdx === todayCm) ? todayDn : dnOf(cy, cmo, 15); viewIdx = wmOf(anchor).idx;
+    }
+    mode = to; span = to === 'week' ? 7 : 28;
+    try { localStorage.setItem('sched2.mode', mode); localStorage.setItem('sched2.span', String(span)); } catch (e) {}
     if (span === 28) hideB = true;
     else { try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; } }
+    ensureIdx(viewIdx);
     fitCW(); render();
-    if (span === 28) scrollToDn(wmOf(todayDn).start); else centerToday(false);
-  });
+    if (mode === 'week') { scrollToDn(wmOf(todayDn).idx === viewIdx ? todayDn : wmOf(ANCHOR + viewIdx * LEN).start); if (wmOf(todayDn).idx === viewIdx) centerToday(false); }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#viewSeg .btn'), function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
   $('toggleB').addEventListener('click', function () {
     if (editing) commit();
     hideB = !hideB; try { localStorage.setItem('sched2.hideB', hideB ? '1' : '0'); } catch (e) {}
