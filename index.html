@@ -143,7 +143,6 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 
 /* board */
 .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: auto; overscroll-behavior: contain; max-height: max(480px, calc(100vh - 230px)); position: relative; }
-#sheet.nosnap { }
 table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 14px; }
 th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--card); padding: 6px 8px; vertical-align: top; text-align: left; font-weight: 400; overflow: hidden; }
 thead th { position: sticky; z-index: 3; text-align: center; vertical-align: middle; padding: 4px; }
@@ -1230,39 +1229,50 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     s.scrollLeft += d; ev.preventDefault();
   }, { passive: false });
 
-  /* ---------- one click on a scrollbar arrow (or an arrow key) moves exactly one date column sideways / one row up or down ---------- */
+
+  /* ---------- one click on a scrollbar arrow (or an arrow key) glides exactly one date column sideways / one row up or down ---------- */
   (function () {
-    var sh = $('sheet'), lastL = sh.scrollLeft, lastT = sh.scrollTop, timer = null;
-    function colPts() {
-      var pad = 150 + (hideB ? 0 : bw), out = [], ths = $('tbl').querySelectorAll('thead th.dh');
-      for (var i = 0; i < ths.length; i++) out.push(ths[i].offsetLeft - pad);
+    var sh = $('sheet'), holdTimer = null, repTimer = null;
+    function points(axis) {
+      var t = $('tbl'), out = [], i;
+      if (axis === 'x') { var pad = 150 + (hideB ? 0 : bw), ths = t.querySelectorAll('thead th.dh'); for (i = 0; i < ths.length; i++) out.push(ths[i].offsetLeft - pad); }
+      else { var hh = t.tHead ? t.tHead.offsetHeight : 72, tds = t.querySelectorAll('tbody td.a'); for (i = 0; i < tds.length; i++) out.push(tds[i].offsetTop - hh); }
       return out;
     }
-    function rowPts() {
-      var hh = $('tbl').tHead ? $('tbl').tHead.offsetHeight : 72, out = [], tds = $('tbl').querySelectorAll('tbody td.a');
-      for (var i = 0; i < tds.length; i++) out.push(tds[i].offsetTop - hh);
-      return out;
-    }
-    function step(pts, from, to) {                                  // the next point past `from`, in the direction of the small move to `to`
-      var dir = to > from ? 1 : -1, best = null;
+    function stepTo(axis, dir, again) {
+      var cur = axis === 'x' ? sh.scrollLeft : sh.scrollTop, pts = points(axis), best = null, max = axis === 'x' ? sh.scrollWidth - sh.clientWidth : sh.scrollHeight - sh.clientHeight;
       for (var i = 0; i < pts.length; i++) {
-        if (dir > 0 && pts[i] > from + 1 && (best === null || pts[i] < best)) best = pts[i];
-        if (dir < 0 && pts[i] < from - 1 && (best === null || pts[i] > best)) best = pts[i];
+        if (dir > 0 && pts[i] > cur + 1 && (best === null || pts[i] < best)) best = pts[i];
+        if (dir < 0 && pts[i] < cur - 1 && (best === null || pts[i] > best)) best = pts[i];
       }
-      return best;
+      if (best === null) best = dir > 0 ? max : 0;
+      best = Math.max(0, Math.min(max, best));
+      var go = function () { if (axis === 'x') sh.scrollTo({ left: best, behavior: 'smooth' }); else sh.scrollTo({ top: best, behavior: 'smooth' }); };
+      go();
+      if (again) again.forEach(function (ms) { setTimeout(go, ms); });   // the browser's own step may start a moment later: say it again so ours wins
     }
-    function settle() {
-      timer = null;
-      if (sh.classList.contains('nosnap')) { lastL = sh.scrollLeft; lastT = sh.scrollTop; return; }
-      var L = sh.scrollLeft, T = sh.scrollTop, dl = Math.abs(L - lastL), dt = Math.abs(T - lastT), tl = null, tt = null;
-      if (dl >= 1 && dl <= Math.max(60, CW) && dt < 1) tl = step(colPts(), lastL, L);   // a small sideways move = an arrow click
-      if (dt >= 1 && dt <= 100 && dl < 1) tt = step(rowPts(), lastT, T);                 // a small up/down move = an arrow click
-      if (tl !== null) sh.scrollLeft = Math.max(0, Math.min(sh.scrollWidth - sh.clientWidth, tl));
-      if (tt !== null) sh.scrollTop = Math.max(0, Math.min(sh.scrollHeight - sh.clientHeight, tt));
-      lastL = sh.scrollLeft; lastT = sh.scrollTop;
-    }
-    sh.addEventListener('scroll', function () { clearTimeout(timer); timer = setTimeout(settle, 130); });
-    sh.addEventListener('snapsync', function () { clearTimeout(timer); timer = null; lastL = sh.scrollLeft; lastT = sh.scrollTop; });   // a drag that scrolled on purpose is not an arrow click
+    function stop() { clearTimeout(holdTimer); clearInterval(repTimer); holdTimer = repTimer = null; }
+    sh.addEventListener('pointerdown', function (ev) {
+      if (ev.target !== sh || ev.button !== 0) return;               // only a click on the scrollbar itself lands on the sheet element
+      var r = sh.getBoundingClientRect(), sbH = (sh.offsetHeight - sh.clientHeight) * UZ, sbW = (sh.offsetWidth - sh.clientWidth) * UZ, axis = null, dir = 0;
+      if (sbH > 4 && ev.clientY > r.bottom - sbH && ev.clientX < r.right - sbW) {
+        if (ev.clientX < r.left + sbH) { axis = 'x'; dir = -1; } else if (ev.clientX > r.right - sbW - sbH) { axis = 'x'; dir = 1; }
+      } else if (sbW > 4 && ev.clientX > r.right - sbW && ev.clientY < r.bottom - sbH) {
+        if (ev.clientY < r.top + sbW) { axis = 'y'; dir = -1; } else if (ev.clientY > r.bottom - sbH - sbW) { axis = 'y'; dir = 1; }
+      }
+      if (!axis) return;
+      stop();
+      stepTo(axis, dir, [30, 90, 180, 280, 400]);                                // the target is worked out now, before the browser's own small step moves anything
+      holdTimer = setTimeout(function () { repTimer = setInterval(function () { stepTo(axis, dir); }, 260); }, 450);   // holding the arrow keeps going, a column / row at a time
+    }, true);
+    document.addEventListener('pointerup', stop, true); document.addEventListener('pointercancel', stop, true);
+    document.addEventListener('keydown', function (ev) {
+      if (ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey || editing) return;
+      var k = ev.key, tg = ev.target, tn = tg && tg.tagName;
+      if (tn !== 'BODY' && tg !== sh && !(tg.closest && tg.closest('#sheet') && tn === 'TD')) return;
+      if (k === 'ArrowRight') stepTo('x', 1); else if (k === 'ArrowLeft') stepTo('x', -1); else if (k === 'ArrowDown') stepTo('y', 1); else if (k === 'ArrowUp') stepTo('y', -1); else return;
+      ev.preventDefault();
+    });
   })();
 
   /* ---------- crosshair highlight for the hovered cell ---------- */
@@ -1319,8 +1329,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function startColResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
     var th0 = ev.currentTarget.closest('th');
-    $('sheet').classList.add('nosnap');
-    czs = { x: ev.clientX, w: CW, el: ev.currentTarget, i: th0 ? Number(th0.dataset.c) || 0 : 0 }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
+        czs = { x: ev.clientX, w: CW, el: ev.currentTarget, i: th0 ? Number(th0.dataset.c) || 0 : 0 }; czs.el.classList.add('on'); document.body.style.userSelect = 'none';
     document.addEventListener('pointermove', moveColResize); document.addEventListener('pointerup', endColResize); document.addEventListener('pointercancel', endColResize);
   }
   function moveColResize(ev) {
@@ -1331,7 +1340,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function endColResize() {
     if (!czs) return;
-    $('sheet').classList.remove('nosnap'); $('sheet').dispatchEvent(new Event('snapsync')); czs.el.classList.remove('on'); czs = null; document.body.style.userSelect = '';
+    czs.el.classList.remove('on'); czs = null; document.body.style.userSelect = '';
     document.removeEventListener('pointermove', moveColResize); document.removeEventListener('pointerup', endColResize); document.removeEventListener('pointercancel', endColResize);
     cwUser[span] = CW; saveSizes();
   }
