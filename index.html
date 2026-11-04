@@ -73,6 +73,37 @@ html { zoom: .8; }   /* default view size = the browser at 80% */
   --hlov: rgba(46, 160, 96, .15);
   --font: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", system-ui, sans-serif;
 }
+.mc-red { --mbg: #fde9e4; --mink: #a23a25; }
+.mc-orange { --mbg: #fdecd3; --mink: #9a5400; }
+.mc-yellow { --mbg: #fff4b8; --mink: #7a6000; }
+.mc-green { --mbg: #dcf3e2; --mink: #236b3a; }
+.mc-blue { --mbg: #dbeafb; --mink: #1d5593; }
+.mc-purple { --mbg: #ece2f8; --mink: #5b3796; }
+.mc-gray { --mbg: #e8ebee; --mink: #474e56; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mc-red { --mbg: #3b2420; --mink: #ff9a85; }
+  :root:not([data-theme="light"]) .mc-orange { --mbg: #3d2c17; --mink: #ffb86b; }
+  :root:not([data-theme="light"]) .mc-yellow { --mbg: #3a3414; --mink: #ffe066; }
+  :root:not([data-theme="light"]) .mc-green { --mbg: #1e3426; --mink: #6fd9a2; }
+  :root:not([data-theme="light"]) .mc-blue { --mbg: #1d2d42; --mink: #8fc0f5; }
+  :root:not([data-theme="light"]) .mc-purple { --mbg: #2c2440; --mink: #c4a8f5; }
+  :root:not([data-theme="light"]) .mc-gray { --mbg: #2a2f35; --mink: #b4bcc6; }
+}
+:root[data-theme="dark"] .mc-red { --mbg: #3b2420; --mink: #ff9a85; }
+:root[data-theme="dark"] .mc-orange { --mbg: #3d2c17; --mink: #ffb86b; }
+:root[data-theme="dark"] .mc-yellow { --mbg: #3a3414; --mink: #ffe066; }
+:root[data-theme="dark"] .mc-green { --mbg: #1e3426; --mink: #6fd9a2; }
+:root[data-theme="dark"] .mc-blue { --mbg: #1d2d42; --mink: #8fc0f5; }
+:root[data-theme="dark"] .mc-purple { --mbg: #2c2440; --mink: #c4a8f5; }
+:root[data-theme="dark"] .mc-gray { --mbg: #2a2f35; --mink: #b4bcc6; }
+#mgr .rrow label.one { min-width: 0; display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; white-space: nowrap; cursor: pointer; }
+.chip.mgr { position: relative; }
+.chip.mgr .full { display: none; position: absolute; left: 0; top: 0; z-index: 9; min-width: 100%; box-sizing: border-box; padding: 2px 10px; border-radius: inherit; background: var(--mbg, var(--mgr)); box-shadow: 0 2px 10px rgba(0, 0, 0, .3); white-space: pre; }
+.chip.mgr:hover .full { display: block; }
+td.mg:hover { overflow: visible; z-index: 5; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches button { width: 34px; height: 34px; border-radius: 8px; border: 2px solid var(--line2); background: var(--mbg); color: var(--mink); font-weight: 700; cursor: pointer; padding: 0; }
+.swatches button.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ink2); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #14171b; --card: #1c2025; --line: #2e343b; --line2: #434b54; --ink: #e8eaed; --ink2: #98a2ae; --accent: #4fbf86; --accent-ink: #0b1a12;
@@ -212,7 +243,7 @@ td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
 .rh:hover, .rh.on { background: var(--accent); opacity: .45; }
 .rz { position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
 .rz:hover, .rz.on { background: var(--accent); opacity: .45; }
-.hb { margin-left: 8px; visibility: hidden; }   /* shows only while the mouse is over the column header */
+.hb { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); margin: 0; visibility: hidden; }   /* shows only while the mouse is over the column header */
 th.b:hover .hb { visibility: visible; }
 @media (hover: none) { .hb { visibility: visible; } }
 /* per-item note: underlined when it has one */
@@ -281,7 +312,7 @@ td.dropt { box-shadow: inset 0 0 0 2px var(--accent); }
 body.dragmode { user-select: none; cursor: grabbing; }
 body.dragmode * { cursor: grabbing !important; }
 .chip { display: inline-block; background: var(--chip); color: var(--chip-ink); border-radius: 8px; padding: 3px 8px; font-weight: 700; white-space: pre-wrap; font-size: 13px; line-height: 1.4; }
-.chip.mgr { background: var(--mgr); color: var(--mgr-ink); white-space: pre-line; }
+.chip.mgr { background: var(--mbg, var(--mgr)); color: var(--mink, var(--mgr-ink)); white-space: pre-line; }
 .chip.plain { background: transparent; color: var(--ink2); font-weight: 500; padding: 0; }
 td.b { position: relative; }
 .note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
@@ -309,11 +340,11 @@ body.monthv #prev, body.monthv #next, body.monthv #goToday { display: none; }
 .mcal .md.wk { background: var(--wk); }
 .mcal .md.today { background: var(--today); box-shadow: inset 0 3px 0 var(--today-line); }
 .mcal .md.hol { background: #fde8e8; }
-.mcal .md.meet { background: var(--mgr); }
+.mcal .md.meet { background: var(--mbg, var(--mgr)); }
 .mcal .mdh { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 2px; color: var(--ink2); font-size: 12px; }
 .mcal .mdh b { color: var(--ink); font-size: 15px; }
 .mcal .mdh .hn { color: #c0392b; }
-.mcal .mtag { display: inline-block; background: var(--mgr-ink); color: var(--card); border-radius: 6px; padding: 0 8px; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+.mcal .mtag { display: inline-block; background: var(--mink, var(--mgr-ink)); color: var(--card); border-radius: 6px; padding: 0 8px; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
 .mcal .mi { display: flex; gap: 4px; font-size: 13px; line-height: 1.45; padding: 1px 0; }
 .mcal .mi .bul { flex: none; width: 12px; text-align: center; color: var(--ink2); }
 .mcal .mi.star .bul { color: var(--star); }
@@ -476,14 +507,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 </div>
 <div id="mgr" hidden role="dialog" aria-modal="true" aria-labelledby="mgrTitle">
   <div class="rulecard">
-    <div class="rulehead" id="mgrTitle">重要會議設定</div>
+    <div class="rulehead" id="mgrTitle">新增倒數會議</div>
     <div class="rulebody">
       <div class="rrow"><label for="mgrName">會議名稱</label><input type="text" id="mgrName" maxlength="20"></div>
-      <div class="rrow"><label for="mgrS">開始日</label><input type="date" id="mgrS"></div>
-      <div class="rrow"><label for="mgrE">結束日</label><input type="date" id="mgrE"></div>
-      <div class="rlabel">「重要會議倒數」那一列依這三個欄位計算</div>
+      <div class="rrow"><label for="mgrS">開始日</label><input type="date" id="mgrS"><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
+      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><input type="date" id="mgrE"></div>
+      <div class="rrow"><label>色塊底色</label><div class="swatches" id="mgrColors"></div></div>
     </div>
-    <div class="rulefoot"><span class="grow"></span><button class="btn" id="mgrNo" type="button">取消</button><button class="btn primary" id="mgrOk" type="button">完成</button></div>
+    <div class="rulefoot"><button class="btn" id="mgrDel" type="button">刪除這個會議</button><span class="grow"></span><button class="btn" id="mgrNo" type="button">取消</button><button class="btn primary" id="mgrOk" type="button">完成</button></div>
   </div>
 </div>
 <div id="rule" hidden role="dialog" aria-modal="true" aria-labelledby="ruleTitle">
@@ -573,14 +604,22 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
 
   function isoToDn(s) { var p = String(s).split('-').map(Number); return dnOf(p[0], p[1], p[2]); }
-  function mgrCfg() {
+  var MC = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray'], MCN = { red: '紅', orange: '橘', yellow: '黃', green: '綠', blue: '藍', purple: '紫', gray: '灰' };
+  function mgrList() {                                                  // every countdown meeting; the older single setting becomes the first one
+    if (meta.mgrs && meta.mgrs.list) return meta.mgrs.list;
     var m = meta.mgr || {};
-    return { name: m.name || '淡水經理會議', start: m.start || '2026-12-07', end: m.end || '2026-12-09' };
+    return [{ id: 'm0', name: m.name || '淡水經理會議', start: m.start || '2026-12-07', end: m.end || '2026-12-09', color: 'red' }];
   }
+  function mgrCfg() { return mgrList()[0] || { name: '', start: '2999-01-01', end: '2999-01-01', color: 'red' }; }
+  function mgrById(id) { return mgrList().filter(function (m) { return m.id === id; })[0]; }
   function z2(n) { return (n < 10 ? '0' : '') + n; }
-  function mgrInfo(dn) {                                               // row 5 (new formula)
-    var c = mgrCfg(), s = isoToDn(c.start), e = isoToDn(c.end);
+  function mgrInfos(dn) {                                              // one entry per meeting that still shows on this day
+    return mgrList().map(function (m) { var o = mgrInfo(dn, m); o.m = m; return o; }).filter(function (o) { return o.txt; });
+  }
+  function mgrInfo(dn, cfg) {                                          // row 5 (new formula); without cfg: the first meeting (used by the Excel export)
+    var c = cfg || mgrCfg(), s = isoToDn(c.start), e = isoToDn(c.end);
     if (dn < s) return { txt: c.name + '\n剩' + z2(s - dn) + '天', note: slash(dn) + ' 距離 ' + c.name + '開始（' + slash(s) + '）還有 ' + (s - dn) + ' 天。' };
+    if (dn <= e && s === e) return { txt: c.name + '\n當天', note: slash(dn) + ' 就是 ' + c.name + ' 當天。' };
     if (dn <= e) return { txt: c.name + '\n第' + z2(dn - s + 1) + '天', note: slash(dn) + ' 在會議期間（' + slash(s) + ' ～ ' + slash(e) + '），是第 ' + (dn - s + 1) + ' 天。' };
     return { txt: '', note: slash(dn) + ' 會議已結束（' + slash(e) + '），不再顯示。' };
   }
@@ -747,12 +786,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (s.c === -2) return def.label || '';
     if (s.c === -1) return cellText(itemsOf(cellKey(noteCol(), s.k)));
     var col = cols[s.c];
-    if (isCalc(def)) return s.k === 'field' ? fieldInfo(col.w).txt : s.k === 'mgr' ? mgrInfo(col.dn).txt : routineInfo(col.w, col.wd).txt;
+    if (isCalc(def)) return s.k === 'field' ? fieldInfo(col.w).txt : s.k === 'mgr' ? mgrInfos(col.dn).map(function (o) { return o.txt; }).join('\n') : routineInfo(col.w, col.wd).txt;
     return cellText(itemsOf(cellKey(col, s.k)));
   }
   function calcWhy(k, col) {
     var w = col.w;
-    if (k === 'mgr') return mgrInfo(col.dn).note;
+    if (k === 'mgr') return mgrInfos(col.dn).map(function (o) { return o.note; }).join('\n');
     if (k === 'field') { var f = fieldInfo(w); return wdLabel(w) + (f.txt ? '：' + f.note : '：第 9、12、15、16、23 天才有節點，這天沒有'); }
     var rt = routineInfo(w, col.wd);
     return WDN[col.wd] + '，' + wdLabel(w) + (rt.txt ? '：' + rt.note : '：不是星期三，也不是第 19 天');
@@ -808,7 +847,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var del = h('button', 'rt rtdel' + (rowArmed === def.k ? ' armed' : ''), rowArmed === def.k ? '確定刪除？' : '刪除'); del.type = 'button'; del.dataset.act = 'rowdel';
     del.title = def.custom ? '刪除這個自己新增的工作項目' : '刪除這一列（下方會留下「已刪除」標籤，可以還原）'; tools.appendChild(del);
     td.appendChild(tools);
-    if (def.k === 'mgr') { var mb = h('button', 'add', '＋'); mb.type = 'button'; mb.dataset.act = 'mgrset'; mb.title = '設定重要會議（名稱、開始日、結束日）'; mb.setAttribute('aria-label', mb.title); td.appendChild(mb); }   // hover the row name: a ＋ at its bottom right opens the meeting settings
+    if (def.k === 'mgr') { var mb = h('button', 'add', '＋'); mb.type = 'button'; mb.dataset.act = 'mgrset'; mb.title = '新增倒數會議'; mb.setAttribute('aria-label', mb.title); td.appendChild(mb); }   // hover the row name: a ＋ at its bottom right opens the meeting settings
   }
   function paintNote(td, k) { paintCell(td, noteCol(), k); }   // 子項目／備註 works like any other cell: one item per bullet
   function paintFoot() {
@@ -881,7 +920,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         if (isCalc(def)) {
           var txt = textOf({ k: def.k, c: col.i });
           td.title = calcWhy(def.k, col);
-          if (txt) { var chip = h('span', 'chip' + (def.k === 'mgr' ? ' mgr' : (def.k === 'routine' ? ' plain' : '')), txt); if (def.k === 'mgr') { chip.dataset.act = 'mgrset'; chip.title = '點一下修改重要會議設定'; } td.appendChild(chip); }
+          if (def.k === 'mgr') mgrInfos(col.dn).forEach(function (o) { var ln = o.txt.split('\n'), ch = h('span', 'chip mgr mc-' + (o.m.color || 'red'), ln[0].charAt(0) + '，' + ln[1]); ch.appendChild(h('span', 'full', o.txt)); td.classList.add('mg'); ch.dataset.act = 'mgrset'; ch.dataset.mid = o.m.id; ch.title = '點一下修改「' + o.m.name + '」'; td.appendChild(ch); });
+          else if (txt) { var chip = h('span', 'chip' + (def.k === 'routine' ? ' plain' : ''), txt); td.appendChild(chip); }
         } else paintCell(td, col, def.k);
         tr.appendChild(td);
       });
@@ -896,7 +936,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     $('prev').textContent = mode === 'cm' ? '‹ 上個月' : '‹ 上一工作月'; $('next').textContent = mode === 'cm' ? '下個月 ›' : '下一工作月 ›';
     $('sheet').classList.toggle('mview', span === 28);
     $('toggleB').textContent = hideB ? '顯示待定事項欄' : '隱藏待定事項欄';
-    var mc = mgrCfg();
     renderTop(); renderStars(); renderHidden(); renderRemoved(); renderWm(); padSheet();
     if (mode !== 'week') renderMcal();
   }
@@ -921,13 +960,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       for (dn = w.start; dn <= w.end; dn++) days.push(dn);
       days.slice(0, 7).forEach(function (d) { box.appendChild(h('div', 'mh', WDN[fromDn(d).w].replace('星期', '週'))); });
     }
-    var mc = mgrCfg(), ms = isoToDn(mc.start), me = isoToDn(mc.end);
     var shown = visibleRows().filter(function (d) { return d.k !== 'mgr'; });
     days.forEach(function (d) {
-      var o = fromDn(d), meet = d >= ms && d <= me;
-      var cell = h('div', 'md' + (o.w === 0 || o.w === 6 ? ' wk' : '') + (d === todayDn ? ' today' : '') + (HOL[d] ? ' hol' : '') + (meet ? ' meet' : '')); cell.dataset.dn = String(d);
+      var o = fromDn(d), mi = mgrInfos(d).filter(function (x) { return d >= isoToDn(x.m.start) && d <= isoToDn(x.m.end); }), meet = mi.length > 0;
+      var cell = h('div', 'md' + (o.w === 0 || o.w === 6 ? ' wk' : '') + (d === todayDn ? ' today' : '') + (HOL[d] ? ' hol' : '') + (meet ? ' meet mc-' + (mi[0].m.color || 'red') : '')); cell.dataset.dn = String(d);
       var hd = h('div', 'mdh'); hd.appendChild(h('b', null, mode === 'cm' ? String(o.d) : o.m + '/' + o.d)); hd.appendChild(h('span', HOL[d] ? 'hn' : null, HOL[d] || (mode === 'cm' ? wdLabel(wmOf(d)) : '第 ' + wmOf(d).dayno + ' 天'))); cell.appendChild(hd);
-      if (meet) cell.appendChild(h('div', 'mtag', mc.name + ' 第' + (d - ms + 1) + '天'));
+      mi.forEach(function (x) { cell.appendChild(h('div', 'mtag mc-' + (x.m.color || 'red'), x.m.name + (x.m.start === x.m.end ? ' 當天' : ' 第' + (d - isoToDn(x.m.start) + 1) + '天'))); });
       var any = false;
       shown.forEach(function (def) {
         itemsOf(cellKey({ dn: d }, def.k)).forEach(function (it) {
@@ -1009,8 +1047,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function renderTop() {
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
-    var line = '', mc = mgrCfg(), ms = isoToDn(mc.start);
-    if (todayDn < ms) line += mc.name + ' 剩' + z2(ms - todayDn) + '天';
+    var line = '';
+    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms) line += (line ? '　' : '') + mc.name + ' 剩' + z2(ms - todayDn) + '天'; });
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
       if (fi.length) { line += (line ? '　' : '') + '下個節點：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
@@ -1325,7 +1363,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!btn || !td) return;
     if (editing && editing.node === td) { commit(); return; }
     var k = td.dataset.k, c = Number(td.dataset.c), act = btn.dataset.act;
-    if (act === 'mgrset') return openMgr();
+    if (act === 'mgrset') return openMgr(btn.dataset.mid);
     if (act === 'add') return startAdd(td, k, c);
     var row = btn.closest('.it'); if (!row) return;
     var i = Number(row.dataset.i), col = colAt(c);
@@ -1862,21 +1900,37 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     document.addEventListener('pointermove', dragMove); document.addEventListener('pointerup', dragUp);
     document.addEventListener('pointercancel', dragCancel); document.addEventListener('keydown', dragKey);
   });
-  function openMgr() {
+  var mgrEdit = null, mgrColor = 'red';
+  function paintMgrColors() {
+    var box = $('mgrColors'); box.textContent = '';
+    MC.forEach(function (c) { var b = h('button', 'mc-' + c + (c === mgrColor ? ' on' : ''), c === mgrColor ? '✓' : ''); b.type = 'button'; b.title = MCN[c]; b.addEventListener('click', function () { mgrColor = c; paintMgrColors(); }); box.appendChild(b); });
+  }
+  function openMgr(id) {                                               // id: edit that meeting; none: add a new one
     if (editing) commit();
-    var mc = mgrCfg(); $('mgrName').value = mc.name; $('mgrS').value = mc.start; $('mgrE').value = mc.end;
+    var m = id ? mgrById(id) : null; mgrEdit = m ? m.id : null;
+    $('mgrTitle').textContent = m ? '編輯倒數會議' : '新增倒數會議';
+    $('mgrName').value = m ? m.name : ''; $('mgrS').value = m ? m.start : ''; $('mgrE').value = m ? m.end : '';
+    mgrColor = m ? (m.color || 'red') : MC[mgrList().length % MC.length];
+    $('mgrOne').checked = !!m && m.start === m.end; syncOne();
+    $('mgrDel').style.display = m ? '' : 'none';
+    paintMgrColors();
     $('mgr').hidden = false; $('mgrName').focus();
   }
+  function syncOne() { var on = $('mgrOne').checked; $('mgrERow').style.display = on ? 'none' : ''; }
+  $('mgrOne').addEventListener('change', syncOne);
   function closeMgr() { $('mgr').hidden = true; }
+  function putMgrs(list) { meta.mgrs = { list: list }; backend.put('meta', 'mgrs', meta.mgrs).catch(failToast); closeMgr(); render(); }
   function saveMgr() {
-    var s = $('mgrS').value, e = $('mgrE').value, n = $('mgrName').value.trim() || '淡水經理會議';
+    var s = $('mgrS').value, e = $('mgrOne').checked ? $('mgrS').value : $('mgrE').value, n = $('mgrName').value.trim();
+    if (!n) { toast('請輸入會議名稱'); return; }
     if (!s || !e) { toast('請選開始日和結束日'); return; }
     if (e < s) { toast('結束日不能早於開始日'); return; }
-    var data = { name: n, start: s, end: e };
-    meta.mgr = data;
-    backend.put('meta', 'mgr', data).catch(failToast);
-    closeMgr(); render();
+    var list = mgrList().slice(), data = { id: mgrEdit || 'm' + Date.now().toString(36), name: n, start: s, end: e, color: mgrColor };
+    var at = -1; list.forEach(function (m, i) { if (m.id === mgrEdit) at = i; });
+    if (at >= 0) list[at] = data; else list.push(data);
+    putMgrs(list);
   }
+  $('mgrDel').addEventListener('click', function () { putMgrs(mgrList().filter(function (m) { return m.id !== mgrEdit; })); });
   $('mgrOk').addEventListener('click', saveMgr);
   $('mgrNo').addEventListener('click', closeMgr);
   $('mgr').addEventListener('mousedown', function (ev) { if (ev.target === $('mgr')) closeMgr(); });
@@ -2082,7 +2136,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         if (note) ws.getCell('B' + r).value = note;
         cols.forEach(function (col) {
           var L = col.L, a = L + r, s = { k: def.k, c: col.i }, txt = textOf(s);
-          if (def.k === 'mgr') ws.getCell(a).value = { formula: xMgrF(L), result: txt };
+          if (def.k === 'mgr') ws.getCell(a).value = { formula: xMgrF(L), result: mgrInfo(col.dn).txt };
           else if (txt) {
             var its = itemsOf(cellKey(col, def.k));
             if (its.some(function (x) { return x.d; })) {   // finished items keep their strike-through in Excel
