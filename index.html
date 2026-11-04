@@ -767,7 +767,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
     });
     td.appendChild(box);
-    var add = h('button', 'add', '＋ 新增'); add.type = 'button'; add.dataset.act = 'add'; td.appendChild(add);
+    var add = h('button', 'add', '＋'); add.type = 'button'; add.dataset.act = 'add'; add.title = '新增工作'; add.setAttribute('aria-label', '新增工作'); td.appendChild(add);
   }
   var rowArmed = null, rowArmTimer = null;
   function paintLabel(td, def, i, n) {
@@ -1013,7 +1013,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function renderStars() {
     var box = $('starChips'); box.textContent = '';
     var list = starredList();
-    if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋ 新增」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
+    if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
     list.forEach(function (s) {
       var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : ''));
       w.dataset.dn = String(s.dn); w.dataset.k = s.k; w.dataset.i = String(s.i);
@@ -1326,7 +1326,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var tb = it.querySelector('.itb'); if (!tb) return;
     it.classList.remove('flip');                                   // decide again every time: the sheet may have been scrolled since the last hover
     var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect();
-    if (r.width && r.right > sr.right) it.classList.add('flip');
+    var add = it.closest('td') && it.closest('td').querySelector(':scope > .add'), ar = add ? add.getBoundingClientRect() : null, ir = it.getBoundingClientRect();
+    var blocked = ar && ar.width && ar.left < ir.right && ar.right > ir.left && ar.top < ir.bottom && ar.bottom > ir.top;   // the "＋" button sits over the item's right end: the mouse could not get across to the tools
+    if (r.width && (r.right > sr.right || blocked)) it.classList.add('flip');
   });
   $('starChips').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
@@ -1728,7 +1730,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function renderRuleList() {
     var box = $('rulesList'); box.textContent = '';
     var list = rulesFor(listRow);
-    if (!list.length) box.appendChild(h('div', 'hint', '目前沒有重複規則。按「＋ 新增規則」，或在該列的格子按「＋ 新增」。'));
+    if (!list.length) box.appendChild(h('div', 'hint', '目前沒有重複規則。按「＋ 新增規則」，或在該列的格子按「＋」。'));
     list.forEach(function (r) {
       var row = h('div', 'rli'), t = h('div', 'rt1'), b = h('button', 'btn', '編輯'); b.type = 'button';
       t.appendChild(h('b', null, expandT(r.t, todayDn))); t.appendChild(h('span', 'sub', ruleSummary(r)));
