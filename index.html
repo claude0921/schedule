@@ -873,7 +873,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
           var txt = textOf({ k: def.k, c: col.i });
           td.title = calcWhy(def.k, col);
           if (txt) { var chip = h('span', 'chip' + (def.k === 'mgr' ? ' mgr' : (def.k === 'routine' ? ' plain' : '')), txt); if (def.k === 'mgr') { chip.dataset.act = 'mgrset'; chip.title = '點一下修改重要會議設定'; } td.appendChild(chip); }
-          if (def.k === 'mgr') { var mb = h('button', 'add', '＋'); mb.type = 'button'; mb.dataset.act = 'mgrset'; mb.title = '設定重要會議'; mb.setAttribute('aria-label', '設定重要會議'); td.appendChild(mb); }
         } else paintCell(td, col, def.k);
         tr.appendChild(td);
       });
