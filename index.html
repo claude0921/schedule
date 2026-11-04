@@ -395,6 +395,9 @@ td.c.manual:hover, td.c.manual.editing { z-index: 5; }
 #tbl td.b:hover, #tbl td.b:focus-within, #tbl td.b:has(.it.hot) { z-index: 6; }   /* the floating item tools (and the 「確定刪除？」 button) stay above the date cell next to it, even when that cell is the hovered one */
 .it.flip .itb { left: auto; right: 100%; }   /* no room on the right (last visible column): open to the left instead */
 .itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
+.itb .ind { border: 0; background: transparent; cursor: pointer; font-size: 13px; padding: 0 3px; color: var(--ink2); }
+.itb .ind:hover:not(:disabled) { color: var(--accent); }
+.itb .ind:disabled { opacity: .25; cursor: default; }
 @media (hover: none) { .it { flex-wrap: wrap; } .itb { display: flex; position: static; flex-basis: 100%; box-shadow: none; border: 0; padding: 0; background: transparent; } .bul { display: none; } }
 .st { border: 0; background: transparent; padding: 0 2px; font-size: 16px; line-height: 1.35; color: var(--ink2); opacity: .5; }
 .it:hover .st, .it.star .st { opacity: 1; }
@@ -410,6 +413,8 @@ td.c:hover .add, td.c.sel .add, td.c:focus-within .add, td.a:hover > .add { opac
 @media (hover: none) { .add, .x, .ed { opacity: 1; } .x { opacity: .5; } }
 .composer { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 td.a input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; font-weight: 700; }
+td.editing .composer textarea, td.editing .it textarea { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; height: auto; resize: none; overflow: hidden; font: inherit; line-height: 1.35; display: block; box-sizing: border-box; }
+.it .tx { white-space: pre-wrap; }
 .composer input, .it input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; }
 .crow { display: flex; flex-wrap: wrap; gap: 4px; }
 .crow .btn { min-height: 28px; padding: 1px 8px; font-size: 12px; border-radius: 6px; }
@@ -807,12 +812,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (!r || (r.row || 'routine') !== rk || !ruleHits(r, dn)) return;   // series deleted, or no longer falls on this day
       seen[it.r] = 1;
       if (it.x) return;                                               // this day was removed
-      var o = { t: it.e ? it.t : expandT(r.t, dn), s: (it.s || (r.st1 && dn === todayDn)) ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; out.push(o);
+      var o = { t: it.e ? it.t : expandT(r.t, dn), s: (it.s || (r.st1 && dn === todayDn)) ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; if (it.l) o.l = it.l; out.push(o);
     });
     rulesFor(rk).forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: expandT(r.t, dn), s: (r.st || (r.st1 && dn === todayDn)) ? 1 : 0, d: 0, r: r.id }); });
     return out;
   }
-  function cellText(items) { return items.map(function (i) { return (i.s ? '★ ' : '') + (i.d ? '✓ ' : '') + i.t + (i.n ? '\n　↳ ' + String(i.n).replace(/\n/g, ' ') : ''); }).join('\n'); }
+  function cellText(items) { return items.map(function (i) { return '　'.repeat(Math.max(0, Math.min(3, Number(i.l) || 0))) + (i.s ? '★ ' : '') + (i.d ? '✓ ' : '') + i.t + (i.n ? '\n　↳ ' + String(i.n).replace(/\n/g, ' ') : ''); }).join('\n'); }
   function textOf(s) {
     if (s.k === 'foot') return (meta.footer && meta.footer.text) || '';
     var def = rowDef(s.k);
@@ -836,6 +841,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var items = itemsOf(cellKey(col, k)), box = h('div', 'items');
     items.forEach(function (it, i) {
       var row = h('div', 'it' + (it.s ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '')); row.dataset.i = String(i);
+      var lv = Math.max(0, Math.min(3, Number(it.l) || 0)); if (lv) row.style.marginLeft = (lv * 14) + 'px';
+      var ind = h('button', 'ind', '⇥'); ind.type = 'button'; ind.dataset.act = 'indent'; ind.title = '向內縮排'; ind.setAttribute('aria-label', ind.title); if (lv >= 3) ind.disabled = true;
+      var outd = h('button', 'ind', '⇤'); outd.type = 'button'; outd.dataset.act = 'outdent'; outd.title = '向外縮排'; outd.setAttribute('aria-label', outd.title); if (lv <= 0) outd.disabled = true;
       var nt = h('button', 'nt', '備註'); nt.type = 'button'; nt.dataset.act = 'inote';
       nt.title = it.n ? '修改這項工作的備註' : '為這項工作加備註（有備註的工作會加底線）'; nt.setAttribute('aria-label', nt.title);
       var ck = h('button', 'ck', it.d ? '☑' : '☐'); ck.type = 'button'; ck.dataset.act = 'done';
@@ -851,7 +859,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       /* a plain bullet (or the lit ★ / ☑) is all that shows until the mouse is over the item; then the tool buttons appear above the text */
       var bul = h('span', 'bul', it.s ? '★' : it.d ? '☑' : '•'); bul.setAttribute('aria-hidden', 'true');
       var tb = h('div', 'itb');
-      tb.appendChild(gr); tb.appendChild(ck); tb.appendChild(st); tb.appendChild(nt);
+      tb.appendChild(gr); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(ck); tb.appendChild(st); tb.appendChild(nt);
       if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); tb.appendChild(rp); }
       tb.appendChild(x);
       row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
@@ -1228,7 +1236,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }
     var legacyNote = isNoteId(id) && notes[k] && notes[k].text;
     if (!items.length && !legacyNote) { delete cellsMap[id]; p = backend.del('cells', id); }
-    else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
+    else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
     p.catch(failToast);
     if (typeof renderHidden === 'function' && cols.length) renderHidden();
   }
@@ -1242,7 +1250,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     else { store[key] = { text: text }; p = backend.put(name, id, { text: text }); }
     p.catch(failToast);
   }
-  function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
+  function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
   function toggleDone(dn, k, i) {
     var col = { dn: dn }, items = itemsNow(col, k); if (!items[i]) return;
     items[i].d = items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0;   // finished → drops off the 置頂 list
@@ -1300,33 +1308,46 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function commit() { finishEdit(true); }
   function cancel() { finishEdit(false); }
 
+  function fitTa(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
   function startAdd(td, k, c) {
     if (editing) commit();
     if (c !== -1 && isRR(k)) { openRule(cols[c].dn, null, k); return; }          // 例行公事 asks for the repeat settings first
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     td.classList.add('editing');
     var add = td.querySelector('.add'); if (add) add.remove();
-    var wrap = h('div', 'composer'), inp = document.createElement('input');
-    inp.type = 'text'; inp.maxLength = 200; inp.placeholder = '工作內容，Enter 加入'; inp.setAttribute('aria-label', '新增工作');
+    var wrap = h('div', 'composer'), inp = document.createElement('textarea'); inp.rows = 1;
+    inp.maxLength = 400; inp.placeholder = '工作內容，Enter 加入，Shift+Enter 換行'; inp.setAttribute('aria-label', '新增工作');
     var row = h('div', 'crow'), star = h('button', 'btn cstar', '☆ 標星號'), ok = h('button', 'btn primary', '加入'), no = h('button', 'btn', '取消');
     star.type = ok.type = no.type = 'button';
     wrap.appendChild(inp); row.appendChild(star); row.appendChild(ok); row.appendChild(no); wrap.appendChild(row); td.appendChild(wrap);
     var e = { kind: 'add', k: k, c: c, node: td, inp: inp, star: false }; editing = e;
     star.addEventListener('click', function () { e.star = !e.star; star.classList.toggle('on', e.star); star.textContent = e.star ? '★ 已標星號' : '☆ 標星號'; inp.focus(); });
     ok.addEventListener('click', commit); no.addEventListener('click', cancel);
-    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
+    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
+    inp.addEventListener('input', function () { fitTa(inp); });
     inp.focus();
   }
   function startItem(td, k, c, i) {
     if (editing) commit();
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     var row = td.querySelector('.it[data-i="' + i + '"]'); if (!row) return;
-    var tx = row.querySelector('.tx'), inp = document.createElement('input');
-    inp.type = 'text'; inp.maxLength = 200; inp.value = tx.textContent; inp.setAttribute('aria-label', '修改工作');
+    var tx = row.querySelector('.tx'), inp = document.createElement('textarea'); inp.rows = 1;
+    inp.maxLength = 400; inp.value = tx.textContent; inp.setAttribute('aria-label', '修改工作');
     tx.replaceWith(inp); td.classList.add('editing');
     editing = { kind: 'item', k: k, c: c, i: i, node: td, inp: inp };
-    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
-    inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+    inp.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+      else if (ev.key === 'Tab') {                                // Tab = 向內縮排, Shift+Tab = 向外縮排
+        ev.preventDefault();
+        var e0 = editing, col0 = colAt(e0.c), its0 = itemsNow(col0, e0.k), it0 = its0[e0.i]; if (!it0) return;
+        var a0 = Number(it0.l) || 0, b0 = Math.max(0, Math.min(3, a0 + (ev.shiftKey ? -1 : 1))); if (a0 === b0) return;
+        var txt0 = inp.value.trim(); if (txt0 && txt0 !== it0.t) { if (it0.r) it0.e = 1; it0.t = txt0; }
+        if (b0) it0.l = b0; else delete it0.l;
+        saveItems(col0, e0.k, its0); var k0 = e0.k, c0 = e0.c, i0 = e0.i, td0 = e0.node; editing = null; td0.classList.remove('editing'); paintCell(td0, col0, k0); startItem(td0, k0, c0, i0);
+      }
+    });
+    inp.addEventListener('input', function () { fitTa(inp); });
+    fitTa(inp); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
   }
   function startItemNote(td, k, c, i) {
     if (editing) commit();
@@ -1434,7 +1455,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var tb = nit.querySelector('.itb'); if (!tb) return;
       var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect(); if (r.width && r.right > sr.right) nit.classList.add('flip');
     }
-    if (act === 'done') { items[i].d = items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
+    if (act === 'indent' || act === 'outdent') { var l0 = Number(items[i].l) || 0, l1 = Math.max(0, Math.min(3, l0 + (act === 'indent' ? 1 : -1))); if (l1 === l0) return; if (l1) items[i].l = l1; else delete items[i].l; saveItems(col, k, items); paintCell(td, col, k); reHot(); }
+    else if (act === 'done') { items[i].d =items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
     else if (act === 'star') { items[i].s = items[i].s ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
     else if (act === 'del') {
       var key = cellKey(col, k) + '#' + i;
@@ -2221,7 +2243,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
             var its = itemsOf(cellKey(col, def.k));
             if (its.some(function (x) { return x.d; })) {   // finished items keep their strike-through in Excel
               ws.getCell(a).value = { richText: its.map(function (it, ix) {
-                return { text: (it.s ? '★ ' : '') + it.t + (it.n ? '\n　↳ ' + String(it.n).replace(/\n/g, ' ') : '') + (ix < its.length - 1 ? '\n' : ''), font: { name: FONT, size: 12, strike: !!it.d, color: { argb: it.d ? 'FF888888' : 'FF000000' } } };
+                return { text: '　'.repeat(Math.max(0, Math.min(3, Number(it.l) || 0))) + (it.s ? '★ ' : '') + it.t + (it.n ? '\n　↳ ' + String(it.n).replace(/\n/g, ' ') : '') + (ix < its.length - 1 ? '\n' : ''), font: { name: FONT, size: 12, strike: !!it.d, color: { argb: it.d ? 'FF888888' : 'FF000000' } } };
               }) };
             } else ws.getCell(a).value = txt;
           }
