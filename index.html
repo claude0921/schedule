@@ -212,7 +212,9 @@ td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
 .rh:hover, .rh.on { background: var(--accent); opacity: .45; }
 .rz { position: absolute; top: 0; right: 0; width: 8px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
 .rz:hover, .rz.on { background: var(--accent); opacity: .45; }
-.hb { margin-left: 8px; }
+.hb { margin-left: 8px; visibility: hidden; }   /* shows only while the mouse is over the column header */
+th.b:hover .hb { visibility: visible; }
+@media (hover: none) { .hb { visibility: visible; } }
 /* per-item note: underlined when it has one */
 .nt { border: 1px solid var(--line2); background: var(--card); color: var(--ink2); border-radius: 6px; font-size: 11px; line-height: 1.5; padding: 0 6px; opacity: 0; flex: none; align-self: flex-start; }
 .it:hover .nt, .it.hasnote .nt { opacity: .9; }
