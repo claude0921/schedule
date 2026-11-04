@@ -290,6 +290,12 @@ td.b { vertical-align: middle; }
 td.b .it { justify-content: flex-start; }   /* 待定事項 items: bullet + text start at the left */
 td.b .tx { flex: 1 1 auto; text-align: left; }
 td.a { overflow: visible; }
+/* 主項目 name: centred both ways in the cell; the drag handle and the notebook icon sit at the edges so they do not push the text off-centre */
+td.a { vertical-align: middle; }
+.lbrow { align-items: center; justify-content: center; }
+.lbrow .lb { flex: 0 1 auto; text-align: center; padding: 0 22px; }
+.lbrow .rgr { position: absolute; left: 3px; top: 50%; transform: translateY(-50%); }
+.lbrow .pd { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); }
 td.a:hover, td.a.open, td.a:focus-within { z-index: 7; }   /* so the floating tools are not buried under the rows below */
 .rowtools { position: absolute; top: 2px; left: calc(100% - 1px); display: none; flex-wrap: nowrap; white-space: nowrap; gap: 3px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); z-index: 5; }
 td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display: flex; }
@@ -646,7 +652,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   /* ---------- rows (r = row number in the original workbook, used by the Excel export) ---------- */
   var BASE = [
-    { k: 'mgr', r: 5, label: '重要會議倒數', type: 'meeting' },
+    { k: 'mgr', r: 5, label: '重要會議', type: 'meeting' },
     { k: 'field', r: 6, label: '大金馬', type: 'routine' },   // repeat rules like 例行公事 (starter rules: 每工第 9、12、15、16、23 天)
     { k: 'routine', r: 7, label: '例行公事', type: 'routine' },   // the two built-in rules show as a chip; its own items and repeating items are typed in
     { k: 'temp', r: 8, label: '臨時', type: 'manual' },
