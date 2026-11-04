@@ -129,7 +129,9 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .page { max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 
-.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; }
+.hright { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: flex-end; min-height: 34px; margin-top: 0; }   /* same line as the title, pushed to the right */
+.midbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .sub { color: var(--ink2); font-size: 13px; overflow-wrap: anywhere; }
 .sub b { color: var(--ink); }
@@ -353,7 +355,7 @@ body.monthv #prev, body.monthv #next, body.monthv #goToday { display: none; }
 .mcal .mt { min-width: 0; overflow-wrap: anywhere; }
 .mcal .mt .mk { color: var(--ink2); }
 .mcal .empty { color: var(--ink2); font-size: 12px; }
-body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .addrow { display: none; }
+body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .addrow, body.monthv #addRow, body.monthv #addForm { display: none; }
 .seg { display: inline-flex; gap: 0; }
 .seg .btn { border-radius: 0; margin-left: -1px; }
 .seg .btn:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
@@ -434,6 +436,30 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <h1>工作排程</h1>
       <div class="sub" id="wmTitle"></div>
     </div>
+    <div class="hright">
+      <button class="btn" id="exportX">匯出 Excel</button>
+      <label class="auto" id="autoWrap" title="每個工作月第一次開啟這個網頁時（任何一台電腦），自動把上一個工作月匯出成 Excel；同一個月只會匯出一次"><input type="checkbox" id="autoX" checked> 新工作月開頁時自動匯出上個月</label>
+      <span class="sync" id="sync"><i></i><span>連線中…</span></span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="tstrip" aria-label="今天與置頂工作">
+    <div class="tline"><span class="tdate" id="todayDate"></span><span class="sub" id="nextLine"></span></div>
+    <div class="srow"><span class="slabel">★ 置頂工作</span><div class="chips" id="starChips"></div></div>
+    <div class="srow" id="hiddenRow" hidden><span class="slabel hl">▫ 已隱藏</span><div class="chips" id="hiddenChips"></div></div>
+  </section>
+
+  <div class="midbar">
+    <button class="btn" id="addRow">＋ 新增主要工作項目</button>
+    <span class="addform" id="addForm" hidden>
+      <input type="text" id="addName" maxlength="30" placeholder="工作項目名稱，例如：專案 A" aria-label="新工作項目名稱">
+      <label class="rep" title="勾選後，這一列就像「例行公事」「外勤相關行事曆」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
+      <button class="btn primary" id="addOk" type="button">加入</button>
+      <button class="btn" id="addNo" type="button">取消</button>
+      <span class="sub">會加在最後一列，之後可以按住列名稱旁的 ☰ 上下拖曳移動</span>
+    </span>
     <div class="tools">
       <button class="btn" id="prev">‹ 上一工作月</button>
       <button class="btn primary" id="goToday">回到今天</button>
@@ -449,32 +475,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="resetRH" title="所有列高還原成預設">預設列高</button>
       <button class="btn" id="toggleB">隱藏待定事項欄</button>
       <select class="btn" id="exportWm" title="選擇要匯出的工作月（一次匯出一個工作月，28 天）"></select>
-      <button class="btn" id="exportX">匯出 Excel</button>
-      <label class="auto" id="autoWrap" title="每個工作月第一次開啟這個網頁時（任何一台電腦），自動把上一個工作月匯出成 Excel；同一個月只會匯出一次"><input type="checkbox" id="autoX" checked> 新工作月開頁時自動匯出上個月</label>
-      <span class="sync" id="sync"><i></i><span>連線中…</span></span>
     </div>
-  </header>
-
-  <div class="banner" id="banner" hidden></div>
-
-  <section class="tstrip" aria-label="今天與置頂工作">
-    <div class="tline"><span class="tdate" id="todayDate"></span><span class="sub" id="nextLine"></span></div>
-    <div class="srow"><span class="slabel">★ 置頂工作</span><div class="chips" id="starChips"></div></div>
-    <div class="srow" id="hiddenRow" hidden><span class="slabel hl">▫ 已隱藏</span><div class="chips" id="hiddenChips"></div></div>
-  </section>
+  </div>
 
   <div class="sheet" id="sheet" aria-label="工作月排程表"><table id="tbl"></table></div>
   <div class="mcal" id="mcal" aria-label="工作月月曆" hidden></div>
 
   <div class="addrow">
-    <button class="btn" id="addRow">＋ 新增主要工作項目</button>
-    <span class="addform" id="addForm" hidden>
-      <input type="text" id="addName" maxlength="30" placeholder="工作項目名稱，例如：專案 A" aria-label="新工作項目名稱">
-      <label class="rep" title="勾選後，這一列就像「例行公事」「外勤相關行事曆」一樣用重複規則排日期"><input type="checkbox" id="addRep" style="width:auto;min-height:0"> 重複性工作</label>
-      <button class="btn primary" id="addOk" type="button">加入</button>
-      <button class="btn" id="addNo" type="button">取消</button>
-      <span class="sub">會加在最後一列，之後可以按住列名稱旁的 ☰ 上下拖曳移動</span>
-    </span>
     <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
   </div>
 
