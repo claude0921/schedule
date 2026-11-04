@@ -149,9 +149,9 @@ thead th { position: sticky; z-index: 3; text-align: center; vertical-align: mid
 thead tr.h1 th { top: 0; height: 46px; }
 thead tr.h2 th { top: 46px; height: 26px; font-size: 12px; color: var(--ink2); }
 th.a, td.a { position: sticky; left: 0; z-index: 4; border-right: 1px solid var(--line2); font-weight: 700; white-space: pre-wrap; vertical-align: middle; }
-thead th.a { z-index: 6; text-align: left; font-size: 13px; color: var(--ink2); }
+thead th.a { z-index: 6; text-align: center; font-size: 13px; color: var(--ink2); }
 .hideB .b { display: none; }
-th.b { text-align: left; font-size: 13px; color: var(--ink2); }
+th.b { text-align: center; font-size: 13px; color: var(--ink2); }
 .dd { font-weight: 700; font-size: 15px; line-height: 1.2; }
 .dw { font-size: 12px; color: var(--ink2); }
 th.wk, td.wk { background: var(--wk); }
@@ -252,7 +252,8 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 /* crosshair: the hovered cell's column and row get a light green tint (a translucent layer, so today / weekend colours still show) */
 #tbl .hl, #tbl tr.hl-row > td, #tbl tr.hl-row > th { background-image: linear-gradient(var(--hlov), var(--hlov)); }
 #tbl tr.hl-row > .hl { background-image: linear-gradient(var(--hlov), var(--hlov)), linear-gradient(var(--hlov), var(--hlov)); }
-.lb { white-space: pre-wrap; }
+.lb { white-space: pre-wrap; text-align: center; }   /* 主項目 names centred */
+td.b .tx { text-align: center; }   /* 待定事項 items centred */
 td.a { overflow: visible; }
 td.a:hover, td.a.open, td.a:focus-within { z-index: 5; }   /* so the floating tools are not buried under the rows below */
 .rowtools { position: absolute; top: 2px; left: calc(100% - 1px); display: none; flex-wrap: nowrap; white-space: nowrap; gap: 3px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); z-index: 5; }
