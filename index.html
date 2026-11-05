@@ -1122,7 +1122,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
 
   /* tags for work items that are hidden, so they are not forgotten */
-  var hiddenOpen = false;                                                // the hidden-row labels are folded away until 「隱藏工作項目」 is clicked
+  var hiddenOpen = true;                                                 // the hidden-row labels are listed by default; 「顯示工作項目」 / 「隱藏工作項目」 folds them away / brings them back
   $('hiddenToggle').addEventListener('click', function () { hiddenOpen = !hiddenOpen; renderHidden(); });
   function renderHidden() {
     var hs = hiddenSet(), keys = rows().filter(function (d) { return hs[d.k]; }), box = $('hiddenChips');
