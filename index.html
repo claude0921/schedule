@@ -286,7 +286,7 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 #tbl .hl, #tbl tr.hl-row > td, #tbl tr.hl-row > th { background-image: linear-gradient(var(--hlov), var(--hlov)); }
 #tbl tr.hl-row > .hl { background-image: linear-gradient(var(--hlov), var(--hlov)), linear-gradient(var(--hlov), var(--hlov)); }
 .lb { white-space: pre-wrap; text-align: center; }   /* 主項目 names centred */
-td.b { vertical-align: middle; }
+td.b { vertical-align: top; text-align: left; }   /* 待定事項: left and top, like the date cells */
 td.b .it { justify-content: flex-start; }   /* 待定事項 items: bullet + text start at the left */
 td.b .tx { flex: 1 1 auto; text-align: left; }
 td.a { overflow: visible; }
@@ -350,6 +350,8 @@ body.monthv #addRow { display: none; }   /* the button group then starts at the 
 .mlabel { display: none; align-items: center; gap: 8px; margin-left: 12px; white-space: nowrap; line-height: 1.1; }
 body.monthv .mlabel { display: inline-flex; }
 .midbar { position: relative; }
+.midbar > .tools { flex: 1 1 auto; }
+#copyYest { order: 99; margin-left: auto; }   /* 複製昨天的工作項目 sits alone at the far right */
 @media (min-width: 1100px) { body.monthv .mlabel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; } }   /* centred over the calendar */
 .mlabel .ml-l { display: flex; flex-direction: column; align-items: center; }
 .mlabel .ml-y { font-size: 22px; }   /* same size as the 工作排程 title; the other two scale from the sample picture */
