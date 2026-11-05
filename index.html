@@ -2214,7 +2214,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var th = tci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + tci + '"]'); if (!th) return;
     padSheet();
     var stick = 150 + (hideB ? 0 : bw), vis = Math.max(sheet.clientWidth - stick, th.offsetWidth);
-    var left = th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
+    var lead = $('tbl').querySelector('thead th.dh[data-c="' + (tci - 2) + '"]');   // start two days before today: seven whole days (5 weekdays + 2 half-width weekend days always fill the width), none cut off at either side
+    var left = lead && mode === 'week' ? lead.offsetLeft - stick : th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
   $('resetCW').addEventListener('click', resetCW);
