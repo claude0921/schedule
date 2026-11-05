@@ -2134,7 +2134,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var m = id ? mgrById(id) : null; mgrEdit = m ? m.id : null;
     $('mgrTitle').textContent = m ? '編輯倒數會議' : '新增倒數會議';
     $('mgrName').value = m ? m.name : ''; $('mgrLoc').value = m && m.loc ? m.loc : ''; var day = !m && dn ? iso(Number(dn)) : ''; $('mgrS').value = m ? m.start : day; $('mgrE').value = m ? m.end : day;
-    mgrColor = m ? (m.color || 'red') : MC[mgrList().length % MC.length];
+    var usedC = mgrList().map(function (x) { return x.color || 'red'; });                  // new meeting: first colour no other meeting uses (all used: cycle)
+    mgrColor = m ? (m.color || 'red') : (MC.filter(function (c) { return usedC.indexOf(c) < 0; })[0] || MC[usedC.length % MC.length]);
     $('mgrOne').checked = !!m && m.start === m.end; syncOne(); $('mgrCd').checked = m ? !m.nocd : true;
     $('mgrDel').style.display = m ? '' : 'none';
     paintMgrColors();
