@@ -392,13 +392,25 @@ td.c.manual { overflow: visible; position: relative; }   /* so the floating tool
 td.c.manual:hover, td.c.manual.editing { z-index: 5; }
 .itb { display: none; position: absolute; left: 100%; top: 0; z-index: 9; align-items: center; gap: 2px; padding: 1px 4px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); white-space: nowrap; }
 .it:hover .itb, .it.hot .itb { display: flex; }
+.it:hover .itl, .it.hot .itl { display: flex; }
+.it:hover .bul, .it.hot .bul { display: none; }   /* the bullet turns into ☆ □ while the mouse is on the item */
+.itl { display: none; flex: none; align-items: flex-start; gap: 0; white-space: nowrap; }   /* 星號 / 已完成: in the bullet's place, one click each */
+.itl .ck, .itl .st { opacity: 1; cursor: pointer; }
 #tbl td.b:hover, #tbl td.b:focus-within, #tbl td.b:has(.it.hot) { z-index: 6; }   /* the floating item tools (and the 「確定刪除？」 button) stay above the date cell next to it, even when that cell is the hovered one */
 .it.flip .itb { left: auto; right: 100%; }   /* no room on the right (last visible column): open to the left instead */
 .itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
+.itb .cpy { border: 0; background: transparent; cursor: pointer; font-size: 13px; padding: 0 3px; color: var(--ink2); }
+.itb .cpy:hover { color: var(--accent); }
+.it.pick { cursor: pointer; }
+.it .pk { border: 0; background: transparent; cursor: pointer; font-size: 14px; line-height: 1.35; padding: 0 2px; color: var(--ink2); flex: none; }
+.it.pick.on .pk { color: #2563eb; }
+.pickbar { display: flex; gap: 6px; margin-top: 4px; }
+.pickbar .btn { min-height: 0; padding: 0 8px; font-size: 13px; line-height: 1.5; border-radius: 6px; }
+td.c > .add.pst { right: 34px; }
 .itb .ind { border: 0; background: transparent; cursor: pointer; font-size: 13px; padding: 0 3px; color: var(--ink2); }
 .itb .ind:hover:not(:disabled) { color: var(--accent); }
 .itb .ind:disabled { opacity: .25; cursor: default; }
-@media (hover: none) { .it { flex-wrap: wrap; } .itb { display: flex; position: static; flex-basis: 100%; box-shadow: none; border: 0; padding: 0; background: transparent; } .bul { display: none; } }
+@media (hover: none) { .it { flex-wrap: wrap; } .itl { display: flex; } .itb { display: flex; position: static; flex-basis: 100%; box-shadow: none; border: 0; padding: 0; background: transparent; } .bul { display: none; } }
 .st { border: 0; background: transparent; padding: 0 2px; font-size: 16px; line-height: 1.35; color: var(--ink2); opacity: .5; }
 .it:hover .st, .it.star .st { opacity: 1; }
 .it.star .st { color: var(--star); }
@@ -493,6 +505,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="next">下一工作月 ›</button>
       <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶ 復原</button>
       <button class="btn" id="redoBtn" title="重做剛剛復原的動作（Ctrl+Y）" disabled>↷ 重做</button>
+      <button class="btn" id="copyYest" title="複製昨天的工作項目（遇到週末、國定假日就往前找上一個上班日），再到要貼的日期格子按 ＋ 旁的貼上圖示">⧉ 複製昨天的工作項目</button>
       <span class="seg" id="viewSeg" role="group" aria-label="切換顯示方式">
         <button class="btn" type="button" data-mode="week" title="一次看一週（可以編輯）">週</button>
         <button class="btn" type="button" data-mode="wm" title="整個工作月一頁：4 週 × 7 天">工作月</button>
@@ -707,6 +720,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   var cols = [];
   var editing = null, pending = false, backend = null;
   var armed = null, armTimer = null;
+  var clip = null, pick = null;   // clip: {from, rows:[{k, items}]} = what 複製 last collected; pick: {c, k0, sel:{rowKey:[bool]}} = the date column whose items (every row) are being ticked for 複製; k0 = row of the cell that shows the √
   var hideB = false;
   try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) {}
   try { if (window.innerWidth < 700 && localStorage.getItem('sched2.hideB') === null) hideB = true; } catch (e) {}
@@ -838,9 +852,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   /* ---------- rendering ---------- */
   function paintCell(td, col, k) {
     td.textContent = '';
-    var items = itemsOf(cellKey(col, k)), box = h('div', 'items');
+    var items = itemsOf(cellKey(col, k)), box = h('div', 'items'), isPick = !!(pick && pick.c === col.i && pick.sel[k]);
     items.forEach(function (it, i) {
-      var row = h('div', 'it' + (it.s ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '')); row.dataset.i = String(i);
+      var row = h('div', 'it' + (it.s ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '') + (isPick && !it.r ? ' pick' + (pick.sel[k][i] ? ' on' : '') : '')); row.dataset.i = String(i);
       var lv = Math.max(0, Math.min(3, Number(it.l) || 0)); if (lv) row.style.marginLeft = (lv * 14) + 'px';
       var ind = h('button', 'ind', '⇥'); ind.type = 'button'; ind.dataset.act = 'indent'; ind.title = '向內縮排'; ind.setAttribute('aria-label', ind.title); if (lv >= 3) ind.disabled = true;
       var outd = h('button', 'ind', '⇤'); outd.type = 'button'; outd.dataset.act = 'outdent'; outd.title = '向外縮排'; outd.setAttribute('aria-label', outd.title); if (lv <= 0) outd.disabled = true;
@@ -859,13 +873,27 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       /* a plain bullet (or the lit ★ / ☑) is all that shows until the mouse is over the item; then the tool buttons appear above the text */
       var bul = h('span', 'bul', it.s ? '★' : it.d ? '☑' : '•'); bul.setAttribute('aria-hidden', 'true');
       var tb = h('div', 'itb');
-      tb.appendChild(gr); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(ck); tb.appendChild(st); tb.appendChild(nt);
+      var cp = h('button', 'cpy', '⧉'); cp.type = 'button'; cp.dataset.act = 'copy'; cp.title = '複製這一欄的工作項目'; cp.setAttribute('aria-label', cp.title);
+      tb.appendChild(gr); if (!it.r) tb.appendChild(cp); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(nt);
       if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); tb.appendChild(rp); }
       tb.appendChild(x);
-      row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
+      if (isPick && !it.r) {                                         // ticking items to copy: a check box replaces the bullet, the tool bar is left out
+        var pk = h('button', 'pk', pick.sel[k][i] ? '◉' : '○'); pk.type = 'button'; pk.dataset.act = 'pick'; pk.setAttribute('aria-label', '選取這項工作');
+        tx.dataset.act = 'pick'; tx.title = '點一下選取／取消選取';
+        row.appendChild(pk); row.appendChild(tx); box.appendChild(row); return;
+      }
+      var itl = h('div', 'itl'); itl.appendChild(st); itl.appendChild(ck);
+      row.appendChild(itl); row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
     });
     td.appendChild(box);
+    if (pick && pick.c === col.i && pick.k0 === k) {
+      var bar = h('div', 'pickbar'), pok = h('button', 'btn primary', '√'), pno = h('button', 'btn', '✕');
+      pok.type = pno.type = 'button'; pok.dataset.act = 'copyok'; pno.dataset.act = 'copyno'; pok.title = '確定複製勾選的工作項目（這一天所有主項目）'; pno.title = '取消複製';
+      pok.setAttribute('aria-label', pok.title); pno.setAttribute('aria-label', pno.title);
+      bar.appendChild(pok); bar.appendChild(pno); td.appendChild(bar); return;
+    }
     var add = h('button', 'add', '＋'); add.type = 'button'; add.dataset.act = 'add'; add.title = '新增工作'; add.setAttribute('aria-label', '新增工作'); td.appendChild(add);
+    if (clip) { var ps = h('button', 'add pst', '📋'); ps.type = 'button'; ps.dataset.act = 'paste'; ps.title = '貼上剛複製的工作項目（' + clip.from + '）到這一欄的對應工作項目列'; ps.setAttribute('aria-label', ps.title); td.appendChild(ps); }
   }
   var rowArmed = null, rowArmTimer = null;
   function paintLabel(td, def, i, n) {
@@ -1308,6 +1336,57 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function commit() { finishEdit(true); }
   function cancel() { finishEdit(false); }
 
+  /* ---------- 複製／貼上 ---------- */
+  function cellAt(k, c) { return $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]'); }
+  function repaintAt(k, c) { var td = cellAt(k, c); if (td && colAt(c)) paintCell(td, colAt(c), k); }
+  function repaintCol(c) { rows().forEach(function (def) { if (!isCalc(def)) repaintAt(def.k, c); }); }
+  function setPick(p) { var old = pick; pick = p; if (old) repaintCol(old.c); if (p) repaintCol(p.c); }
+  function startPick(k0, c, i0) {                                          // every row of that day becomes tickable (rule-made items fill themselves, so they are left out)
+    var col = colAt(c), sel = {};
+    rows().forEach(function (def) {
+      if (isCalc(def)) return;
+      var its = itemsNow(col, def.k); if (!its.length) return;
+      sel[def.k] = its.map(function (x, j) { return def.k === k0 && j === i0 && !x.r; });
+    });
+    setPick({ c: c, k0: k0, sel: sel });
+  }
+  function plainItem(x) { var o = { t: x.t, s: x.s ? 1 : 0, d: 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; return o; }
+  function dayLabel(dn) { var t = slash(dn); return t.slice(t.indexOf('/') + 1); }
+  function pickOk() {
+    if (!pick) return;
+    var col = colAt(pick.c), out = [], total = 0;
+    rows().forEach(function (def) {
+      var flags = pick.sel[def.k]; if (!flags) return;
+      var its = itemsNow(col, def.k), chosen = its.filter(function (x, i) { return flags[i] && !x.r; }).map(plainItem);
+      if (chosen.length) { out.push({ k: def.k, items: chosen }); total += chosen.length; }
+    });
+    if (!total) { toast('請先勾選要複製的工作項目'); return; }
+    clip = { from: pick.c === -1 ? '待定事項' : dayLabel(col.dn), rows: out };
+    pick = null; render(); toast('已複製 ' + total + ' 項，到要貼上的日期格子，按 ＋ 旁邊的 📋', 4500);
+  }
+  function copyYesterday() {
+    if (editing) commit();
+    var d = todayDn - 1, n = 0;
+    while (n++ < 30 && (HOL[d] || fromDn(d).w === 0 || fromDn(d).w === 6)) d--;      // weekends and national holidays have no work: take the working day before
+    var out = [], total = 0;
+    rows().forEach(function (def) {
+      if (isCalc(def) || isRR(def.k)) return;                                          // rows driven by repeat rules fill themselves
+      var its = itemsNow({ dn: d }, def.k).map(plainItem); if (its.length) { out.push({ k: def.k, items: its }); total += its.length; }
+    });
+    if (!total) { toast(dayLabel(d) + ' 沒有可以複製的工作項目'); return; }
+    clip = { from: dayLabel(d) + ' 的全部工作', rows: out }; pick = null; render();
+    toast('已複製 ' + dayLabel(d) + ' 的 ' + total + ' 項，到要貼上的日期格子，按 ＋ 旁邊的 📋', 4500);
+  }
+  function doPaste(c) {
+    if (!clip) return; var col = colAt(c), total = 0, miss = 0;
+    clip.rows.forEach(function (r) {
+      if (!rowDef(r.k)) { miss++; return; }
+      var cur = itemsNow(col, r.k); r.items.forEach(function (x) { cur.push(plainItem(x)); total++; });
+      saveItems(col, r.k, cur); repaintAt(r.k, c);
+    });
+    clip = null; render(); toast(total ? '已貼上 ' + total + ' 項' + (miss ? '（有 ' + miss + ' 列已不存在，略過）' : '') : '沒有可以貼上的工作項目');
+  }
+  $('copyYest').addEventListener('click', copyYesterday);
   function fitTa(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
   function startAdd(td, k, c) {
     if (editing) commit();
@@ -1442,8 +1521,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var k = td.dataset.k, c = Number(td.dataset.c), act = btn.dataset.act;
     if (act === 'mgrset') return openMgr(btn.dataset.mid, btn.dataset.dn);
     if (act === 'add') return startAdd(td, k, c);
+    if (act === 'paste') return doPaste(c);
+    if (act === 'copyok') return pickOk();
+    if (act === 'copyno') return setPick(null);
     var row = btn.closest('.it'); if (!row) return;
     var i = Number(row.dataset.i), col = colAt(c);
+    if (act === 'copy') return startPick(k, c, i);
+    if (act === 'pick') { if (pick && pick.sel[k]) { pick.sel[k][i] = !pick.sel[k][i]; paintCell(td, col, k); } return; }
     if (act === 'rule') { var it0 = itemsNow(col, k)[i]; if (it0 && it0.r) openRule(col.dn, it0.r); return; }
     if (act === 'edit') return startItem(td, k, c, i);
     if (act === 'inote') return startItemNote(td, k, c, i);
