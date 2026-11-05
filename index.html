@@ -236,6 +236,11 @@ td.a { vertical-align: top; }
 #tbl thead th.b { z-index: 6; }
 td.c.fixh { overflow: hidden; position: relative; }
 td.c.fixh > .items, td.c.fixh > .chip { max-height: calc(var(--rh) - 6px); overflow: hidden; }
+td.a.fixh { padding-top: 2px; padding-bottom: 2px; }
+td.c.fixh > .chip { margin-bottom: 0; vertical-align: top; }
+td.c.more:hover::after { right: 66px; }   /* make room for the ＋ / 📋 buttons that show on hover */
+td.c.more::after { content: '...'; position: absolute; right: 5px; bottom: 0; padding: 0 3px; background: var(--card); font-size: 13px; line-height: 1; font-weight: 700; color: var(--ink2); pointer-events: none; }   /* this cell holds more than the row height shows */
+td.a.fixh .lbrow { max-height: calc(var(--rh) - 4px); overflow: hidden; }   /* a hand-set / equalised row clips its name too, so rows can be as short as the screen needs */
 td.c.fixh:hover { overflow: visible; z-index: 5; }
 td.c.fixh:hover > .items, td.c.fixh:hover > .chip { overflow: visible; }   /* point at a clipped cell to see all of it */
 td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
@@ -514,7 +519,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         <button class="btn" type="button" data-mode="cm" title="像一般月曆：一個曆月一頁">曆月</button>
       </span>
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
-      <button class="btn" id="resetRH" title="所有列高還原成預設">預設列高</button>
+      <button class="btn" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button>
       <button class="btn" id="toggleB">隱藏待定事項欄</button>
       <span class="mlabel" id="mLabel"></span>
     </div>
@@ -1607,9 +1612,19 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (best === null) best = dir > 0 ? max : 0;
       best = Math.max(0, Math.min(max, best));
       tgt[axis] = best; tgtT[axis] = now;
-      var go =function () { if (axis === 'x') sh.scrollTo({ left: best, behavior: 'smooth' }); else sh.scrollTo({ top: best, behavior: 'smooth' }); };
-      go();
-      if (again) again.forEach(function (ms) { setTimeout(go, ms); });   // the browser's own step may start a moment later: say it again so ours wins
+      glide(axis, best, again ? 500 : 0);                                // own frame-by-frame glide; with 'again' it also keeps holding the target for a moment, so the browser's own arrow step cannot pull it away
+    }
+    var gl = { x: null, y: null };
+    function glide(axis, to, guard) {
+      if (gl[axis]) cancelAnimationFrame(gl[axis].raf);
+      var from = axis === 'x' ? sh.scrollLeft : sh.scrollTop, t0 = performance.now(), dist = Math.abs(to - from), dur = Math.min(300, Math.max(120, dist * .9)), a = {};
+      gl[axis] = a;
+      (function frame(now) {
+        if (gl[axis] !== a) return;
+        var el = now - t0, p = Math.min(1, el / dur), v = p >= 1 ? to : from + (to - from) * (1 - Math.pow(1 - p, 3));
+        if (axis === 'x') sh.scrollLeft = v; else sh.scrollTop = v;
+        if (el < Math.max(dur, guard)) a.raf = requestAnimationFrame(frame); else gl[axis] = null;
+      })(t0);
     }
     wheelStep = function (axis, d, t) {
       if (t - accT[axis] > 200) acc[axis] = 0;                          // a pause ends the previous gesture
@@ -1719,11 +1734,30 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   /* row heights: drag the bottom edge of a row's name cell (a row can never get shorter than what it holds) */
   /* a row normally grows to its tallest cell (even a date scrolled off-screen); once the height is set by hand the cells are clipped to it */
+  var clipRaf = 0;
+  function markClipped() {                                              // a cell whose items are cut off by the row height gets a "..." under it; it goes away once the row is tall enough for everything
+    Array.prototype.forEach.call($('tbl').querySelectorAll('td.c'), function (td) {
+      var it = td.querySelector(':scope > .items');
+      td.classList.toggle('more', !!(it && td.classList.contains('fixh') && it.scrollHeight > it.clientHeight + 1));
+    });
+  }
+  function fitSheet() {                                                 // the sheet grows down until the 隱藏工作項目 row sits just above the bottom of the window
+    var sh = $('sheet'), ar = document.querySelector('.addrow'); if (!sh || !ar || document.body.classList.contains('monthv')) return;
+    var sr = sh.getBoundingClientRect(); if (!sr.height) return;
+    var below = ar.getBoundingClientRect().bottom - sr.bottom;           // screen px from the sheet's bottom edge to the bottom of that row (does not depend on the sheet height)
+    var top = sr.top + (window.pageYOffset || 0), room = (window.innerHeight - 6 - top - below) / UZ;
+    sh.style.maxHeight = Math.max(300, Math.floor(room)) + 'px';
+  }
+  function scheduleClip() { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(function () { fitSheet(); markClipped(); }); }
+  var clipMo = new MutationObserver(scheduleClip); clipMo.observe($('tbl'), { childList: true, subtree: true }); clipMo.observe($('starChips'), { childList: true, subtree: true });
+  window.addEventListener('resize', scheduleClip); window.addEventListener('load', scheduleClip); scheduleClip();
   function setRowH(tr, px) {
+    scheduleClip();
     tr.style.height = px + 'px';
     Array.prototype.forEach.call(tr.querySelectorAll('td.c, td.a'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', px + 'px'); });
   }
   function clearRowH(tr) {
+    scheduleClip();
     tr.style.height = '';
     Array.prototype.forEach.call(tr.querySelectorAll('td.c, td.a'), function (td) { td.classList.remove('fixh'); td.style.removeProperty('--rh'); });
   }
@@ -2185,7 +2219,17 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   $('resetCW').addEventListener('click', resetCW);
   $('resetRH').addEventListener('click', function () {
-    rhUser = {}; saveSizes(); Array.prototype.forEach.call($('tbl').querySelectorAll('tbody tr'), function (tr) { clearRowH(tr); });
+    rhUser = {}; saveSizes();
+    var trs = Array.prototype.slice.call($('tbl').querySelectorAll('tbody tr')); if (!trs.length) return;
+    trs.forEach(clearRowH);
+    fitSheet();
+    var sh = $('sheet'), hh = $('tbl').tHead ? $('tbl').tHead.offsetHeight : 72;
+    var room = (parseFloat(sh.style.maxHeight) || sh.clientHeight) - (sh.offsetHeight - sh.clientHeight);   // the whole room the sheet may use, minus its border / scrollbar
+    var px = Math.max(18, Math.min(400, Math.floor((room - hh) / trs.length) - 1));   // every shown main item gets the same height, small enough that all of them show at once, no scrolling down
+    trs.forEach(function (tr) { setRowH(tr, px); });
+    while (px > 18 && sh.scrollHeight > sh.clientHeight + 1) { px--; trs.forEach(function (tr) { setRowH(tr, px); }); }   // squeeze one more px until it really fits
+    trs.forEach(function (tr) { var a = tr.querySelector('td.a'); if (a) rhUser[a.dataset.k] = px; });
+    saveSizes(); toast('已把 ' + trs.length + ' 個工作項目平均成相同列高');
   });
   function setMode(to) {
     if (editing) commit();
