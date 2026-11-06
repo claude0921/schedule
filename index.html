@@ -316,6 +316,28 @@ td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display
 .chip-h.has { border-style: solid; border-color: var(--star); background: var(--star-bg); color: var(--ink); }
 .chip-h:hover { border-color: var(--accent); }
 .srow[hidden] { display: none; }
+.wgrid { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 8px; align-items: start; }
+.wcol { min-width: 0; }
+.whead { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; text-align: left; }
+.wname { font-weight: 700; color: var(--ink); cursor: grab; touch-action: none; user-select: none; background: var(--star-bg); border: 1px solid var(--star); border-bottom: 0; border-radius: 8px 8px 0 0; padding: 0 10px; }   /* the keyword is a tab: hold it and drag sideways to reorder */
+.wname:active { cursor: grabbing; }
+.wcol.wmoving { opacity: .8; position: relative; z-index: 5; }
+.wcol.wdrop { box-shadow: -4px 0 0 var(--accent); }
+.wcnt { color: var(--ink2); font-weight: 400; font-size: 12px; }
+.wbtns { margin-left: auto; display: inline-flex; gap: 2px; }
+.wx { border: 0; background: transparent; cursor: pointer; color: var(--ink2); font-size: 11px; padding: 0 3px; }
+.wx:hover:not(:disabled) { color: var(--accent); }
+.wx:disabled { opacity: .25; cursor: default; }
+.wchips { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.wchips .chip-s { white-space: normal; overflow: visible; border-radius: 12px; max-width: 100%; width: fit-content; }
+.wdel { padding: 0 2px 0 0; }
+.wempty { color: var(--ink2); font-size: 13px; }
+.chip-s.late { border-color: #c0392b; background: #fdeaea; color: #8a1f14; }
+.chip-s.late b { color: #c0392b; }
+.wtools { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 6px; font-size: 12px; color: var(--ink2); }
+.wtools .btn { min-height: 0; padding: 0 8px; font-size: 12px; }
+.wtools label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.wempty { color: var(--ink2); font-size: 13px; padding-top: 3px; }
 .hbtn { border: 0; background: transparent; cursor: pointer; font: inherit; font-weight: 700; padding: 3px 0 0; }
 .hbtn:hover { text-decoration: underline; }
 #hiddenChips[hidden], #hiddenRow[hidden] { display: none; }
@@ -502,6 +524,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   <section class="tstrip" aria-label="今天與置頂工作">
     <div class="tline"><span class="tdate" id="todayDate"></span><span class="sub" id="nextLine"></span></div>
     <div class="srow"><span class="slabel">★ 置頂工作</span><div class="chips" id="starChips"></div></div>
+    <div id="watchBox"></div>
   </section>
 
   <div class="midbar">
@@ -1185,6 +1208,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     return out;
   }
   function renderStars() {
+    renderWatch();
     var box = $('starChips'); box.textContent = '';
     var list = starredList();
     if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
@@ -1198,6 +1222,116 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       w.appendChild(ck); w.appendChild(go); box.appendChild(w);
     });
   }
+  /* ---------- 關注清單: every item whose text / note contains a keyword; from today on, plus overdue ones that are not finished ---------- */
+  var NOTE_DN = null;
+  function watchCfg() { var w = meta.watch; return { words: w && Array.isArray(w.words) ? w.words.slice() : ['副總'], done: !!(w && w.done), hide: !!(w && w.hide), nolate: !!(w && w.nolate) }; }
+  function saveWatch(c) { pushWatchUndo(); meta.watch = { words: c.words, done: c.done ? 1 : 0, hide: c.hide ? 1 : 0, nolate: c.nolate ? 1 : 0 }; backend.put('meta', 'watch', meta.watch).catch(failToast); renderWatch(); }
+  function watchItems(word, showDone, noLate) {
+    NOTE_DN = NOTE_DN || isoToDn(NOTE_ISO);
+    var out = [];
+    Object.keys(cellsMap).forEach(function (id) {
+      var d = cellsMap[id], parts = id.split('_'), date = (d && d.date) || parts[0], row = (d && d.row) || parts.slice(1).join('_');
+      var dn = isoToDn(date), def = rowDef(row);
+      if (isNaN(dn) || !def) return;
+      var isNote = dn === NOTE_DN;
+      itemsOf(id).forEach(function (it, i) {
+        if (((it.t || '') + '\n' + (it.n || '')).indexOf(word) < 0) return;
+        if (it.d && !showDone) return;
+        var late = !isNote && dn < todayDn;
+        if (late && (it.d || noLate)) return;                                  // finished and in the past: gone
+        out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def), late: late, note: isNote });
+      });
+    });
+    out.sort(function (a, b) { return (b.late - a.late) || (a.note - b.note) || a.dn - b.dn || a.o - b.o || a.i - b.i; });
+    return out;
+  }
+  var wdrag = null;
+  function watchDragStart(ev) {
+    if (ev.button && ev.button !== 0) return;
+    ev.preventDefault();
+    var nm = ev.currentTarget, grid = nm.closest('.wgrid');
+    wdrag = { from: Number(nm.dataset.wi), to: Number(nm.dataset.wi), x0: ev.clientX, on: false, grid: grid, col: nm.closest('.wcol') };
+    document.addEventListener('pointermove', watchDragMove); document.addEventListener('pointerup', watchDragEnd); document.addEventListener('pointercancel', watchDragCancel);
+  }
+  function watchDragMove(ev) {
+    if (!wdrag) return;
+    if (!wdrag.on) { if (Math.abs(ev.clientX - wdrag.x0) < 5) return; wdrag.on = true; wdrag.col.classList.add('wmoving'); document.body.classList.add('dragmode'); }
+    var cols = wdrag.grid.querySelectorAll('.wcol'), to = cols.length - 1;
+    for (var i = 0; i < cols.length; i++) { var rc = cols[i].getBoundingClientRect(); if (ev.clientX < rc.left + rc.width / 2) { to = i; break; } }
+    wdrag.to = to;
+    for (var k = 0; k < cols.length; k++) cols[k].classList.toggle('wdrop', k === to && to !== wdrag.from);
+    wdrag.col.style.transform = 'translateX(' + ((ev.clientX - wdrag.x0) / UZ) + 'px)';
+  }
+  function watchDragStop() {
+    document.removeEventListener('pointermove', watchDragMove); document.removeEventListener('pointerup', watchDragEnd); document.removeEventListener('pointercancel', watchDragCancel);
+    document.body.classList.remove('dragmode');
+    if (wdrag && wdrag.col) { wdrag.col.classList.remove('wmoving'); wdrag.col.style.transform = ''; }
+    if (wdrag && wdrag.grid) Array.prototype.forEach.call(wdrag.grid.querySelectorAll('.wcol'), function (c) { c.classList.remove('wdrop'); });
+  }
+  function watchDragEnd() {
+    var d = wdrag; watchDragStop(); wdrag = null;
+    if (!d || !d.on || d.to === d.from) return;
+    var c = watchCfg(); c.words.splice(d.to, 0, c.words.splice(d.from, 1)[0]); saveWatch(c);
+  }
+  function watchDragCancel() { watchDragStop(); wdrag = null; }
+  function renderWatch() {
+    var box = $('watchBox'); if (!box) return; box.textContent = '';
+    var cfg = watchCfg();
+    if (cfg.hide) {                                                  // folded away: one small line with a way back
+      var hr = h('div', 'wtools'), sh = h('button', 'btn', '顯示'); sh.type = 'button';
+      sh.addEventListener('click', function () { var c = watchCfg(); c.hide = false; saveWatch(c); });
+      hr.appendChild(document.createTextNode('👁 關注清單（已隱藏）')); hr.appendChild(sh); box.appendChild(hr); return;
+    }
+    var grid = h('div', 'wgrid'); grid.style.gridTemplateColumns = 'repeat(' + Math.max(1, cfg.words.length) + ', minmax(0, 1fr))';   // keywords side by side, every column the same width
+    cfg.words.forEach(function (word, wi) {
+      var list = watchItems(word, cfg.done, cfg.nolate), late = list.filter(function (x) { return x.late; }).length;
+      var col = h('div', 'wcol'), head = h('div', 'whead');
+      var xb = h('button', 'wx wdel', '✕'); xb.type = 'button'; xb.title = '不再關注「' + word + '」'; xb.setAttribute('aria-label', xb.title);
+      xb.addEventListener('click', function () { var c = watchCfg(); c.words.splice(wi, 1); saveWatch(c); });
+      head.appendChild(xb);
+      var nm = h('span', 'wname', word); nm.title = '按住左右拖曳，調整順序'; nm.dataset.wi = String(wi); nm.addEventListener('pointerdown', watchDragStart);
+      head.appendChild(nm);
+      head.appendChild(h('span', 'wcnt', list.length + (late ? '（逾期 ' + late + '）' : '')));
+      col.appendChild(head);
+      var chips = h('div', 'wchips');
+      if (!list.length) chips.appendChild(h('span', 'wempty', '今天起沒有提到「' + word + '」的未完成事項'));
+      list.forEach(function (s) {
+        var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.late ? ' late' : '') + (!s.late && s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : '') + (s.n ? ' hasnote' : ''));
+        w.dataset.dn = String(s.dn); w.dataset.k = s.k; w.dataset.i = String(s.i); if (s.note) w.dataset.note = '1';
+        var ck = h('button', 'cks', s.d ? '☑' : '☐'); ck.type = 'button'; ck.title = s.d ? '標回未完成' : '標示已完成'; ck.setAttribute('aria-label', ck.title);
+        var go = h('button', 'cgo'); go.type = 'button'; go.title = s.label + '：' + s.t + '（點一下跳到那一格）' + (s.n ? '\n備註：' + s.n : '');
+        go.appendChild(h('b', null, (s.late ? '逾期 ' : '') + (s.note ? '待定' : o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週')))); var full = s.label + '：' + s.t, chs = Array.from(full); go.appendChild(document.createTextNode(chs.length > 30 ? chs.slice(0, 30).join('') + '…' : full));   // at most 30 characters; the whole text is in the tooltip
+        w.appendChild(ck); w.appendChild(go); chips.appendChild(w);
+      });
+      col.appendChild(chips); grid.appendChild(col);
+    });
+    box.appendChild(grid);
+    var tools = h('div', 'wtools');
+    var add = h('button', 'btn', '＋ 新增關注關鍵字'); add.type = 'button';
+    add.addEventListener('click', function () {
+      var v = window.prompt('要關注的關鍵字（例如：副總、協理）'); v = v && v.trim(); if (!v) return;
+      var c = watchCfg(); if (c.words.indexOf(v) < 0) c.words.push(v); saveWatch(c);
+    });
+    var lb = h('label'), cb = h('input'); cb.type = 'checkbox'; cb.checked = cfg.done; lb.appendChild(cb); lb.appendChild(document.createTextNode('顯示已完成'));
+    cb.addEventListener('change', function () { var c = watchCfg(); c.done = cb.checked; saveWatch(c); });
+    var lb2 = h('label'), cb2 = h('input'); cb2.type = 'checkbox'; cb2.checked = cfg.nolate; lb2.appendChild(cb2); lb2.appendChild(document.createTextNode('隱藏逾期'));
+    cb2.addEventListener('change', function () { var c = watchCfg(); c.nolate = cb2.checked; saveWatch(c); });
+    var hb = h('button', 'btn', '隱藏關注清單'); hb.type = 'button'; hb.title = '把這個清單收起來（可以按「顯示」或「復原」叫回來）';
+    hb.addEventListener('click', function () { var c = watchCfg(); c.hide = true; saveWatch(c); });
+    tools.appendChild(add); tools.appendChild(lb); tools.appendChild(lb2); tools.appendChild(hb); box.appendChild(tools);
+  }
+  $('watchBox').addEventListener('click', function (ev) {
+    var w = ev.target.closest('.chip-s'); if (!w) return;
+    if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
+    if (!ev.target.closest('.cgo')) return;
+    if (w.dataset.note) {                                           // an item of the 待定事項 column: show that column and flash the cell
+      if (hideB) { hideB = false; try { localStorage.setItem('sched2.hideB', '0'); } catch (e) {} render(); }
+      var td = $('tbl').querySelector('td.b[data-k="' + w.dataset.k + '"]');
+      if (td) { td.scrollIntoView({ block: 'center', inline: 'nearest' }); td.classList.add('flash'); setTimeout(function () { td.classList.remove('flash'); }, 1700); }
+      return;
+    }
+    jumpTo(Number(w.dataset.dn), w.dataset.k);
+  });
   function jumpTo(dn, k) {
     if (editing) commit();
     if (hiddenSet()[k]) { var lay = layoutNow(); delete lay.hidden[k]; saveLayout(lay); }
@@ -1239,12 +1373,19 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     else { undoStack.push({ t: now, list: [{ id: id, prev: prev }] }); if (undoStack.length > 50) undoStack.shift(); }
     syncUndoBtn();
   }
+  function watchSnap() { var c = watchCfg(); return JSON.parse(JSON.stringify({ words: c.words, done: c.done ? 1 : 0, hide: c.hide ? 1 : 0, nolate: c.nolate ? 1 : 0 })); }
+  function pushWatchUndo() {                                         // 關注清單 changes (add / remove a keyword, 顯示已完成, hide) are undoable too
+    redoStack.length = 0;
+    undoStack.push({ t: Date.now(), list: [{ meta: 'watch', prev: watchSnap() }] }); if (undoStack.length > 50) undoStack.shift();
+    syncUndoBtn();
+  }
   function syncUndoBtn() { var b = $('undoBtn'), r = $('redoBtn'); if (b) b.disabled = !undoStack.length; if (r) r.disabled = !redoStack.length; }
   function restoreGroup(g, field) {                                  // put every cell of the group back to its saved state
     undoing = true;
     try {
       g.list.slice().reverse().forEach(function (x) {
         var v = x[field];
+        if (x.meta) { meta.watch = v; backend.put('meta', 'watch', v).catch(failToast); return; }
         if (v) { cellsMap[x.id] = v; backend.put('cells', x.id, v).catch(failToast); }
         else { delete cellsMap[x.id]; backend.del('cells', x.id).catch(failToast); }
       });
@@ -1255,7 +1396,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (editing) cancel();
     var g = undoStack.pop();
     if (!g) { syncUndoBtn(); toast('沒有可以復原的動作'); return; }
-    g.list.forEach(function (x) { x.cur = snap(x.id); });            // remember the state we are leaving, for 重做
+    g.list.forEach(function (x) { x.cur = x.meta ? watchSnap() : snap(x.id); });            // remember the state we are leaving, for 重做
     redoStack.push(g); syncUndoBtn();
     restoreGroup(g, 'prev'); toast('已復原上一個動作');
   }
@@ -1763,7 +1904,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     sh.style.maxHeight = Math.max(300, Math.floor(room)) + 'px';
   }
   function scheduleClip() { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(function () { fitSheet(); markClipped(); }); }
-  var clipMo = new MutationObserver(scheduleClip); clipMo.observe($('tbl'), { childList: true, subtree: true }); clipMo.observe($('starChips'), { childList: true, subtree: true });
+  var clipMo = new MutationObserver(scheduleClip); clipMo.observe($('tbl'), { childList: true, subtree: true }); clipMo.observe($('starChips'), { childList: true, subtree: true }); clipMo.observe($('watchBox'), { childList: true, subtree: true });
   window.addEventListener('resize', scheduleClip); window.addEventListener('load', scheduleClip); scheduleClip();
   function setRowH(tr, px) {
     scheduleClip();
