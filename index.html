@@ -2068,7 +2068,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (Math.abs(ev.clientX - drag.x0) + Math.abs(ev.clientY - drag.y0) < 5) return;
       drag.on = true;
       drag.ghost = h('div', 'ghost', drag.text); document.body.appendChild(drag.ghost);
-      drag.row.classList.add('dragging'); document.body.classList.add('dragmode');
+      document.body.classList.add('dragmode'); dragCopyMark();
       drag.raf = requestAnimationFrame(dragTick);
     }
     drag.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; drag.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
@@ -2088,13 +2088,25 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!drag) return;
     var d = drag; drag = null;
     document.removeEventListener('pointermove', dragMove); document.removeEventListener('pointerup', dragUp);
-    document.removeEventListener('pointercancel', dragCancel); document.removeEventListener('keydown', dragKey);
+    document.removeEventListener('pointercancel', dragCancel); document.removeEventListener('keydown', dragKey); document.removeEventListener('keyup', dragKeyUp);
     cancelAnimationFrame(d.raf); clearDrop(); document.body.classList.remove('dragmode');
     if (d.ghost) d.ghost.remove();
     if (d.row) d.row.classList.remove('dragging');
     if (!d.on || cancelIt || !d.t) return;
     var dstC = Number(d.t.td.dataset.c), dstK = d.t.td.dataset.k, srcCol = colAt(d.c), dstCol = colAt(dstC);
-    var src = itemsNow(srcCol, d.k), item = src.splice(d.i, 1)[0];
+    var src = itemsNow(srcCol, d.k), item;
+    if (d.copy) {                                                       // Ctrl held at release: the original stays, a plain copy (not done, not rule-made) is dropped in
+      if (!src[d.i]) return;
+      item = plainItem(src[d.i]);
+      var dst0 = (dstC === d.c && dstK === d.k) ? src : itemsNow(dstCol, dstK); dst0.splice(d.t.idx, 0, item);
+      saveItems(dstCol, dstK, dst0);
+      [[dstK, dstC]].forEach(function (p) {
+        var td = $('tbl').querySelector('td.c[data-k="' + p[0] + '"][data-c="' + p[1] + '"]');
+        if (td) paintCell(td, colAt(p[1]), p[0]);
+      });
+      renderStars(); toast('已複製到這裡'); return;
+    }
+    item = src.splice(d.i, 1)[0];
     if (!item) return;
     if (item.r && (dstC !== d.c || dstK !== d.k)) { delete item.r; delete item.e; }   // moved elsewhere: becomes an ordinary item, the repeat skips this day
     if (dstC === d.c && dstK === d.k) {
@@ -2111,9 +2123,17 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     });
     renderStars();
   }
-  function dragUp() { dragEnd(false); }
+  function dragUp(ev) { if (drag && ev) drag.copy = !!(ev.ctrlKey || ev.metaKey); dragEnd(false); }
   function dragCancel() { dragEnd(true); }
-  function dragKey(ev) { if (ev.key === 'Escape') dragEnd(true); }
+  function dragCopyMark() {                                            // Ctrl held = move-and-copy: ghost shows ＋ and the original stays put
+    if (!drag || !drag.on) return;
+    drag.ghost.textContent = (drag.copy ? '＋ ' : '') + drag.text; drag.row.classList.toggle('dragging', !drag.copy);
+  }
+  function dragKey(ev) {
+    if (ev.key === 'Escape') dragEnd(true);
+    else if ((ev.key === 'Control' || ev.key === 'Meta') && drag && !drag.copy) { drag.copy = true; dragCopyMark(); }
+  }
+  function dragKeyUp(ev) { if ((ev.key === 'Control' || ev.key === 'Meta') && drag && drag.copy) { drag.copy = false; dragCopyMark(); } }
   $('tbl').addEventListener('pointerdown', function (ev) {
     var gr = ev.target.closest('.gr'); if (!gr || (ev.button && ev.button !== 0)) return;
     if (editing) { commit(); return; }
@@ -2122,7 +2142,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     drag = { k: td.dataset.k, c: Number(td.dataset.c), i: Number(row.dataset.i), row: row, text: row.querySelector('.tx').textContent,
       x0: ev.clientX, y0: ev.clientY, on: false, t: null, sx: 0, sy: 0 };
     document.addEventListener('pointermove', dragMove); document.addEventListener('pointerup', dragUp);
-    document.addEventListener('pointercancel', dragCancel); document.addEventListener('keydown', dragKey);
+    document.addEventListener('pointercancel', dragCancel); document.addEventListener('keydown', dragKey); document.addEventListener('keyup', dragKeyUp);
+    drag.copy = !!(ev.ctrlKey || ev.metaKey);
   });
   var mgrEdit = null, mgrColor = 'red';
   function paintMgrColors() {
