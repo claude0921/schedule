@@ -368,6 +368,7 @@ body.monthv .mlabel { display: inline-flex; }
 .mcal .md.blank { background: var(--wk); cursor: default; min-height: 0; }
 .mcal .md.blank:hover { background: var(--wk); }
 .mcal .md.wk { background: var(--wk); }
+.mcal .md.out .mdh b, .mcal .md.out .mdh span { opacity: .55; }
 .mcal .md.today { background: var(--today); box-shadow: inset 0 3px 0 var(--today-line); }
 .mcal .md.hol { background: #fde8e8; }
 .mcal .md.meet { background: var(--mbg, var(--mgr)); }
@@ -383,10 +384,14 @@ body.monthv .mlabel { display: inline-flex; }
 .mcal .mt { min-width: 0; overflow-wrap: anywhere; }
 .mcal .mt .mk { color: var(--ink2); }
 .mcal .empty { color: var(--ink2); font-size: 12px; }
-body.monthv #resetCW, body.monthv #resetRH, body.monthv #toggleB, body.monthv .addrow, body.monthv #addForm { display: none; }
+body.monthv #resetCW, body.monthv #resetRH, body.monthv #hideSeg, body.monthv .addrow, body.monthv #addForm { display: none; }
 .seg { display: inline-flex; gap: 0; }
 .seg .btn { border-radius: 0; margin-left: -1px; }
+.seglabel { display: inline-flex; align-items: center; padding: 0 8px; font-size: 13px; color: var(--ink2); border: 1px solid var(--line2); border-radius: 8px 0 0 8px; background: var(--card); }
+.seglabel + .btn { margin-left: -1px; border-radius: 0; }
+.hideWk .wk { display: none; }
 .seg .btn:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.seglabel + .btn { border-radius: 0; }
 .seg .btn:last-child { border-radius: 0 8px 8px 0; }
 .seg .btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); position: relative; z-index: 1; }
 .mview .it { font-size: 11px; gap: 1px; }
@@ -521,7 +526,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       </span>
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
       <button class="btn" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button>
-      <button class="btn" id="toggleB">隱藏待定事項欄</button>
+      <span class="seg" id="hideSeg" role="group" aria-label="隱藏"><span class="seglabel">隱藏</span><button class="btn" type="button" id="toggleB" title="隱藏／顯示待定事項欄">待定事項</button><button class="btn" type="button" id="toggleWk" title="隱藏／顯示週六、週日">六日</button></span>
       <span class="mlabel" id="mLabel"></span>
     </div>
   </div>
@@ -731,7 +736,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   var editing = null, pending = false, backend = null;
   var armed = null, armTimer = null;
   var clip = null, pick = null;   // clip: {from, rows:[{k, items}]} = what 複製 last collected; pick: {c, k0, sel:{rowKey:[bool]}} = the date column whose items (every row) are being ticked for 複製; k0 = row of the cell that shows the √
-  var hideB = false;
+  var hideB = false, hideWk = false;                                   // hideWk: Saturday / Sunday columns left out of the week sheet
+  try { hideWk = localStorage.getItem('sched2.hideWk') === '1'; } catch (e) {}
   try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) {}
   try { if (window.innerWidth < 700 && localStorage.getItem('sched2.hideB') === null) hideB = true; } catch (e) {}
   var bw = 400;   // width of the 子項目／備註 column, adjustable by dragging its right edge
@@ -951,9 +957,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   var cwUser = {}, rhUser = {};   // per-viewer: date-column width (per view) and row heights (per row), set by dragging
   try { cwUser = JSON.parse(localStorage.getItem('sched2.cw') || '{}') || {}; rhUser = JSON.parse(localStorage.getItem('sched2.rh') || '{}') || {}; } catch (e) {}
   function saveSizes() { try { localStorage.setItem('sched2.cw', JSON.stringify(cwUser)); localStorage.setItem('sched2.rh', JSON.stringify(rhUser)); } catch (e) {} }
-  function fitCW() { if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / (span === 7 ? 6 : span))); var ch = n !== CW; CW = n; return ch; }
+  function fitCW() { if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / (span === 7 ? (wkOff() ? 5 : 6) : span))); var ch = n !== CW; CW = n; return ch; }
   /* Saturday and Sunday columns are half as wide as the others */
-  function colW(c) { return (c.wd === 0 || c.wd === 6) ? Math.round(CW / 2) : CW; }
+  function wkOff() { return hideWk && mode === 'week'; }
+  function isWkCol(c) { return c.wd === 0 || c.wd === 6; }
+  function colW(c) { return isWkCol(c) ? (wkOff() ? 0 : Math.round(CW / 2)) : CW; }
   function colsW() { var t = 0; for (var i = 0; i < cols.length; i++) t += colW(cols[i]); return t; }
   function leftOf(i) { var t = 0; for (var j = 0; j < i && j < cols.length; j++) t += colW(cols[j]); return t; }
   function colIndexAt(x) { var t = 0; for (var i = 0; i < cols.length; i++) { t += colW(cols[i]); if (x < t) return i; } return Math.max(0, cols.length - 1); }
@@ -962,10 +970,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     fitCW();
     buildCols();
     var tbl = $('tbl'); tbl.textContent = '';
-    $('sheet').classList.toggle('hideB', hideB);
+    $('sheet').classList.toggle('hideB', hideB); $('sheet').classList.toggle('hideWk', wkOff());
     var cg = document.createElement('colgroup'), widths = [150, hideB ? 0 : bw];
     widths.forEach(function (wd, n) { var c = document.createElement('col'); c.style.width = wd + 'px'; if (n === 1 && hideB) c.style.display = 'none'; cg.appendChild(c); });
-    cols.forEach(function (cc) { var c = document.createElement('col'); c.style.width = colW(cc) + 'px'; cg.appendChild(c); });
+    cols.forEach(function (cc) { var c = document.createElement('col'); c.style.width = colW(cc) + 'px'; if (!colW(cc)) c.style.display = 'none'; cg.appendChild(c); });
     tbl.appendChild(cg);
     tbl.style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
 
@@ -1015,7 +1023,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     Array.prototype.forEach.call(document.querySelectorAll('#viewSeg .btn'), function (b) { b.classList.toggle('on', b.dataset.mode === mode); });
     $('prev').textContent = mode === 'cm' ? '‹ 上個月' : '‹ 上一工作月'; $('next').textContent = mode === 'cm' ? '下個月 ›' : '下一工作月 ›';
     $('sheet').classList.toggle('mview', span === 28);
-    $('toggleB').textContent = hideB ? '顯示待定事項欄' : '隱藏待定事項欄';
+    $('toggleB').classList.toggle('on', hideB); $('toggleWk').classList.toggle('on', hideWk);
     renderTop(); renderStars(); renderHidden(); renderRemoved(); renderWm(); padSheet();
     if (mode !== 'week') renderMcal();
   }
@@ -1023,13 +1031,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function renderMcal() {
     var box = $('mcal'); box.textContent = '';
     box.style.setProperty('--gcols', mode === 'cm' ? 'repeat(5, minmax(0, 1fr)) minmax(0, .5fr) minmax(0, .5fr)' : 'repeat(2, minmax(0, 1fr)) minmax(0, .5fr) minmax(0, .5fr) repeat(3, minmax(0, 1fr))');   // Saturday / Sunday half as wide
-    var w = wmOf(ANCHOR + viewIdx * LEN), days = [], dn, lead = 0, trail = 0;
+    var w = wmOf(ANCHOR + viewIdx * LEN), days = [], dn, lead = 0, trail = 0, cmFirst = 0, cmLast = 0;
     if (mode === 'cm') {                                              // a calendar month: Mon..Fri columns, blank cells before the 1st and after the last
       var y = Math.floor(cmIdx / 12), mo = cmIdx % 12 + 1, first = dnOf(y, mo, 1), last = dnOf(y, mo + 1, 1) - 1;
-      for (dn = first; dn <= last; dn++) days.push(dn);
+      cmFirst = first; cmLast = last;
+      lead = (fromDn(first).w + 6) % 7; trail = (7 - (lead + (last - first + 1)) % 7) % 7;               // weeks run Monday..Sunday
+      for (dn = first - lead; dn <= last + trail; dn++) days.push(dn);                                 // the days of the previous / next month that share the first / last week are shown too
       ['週一', '週二', '週三', '週四', '週五', '週六', '週日'].forEach(function (n) { box.appendChild(h('div', 'mh', n)); });
-      lead = (fromDn(first).w + 6) % 7; trail = (7 - (lead + days.length) % 7) % 7;               // weeks run Monday..Sunday
-      for (var li = 0; li < lead; li++) box.appendChild(h('div', 'md blank'));
     } else {
       for (dn = w.start; dn <= w.end; dn++) days.push(dn);
       days.slice(0, 7).forEach(function (d) { box.appendChild(h('div', 'mh', WDN[fromDn(d).w].replace('星期', '週'))); });
@@ -1037,8 +1045,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var shown = visibleRows().filter(function (d) { return d.k !== 'mgr'; });
     days.forEach(function (d) {
       var o = fromDn(d), mi = mgrInfos(d).filter(function (x) { return d >= isoToDn(x.m.start) && d <= isoToDn(x.m.end); }), meet = mi.length > 0;
-      var cell = h('div', 'md' + (o.w === 0 || o.w === 6 ? ' wk' : '') + (d === todayDn ? ' today' : '') + (HOL[d] ? ' hol' : '') + (meet ? ' meet mc-' + (mi[0].m.color || 'red') : '')); cell.dataset.dn = String(d);
-      var hd = h('div', 'mdh'); hd.appendChild(h('b', null, mode === 'cm' ? String(o.d) : o.m + '/' + o.d)); hd.appendChild(h('span', HOL[d] ? 'hn' : null, HOL[d] || (mode === 'cm' ? wdLabel(wmOf(d)) : '第 ' + wmOf(d).dayno + ' 天'))); cell.appendChild(hd);
+      var out = mode === 'cm' && (d < cmFirst || d > cmLast);
+      var cell = h('div', 'md' + (out ? ' out' : '') + (o.w === 0 || o.w === 6 ? ' wk' : '') + (d === todayDn ? ' today' : '') + (HOL[d] ? ' hol' : '') + (meet ? ' meet mc-' + (mi[0].m.color || 'red') : '')); cell.dataset.dn = String(d);
+      var hd = h('div', 'mdh'); hd.appendChild(h('b', null, mode === 'cm' && !out ? String(o.d) : o.m + '/' + o.d)); hd.appendChild(h('span', HOL[d] ? 'hn' : null, HOL[d] || (mode === 'cm' ? wdLabel(wmOf(d)) : '第 ' + wmOf(d).dayno + ' 天'))); cell.appendChild(hd);
       mi.forEach(function (x) { cell.appendChild(h('div', 'mtag mc-' + (x.m.color || 'red'), x.m.name + (x.m.start === x.m.end ? ' 當天' : ' 第' + (d - isoToDn(x.m.start) + 1) + '天'))); });
       var any = false;
       shown.forEach(function (def) {
@@ -1053,7 +1062,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (!any && !meet) cell.appendChild(h('div', 'empty', ' '));
       box.appendChild(cell);
     });
-    for (var ti = 0; ti < trail; ti++) box.appendChild(h('div', 'md blank'));
   }
   $('mcal').addEventListener('click', function (ev) {                    // click a day or an item: open the week view there
     var c = ev.target.closest('.md'); if (!c) return;
@@ -1191,6 +1199,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function jumpTo(dn, k) {
     if (editing) commit();
     if (hiddenSet()[k]) { var lay = layoutNow(); delete lay.hidden[k]; saveLayout(lay); }
+    var wd0 = fromDn(dn).w; if (hideWk && (wd0 === 0 || wd0 === 6)) { hideWk = false; try { localStorage.setItem('sched2.hideWk', '0'); } catch (e) {} }
     ensureIdx(wmOf(dn).idx); render();
     var ci = -1; cols.forEach(function (c) { if (c.dn === dn) ci = c.i; });
     var td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + ci + '"]');
@@ -1600,7 +1609,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var sh = $('sheet'), holdTimer = null, repTimer = null;
     function points(axis) {
       var t = $('tbl'), out = [], i;
-      if (axis === 'x') { var pad = 150 + (hideB ? 0 : bw), ths = t.querySelectorAll('thead th.dh'); for (i = 0; i < ths.length; i++) out.push(ths[i].offsetLeft - pad); }
+      if (axis === 'x') { var pad = 150 + (hideB ? 0 : bw), ths = t.querySelectorAll('thead th.dh'); for (i = 0; i < ths.length; i++) if (ths[i].offsetWidth) out.push(ths[i].offsetLeft - pad); }
       else { var hh = t.tHead ? t.tHead.offsetHeight : 72, tds = t.querySelectorAll('tbody td.a'); for (i = 0; i < tds.length; i++) out.push(tds[i].offsetTop - hh); }
       return out;
     }
@@ -2187,7 +2196,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function ensureIdx(idx) { if (idx < winFirst) winFirst = idx; if (idx > winLast) winLast = idx; }
   function stickW() { return 150 + (hideB ? 0 : bw); }
   function scrollToDn(dn) {
-    var sheet = $('sheet'), ci = -1; cols.forEach(function (c) { if (ci < 0 && c.dn >= dn) ci = c.i; });
+    var sheet = $('sheet'), ci = -1; cols.forEach(function (c) { if (ci < 0 && c.dn >= dn && !(wkOff() && isWkCol(c))) ci = c.i; });
     var th = ci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + ci + '"]');
     if (th) sheet.scrollTo({ left: Math.max(0, th.offsetLeft - stickW()), behavior: 'auto' });
   }
@@ -2236,11 +2245,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }, 200);
   });
   function centerToday(smooth) {
-    var sheet = $('sheet'), tci = -1; cols.forEach(function (c) { if (tci < 0 && c.dn >= todayDn) tci = c.i; });
+    var sheet = $('sheet'), tci = -1; cols.forEach(function (c) { if (tci < 0 && c.dn >= todayDn && !(wkOff() && isWkCol(c))) tci = c.i; });
     var th = tci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + tci + '"]'); if (!th) return;
     padSheet();
     var stick = 150 + (hideB ? 0 : bw), vis = Math.max(sheet.clientWidth - stick, th.offsetWidth);
-    var lead = $('tbl').querySelector('thead th.dh[data-c="' + (tci - 2) + '"]');   // start two days before today: seven whole days (5 weekdays + 2 half-width weekend days always fill the width), none cut off at either side
+    var li = tci, back = 2; while (back > 0 && li > 0) { li--; if (!(wkOff() && isWkCol(cols[li]))) back--; }   // two shown days before today
+    var lead = $('tbl').querySelector('thead th.dh[data-c="' + li + '"]');   // start two days before today: seven whole days (5 weekdays + 2 half-width weekend days always fill the width), none cut off at either side
     var left = lead && mode === 'week' ? lead.offsetLeft - stick : th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
@@ -2283,6 +2293,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   $('toggleB').addEventListener('click', function () {
     if (editing) commit();
     hideB = !hideB; try { localStorage.setItem('sched2.hideB', hideB ? '1' : '0'); } catch (e) {}
+    render(); centerToday(false);
+  });
+  $('toggleWk').addEventListener('click', function () {
+    if (editing) commit();
+    hideWk = !hideWk; try { localStorage.setItem('sched2.hideWk', hideWk ? '1' : '0'); } catch (e) {}
     render(); centerToday(false);
   });
   document.addEventListener('visibilitychange', function () {
