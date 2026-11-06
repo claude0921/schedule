@@ -403,6 +403,7 @@ td.c.manual:hover, td.c.manual.editing { z-index: 5; }
 .it:hover .bul, .it.hot .bul { display: none; }   /* the bullet turns into ☆ □ while the mouse is on the item */
 .itl { display: none; flex: none; align-items: flex-start; gap: 0; white-space: nowrap; }   /* 星號 / 已完成: in the bullet's place, one click each */
 .itl .ck, .itl .st { opacity: 1; cursor: pointer; }
+.itl .gr { opacity: .9; padding: 0 3px 0 2px; }
 #tbl td.b:hover, #tbl td.b:focus-within, #tbl td.b:has(.it.hot) { z-index: 6; }   /* the floating item tools (and the 「確定刪除？」 button) stay above the date cell next to it, even when that cell is the hovered one */
 .it.flip .itb { left: auto; right: 100%; }   /* no room on the right (last visible column): open to the left instead */
 .itb .gr, .itb .st, .itb .x, .itb .nt { opacity: 1; }
@@ -883,7 +884,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var bul = h('span', 'bul', it.s ? '★' : it.d ? '☑' : '•'); bul.setAttribute('aria-hidden', 'true');
       var tb = h('div', 'itb');
       var cp = h('button', 'cpy', '⧉'); cp.type = 'button'; cp.dataset.act = 'copy'; cp.title = '複製這一欄的工作項目'; cp.setAttribute('aria-label', cp.title);
-      tb.appendChild(gr); if (!it.r) tb.appendChild(cp); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(nt);
+      if (!it.r) tb.appendChild(cp); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(nt);
       if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); tb.appendChild(rp); }
       tb.appendChild(x);
       if (isPick && !it.r) {                                         // ticking items to copy: a check box replaces the bullet, the tool bar is left out
@@ -891,7 +892,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         tx.dataset.act = 'pick'; tx.title = '點一下選取／取消選取';
         row.appendChild(pk); row.appendChild(tx); box.appendChild(row); return;
       }
-      var itl = h('div', 'itl'); itl.appendChild(st); itl.appendChild(ck);
+      var itl = h('div', 'itl'); itl.appendChild(st); itl.appendChild(ck); itl.appendChild(gr);   // 移動鈕在已完成的右邊
       row.appendChild(itl); row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
     });
     td.appendChild(box);
