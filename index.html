@@ -491,6 +491,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     <div class="hright">
       <select class="btn" id="exportWm" title="選擇要匯出的工作月（一次匯出一個工作月，28 天）"></select>
       <button class="btn" id="exportX">匯出 Excel</button>
+      <button class="btn" id="exportDir" title="選一個資料夾，以後匯出的 Excel 直接存進去（只要選一次；瀏覽器偶爾會要求重新允許）">📁 選擇匯出資料夾</button>
       <label class="auto" id="autoWrap" title="每個工作月第一次開啟這個網頁時（任何一台電腦），自動把上一個工作月匯出成 Excel；同一個月只會匯出一次"><input type="checkbox" id="autoX" checked> 新工作月開頁時自動匯出上個月</label>
       <span class="sync" id="sync"><i></i><span>連線中…</span></span>
     </div>
@@ -2479,14 +2480,54 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       return wb;
     }
   }
+  /* ---------- export folder: pick one folder once (kept in this browser), exports are written straight into it ---------- */
+  var dirH = null, DIR_OK = !!window.showDirectoryPicker;
+  function idb(mode, fn) {
+    return new Promise(function (res, rej) {
+      var q = indexedDB.open('sched-export', 1);
+      q.onupgradeneeded = function () { q.result.createObjectStore('kv'); };
+      q.onerror = function () { rej(q.error); };
+      q.onsuccess = function () { var tx = q.result.transaction('kv', mode), rq = fn(tx.objectStore('kv')); tx.oncomplete = function () { res(rq && rq.result); }; tx.onerror = function () { rej(tx.error); }; };
+    });
+  }
+  function paintDirBtn() { $('exportDir').textContent = dirH ? '📁 ' + dirH.name : '📁 選擇匯出資料夾'; $('exportDir').classList.toggle('on', !!dirH); }
+  if (!DIR_OK) $('exportDir').hidden = true;
+  else idb('readonly', function (st) { return st.get('dir'); }).then(function (h0) { if (h0) { dirH = h0; paintDirBtn(); } }).catch(function () {});
+  function dirReady(ask) {                                        // resolves true when we may write into the chosen folder (asking only if a click allows it)
+    if (!dirH) return Promise.resolve(false);
+    return dirH.queryPermission({ mode: 'readwrite' }).then(function (p) {
+      if (p === 'granted') return true;
+      return ask ? dirH.requestPermission({ mode: 'readwrite' }).then(function (q) { return q === 'granted'; }) : false;
+    }).catch(function () { return false; });
+  }
+  $('exportDir').addEventListener('click', function () {
+    window.showDirectoryPicker({ mode: 'readwrite', id: 'sched-export' }).then(function (h0) {
+      dirH = h0; paintDirBtn(); toast('已選好匯出資料夾：' + h0.name + '，之後匯出的 Excel 會直接存進去', 6000);
+      return idb('readwrite', function (st) { return st.put(h0, 'dir'); });
+    }).catch(function (e) { if (e && e.name !== 'AbortError') toast('無法選這個資料夾：' + (e.message || e), 6000); });
+  });
+  function saveBlob(blob, name, auto) {                           // → 'folder' | 'download'
+    return dirReady(!auto).then(function (ok) {
+      if (!ok) return null;
+      return dirH.getFileHandle(name, { create: true }).then(function (fh) { return fh.createWritable(); })
+        .then(function (w) { return w.write(blob).then(function () { return w.close(); }); }).then(function () { return 'folder'; })
+        .catch(function () { return null; });
+    }).then(function (how) {
+      if (how) return how;
+      var url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+      return 'download';
+    });
+  }
   function downloadMonth(idx, auto) {
     var code = wmOf(ANCHOR + idx * LEN).code;
     return buildXlsx(idx).then(function (buf) {
       var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      var url = URL.createObjectURL(blob), a = document.createElement('a');
-      a.href = url; a.download = code + '.xlsx'; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
-      toast((auto ? '已自動匯出 ' : '已匯出 ') + code + '.xlsx（請到瀏覽器的下載資料夾找）', 8000);
+      return saveBlob(blob, code + '.xlsx', auto).then(function (how) {
+        toast((auto ? '已自動匯出 ' : '已匯出 ') + code + '.xlsx' + (how === 'folder' ? '，已存進資料夾「' + dirH.name + '」'
+          : '（請到瀏覽器的下載資料夾找）' + (dirH ? '。匯出資料夾還沒重新允許，按一次「匯出 Excel」會詢問是否允許' : '')), 8000);
+      });
     });
   }
   $('exportX').addEventListener('click', function () {
@@ -2496,7 +2537,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     downloadMonth(idx, false).catch(function (err) { toast('匯出失敗：' + ((err && err.message) || '請稍後再試'), 7000); })
       .then(function () { btn.disabled = false; btn.textContent = '匯出 Excel'; });
   });
-  if (window.claude) { $('exportX').hidden = true; $('exportWm').hidden = true; $('autoWrap').hidden = true; }   // downloads are blocked inside claude.ai artifacts
+  if (window.claude) { $('exportDir').hidden = true; $('exportX').hidden = true; $('exportWm').hidden = true; $('autoWrap').hidden = true; }   // downloads are blocked inside claude.ai artifacts
 
   /* ---------- auto export: on the first day of a work month, the finished one is exported (needs this page open) ---------- */
   var autoOn = true, autoBusy = false, live = {};
