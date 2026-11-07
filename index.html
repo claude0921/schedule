@@ -242,8 +242,9 @@ td.c.fixh > .chip { margin-bottom: 0; vertical-align: top; }
 td.c.more:hover::after { right: 66px; }   /* make room for the ＋ / 📋 buttons that show on hover */
 td.c.more::after { content: '...'; position: absolute; right: 5px; bottom: 0; padding: 0 3px; background: var(--card); font-size: 13px; line-height: 1; font-weight: 700; color: var(--ink2); pointer-events: none; }   /* this cell holds more than the row height shows */
 td.a.fixh .lbrow { max-height: calc(var(--rh) - 4px); overflow: hidden; }   /* a hand-set / equalised row clips its name too, so rows can be as short as the screen needs */
-td.c.fixh:hover { overflow: visible; z-index: 5; }
-td.c.fixh:hover > .items, td.c.fixh:hover > .chip { overflow: visible; }   /* point at a clipped cell to see all of it */
+body:not(.dragmode) td.c.fixh:hover, td.c.fixh.peek { overflow: visible; z-index: 5; }
+body:not(.dragmode) td.c.fixh:hover > .items, body:not(.dragmode) td.c.fixh:hover > .chip, td.c.fixh.peek > .items, td.c.fixh.peek > .chip { overflow: visible; }   /* point at a clipped cell to see all of it */
+body:not(.dragmode) td.c.fixh.more:hover > .items, body:not(.dragmode) td.c.fixh.more:hover > .chip, td.c.fixh.more.peek > .items, td.c.fixh.more.peek > .chip { position: fixed; max-height: none; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; z-index: 6; background: var(--card); border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); outline: 1px solid var(--line); padding: 4px 6px 22px; }   /* a bubble that grows to hold the whole cell, floating over the rows below */   /* the preview of a clipped cell is a solid box, so it does not mix with the rows below */
 td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
 .cz { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
 .cz:hover, .cz.on { background: var(--accent); opacity: .45; }
@@ -1900,6 +1901,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   var clipRaf = 0;
   function markClipped() {                                              // a cell whose items are cut off by the row height gets a "..." under it; it goes away once the row is tall enough for everything
     Array.prototype.forEach.call($('tbl').querySelectorAll('td.c'), function (td) {
+      if (td === bubTd || td.classList.contains('peek')) return;   // its bubble is open, so it is not clipped right now: keep the flag
       var it = td.querySelector(':scope > .items');
       td.classList.toggle('more', !!(it && td.classList.contains('fixh') && it.scrollHeight > it.clientHeight + 1));
     });
@@ -2206,6 +2208,30 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   });
 
   /* ---------- drag: reorder inside a cell, or move to another cell (pointer events, so touch works too) ---------- */
+  var bubTd = null;
+  function bubbleOff() {
+    if (!bubTd) return;
+    var b = bubTd.querySelector(':scope > .items, :scope > .chip'); if (b) { b.style.left = b.style.top = b.style.width = b.style.maxHeight = ''; }
+    bubTd = null;
+  }
+  function bubbleOn(td) {                                           // the bubble is fixed to the window, so the sheet's own scroll area never cuts it off; it sits on the cell and slides up when it would run past the bottom
+    if (bubTd && bubTd !== td) bubbleOff();
+    var b = td.querySelector(':scope > .items, :scope > .chip'); if (!b) return;
+    bubTd = td;
+    var r = td.getBoundingClientRect();
+    b.style.left = '0px'; b.style.top = '0px'; b.style.width = '100px';   // measure how screen pixels relate to the page's pixels in this browser (zoom is handled differently by different browsers), then place by measurement
+    var a = b.getBoundingClientRect(), k = (a.width / 100) || 1;
+    b.style.width = (r.width / k) + 'px'; b.style.maxHeight = ((window.innerHeight - 12) / k) + 'px';
+    var need = b.getBoundingClientRect().height, topPx = Math.max(6, Math.min(r.top, window.innerHeight - need - 6));
+    b.style.left = ((r.left - a.left) / k) + 'px'; b.style.top = ((topPx - a.top) / k) + 'px';
+  }
+  document.addEventListener('mouseover', function (ev) {
+    if (document.body.classList.contains('dragmode')) return;
+    var td = ev.target.closest && ev.target.closest('td.c.more'); if (td) bubbleOn(td); else bubbleOff();
+  });
+  var bubRaf = 0;
+  function bubbleFollow() { if (!bubTd) return; cancelAnimationFrame(bubRaf); bubRaf = requestAnimationFrame(function () { if (bubTd) bubbleOn(bubTd); }); }   // the page or the sheet scrolled (or the window changed): put the bubble back on its cell
+  document.addEventListener('scroll', bubbleFollow, true); window.addEventListener('resize', bubbleFollow);
   var drag = null;
   function dropTarget(x, y) {
     var el = document.elementFromPoint(x, y), td = el && el.closest ? el.closest('td.c.manual') : null;
@@ -2228,12 +2254,18 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!drag.on) {
       if (Math.abs(ev.clientX - drag.x0) + Math.abs(ev.clientY - drag.y0) < 5) return;
       drag.on = true;
+      if (bubTd) { bubTd.classList.add('peek'); drag.peek = bubTd; }   // the bubble that is open now stays open as the drag begins, so a quick move still lands inside it
       drag.ghost = h('div', 'ghost', drag.text); document.body.appendChild(drag.ghost);
       document.body.classList.add('dragmode'); dragCopyMark();
       drag.raf = requestAnimationFrame(dragTick);
     }
     drag.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; drag.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
     clearDrop();
+    var pk = document.elementFromPoint(ev.clientX, ev.clientY); pk = pk && pk.closest && pk.closest('td.c.more');   // while dragging, the cell under the pointer shows its whole content as a bubble
+    if (pk !== drag.peek) {
+      if (drag.peek) { drag.peek.classList.remove('peek'); }
+      bubbleOff(); drag.peek = pk; if (pk) { pk.classList.add('peek'); bubbleOn(pk); }
+    }
     var t = dropTarget(ev.clientX, ev.clientY); drag.t = t;
     if (t) {
       t.td.classList.add('dropt');
@@ -2242,7 +2274,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       else { var box = t.td.querySelector('.items'); if (box) box.appendChild(line); }
     }
     var sh = $('sheet').getBoundingClientRect(), stick = 150 + (hideB ? 0 : bw) + 40;
-    drag.sx = ev.clientX > sh.right - 50 ? 18 : (ev.clientX < sh.left + stick ? -18 : 0);
+    if (ev.clientX >= sh.left + stick) drag.out = true;   // an item picked up inside the fixed left columns (待定事項) must not scroll left until the pointer has left that strip once
+    drag.sx = ev.clientX > sh.right - 50 ? 18 : (ev.clientX < sh.left + stick && drag.out ? -18 : 0);
     drag.sy = ev.clientY > sh.bottom - 40 ? 18 : (ev.clientY < sh.top + 90 ? -18 : 0);
   }
   function dragEnd(cancelIt) {
@@ -2253,6 +2286,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     cancelAnimationFrame(d.raf); clearDrop(); document.body.classList.remove('dragmode');
     if (d.ghost) d.ghost.remove();
     if (d.row) d.row.classList.remove('dragging');
+    if (d.peek) { d.peek.classList.remove('peek'); } bubbleOff();
     if (!d.on || cancelIt || !d.t) return;
     var dstC = Number(d.t.td.dataset.c), dstK = d.t.td.dataset.k, srcCol = colAt(d.c), dstCol = colAt(dstC);
     var src = itemsNow(srcCol, d.k), item;
