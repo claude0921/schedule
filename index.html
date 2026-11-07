@@ -602,6 +602,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><input type="date" id="mgrE"></div>
       <div class="rrow"><label for="mgrNote">備註</label><textarea id="mgrNote" rows="3" maxlength="500" style="flex:1;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;resize:vertical;background:var(--card);color:var(--ink)"></textarea></div>
       <div class="rrow"><label>倒數顯示</label><label class="one"><input type="checkbox" id="mgrCd"> 會議前每天倒數（取消勾選＝只在會議當天／會期標記）</label></div>
+      <div class="rrow"><label></label><label class="one"><input type="checkbox" id="mgrCdLim"> 剩 <input type="number" id="mgrCdN" min="1" max="365" step="1" style="width:64px"> 天才顯示倒數（不勾＝一直顯示）</label></div>
       <div class="rrow"><label>色塊底色</label><div class="swatches" id="mgrColors"></div></div>
     </div>
     <div class="rulefoot"><button class="btn" id="mgrDel" type="button">刪除這個會議</button><span class="grow"></span><button class="btn" id="mgrNo" type="button">取消</button><button class="btn primary" id="mgrOk" type="button">完成</button></div>
@@ -709,7 +710,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function mgrInfo(dn, cfg) {                                          // row 5 (new formula); without cfg: the first meeting (used by the Excel export)
     var c = cfg || mgrCfg(), s = isoToDn(c.start), e = isoToDn(c.end);
-    if (dn < s && c.nocd) return { txt: '', note: '' };                 // 只在會議當天／會期標記，不做倒數
+    if (dn < s && (c.nocd || (c.cdn && s - dn > c.cdn))) return { txt: '', note: '' };                 // 只在會議當天／會期標記，不做倒數
     if (dn < s) return { txt: c.name + '\n剩' + z2(s - dn) + '天', note: slash(dn) + ' 距離 ' + c.name + '開始（' + slash(s) + '）還有 ' + (s - dn) + ' 天。' };
     if (dn <= e && s === e) return { txt: c.name + '\n當天', note: slash(dn) + ' 就是 ' + c.name + ' 當天。' };
     if (dn <= e) return { txt: c.name + '\n第' + z2(dn - s + 1) + '天', note: slash(dn) + ' 在會議期間（' + slash(s) + ' ～ ' + slash(e) + '），是第 ' + (dn - s + 1) + ' 天。' };
@@ -1192,7 +1193,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
     var line = '';
-    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd) line += (line ? '　' : '') + mc.name + ' 剩' + z2(ms - todayDn) + '天'; });
+    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) line += (line ? '　' : '') + mc.name + ' 剩' + z2(ms - todayDn) + '天'; });
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
       if (fi.length) { line += (line ? '　' : '') + '大金馬：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
@@ -2352,13 +2353,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     $('mgrName').value = m ? m.name : ''; $('mgrLoc').value = m && m.loc ? m.loc : ''; var day = !m && dn ? iso(Number(dn)) : ''; $('mgrS').value = m ? m.start : day; $('mgrE').value = m ? m.end : day;
     var usedC = mgrList().map(function (x) { return x.color || 'red'; });                  // new meeting: first colour no other meeting uses (all used: cycle)
     mgrColor = m ? (m.color || 'red') : (MC.filter(function (c) { return usedC.indexOf(c) < 0; })[0] || MC[usedC.length % MC.length]);
-    $('mgrOne').checked = !!m && m.start === m.end; syncOne(); $('mgrNote').value = m && m.note ? m.note : ''; $('mgrCd').checked = m ? !m.nocd : true;
+    $('mgrOne').checked = !!m && m.start === m.end; syncOne(); $('mgrNote').value = m && m.note ? m.note : ''; $('mgrCd').checked = m ? !m.nocd : true; $('mgrCdLim').checked = !!(m && m.cdn); $('mgrCdN').value = m && m.cdn ? m.cdn : ''; syncCd();
     $('mgrDel').style.display = m ? '' : 'none';
     paintMgrColors();
     $('mgr').hidden = false; $('mgrName').focus();
   }
   function syncOne() { var on = $('mgrOne').checked; $('mgrERow').style.display = on ? 'none' : ''; }
   $('mgrOne').addEventListener('change', syncOne);
+  function syncCd() { var on = $('mgrCd').checked; $('mgrCdLim').disabled = !on; $('mgrCdN').disabled = !on || !$('mgrCdLim').checked; }
+  $('mgrCd').addEventListener('change', syncCd);
+  $('mgrCdLim').addEventListener('change', function () { if ($('mgrCdLim').checked && !$('mgrCdN').value) $('mgrCdN').value = 7; syncCd(); if (!$('mgrCdN').disabled) $('mgrCdN').focus(); });
   function closeMgr() { $('mgr').hidden = true; }
   function putMgrs(list) { meta.mgrs = { list: list }; backend.put('meta', 'mgrs', meta.mgrs).catch(failToast); closeMgr(); render(); }
   function saveMgr() {
@@ -2368,6 +2372,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (e < s) { toast('結束日不能早於開始日'); return; }
     var list = mgrList().slice(), data = { id: mgrEdit || 'm' + Date.now().toString(36), name: n, loc: $('mgrLoc').value.trim(), start: s, end: e, color: mgrColor };
     if (!$('mgrCd').checked) data.nocd = true;
+    var cdn = parseInt($('mgrCdN').value, 10); if ($('mgrCd').checked && $('mgrCdLim').checked && cdn > 0) data.cdn = cdn;
     var nt0 = $('mgrNote').value.trim(); if (nt0) data.note = nt0;
     var at = -1; list.forEach(function (m, i) { if (m.id === mgrEdit) at = i; });
     if (at >= 0) list[at] = data; else list.push(data);
