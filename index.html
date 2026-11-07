@@ -368,6 +368,7 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 
 /* items inside a date cell */
 .items { display: flex; flex-direction: column; gap: 2px; }
+.items.mgw { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }   /* the meeting chips of a day sit in one box, so a hand-set row height can clip them like any other cell */
 /* 工作月: one calendar page = 7 weekday headers + 4 rows x 7 days (a work month is exactly 28 days) */
 .mcal { --gcols: repeat(7, minmax(0, 1fr)); background: var(--card); border: 1px solid var(--line); border-radius: 12px; display: grid; grid-template-columns: var(--gcols); overflow: hidden; }
 .mcal .mnav { display: grid; grid-template-columns: var(--gcols); border-bottom: 1px solid var(--line); padding: 6px 0; }
@@ -1042,7 +1043,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         if (isCalc(def)) {
           var txt = textOf({ k: def.k, c: col.i });
           td.title = calcWhy(def.k, col);
-          if (def.k === 'mgr') mgrInfos(col.dn).forEach(function (o) { var ln = o.txt.split('\n'), ch = h('span', 'chip mgr mc-' + (o.m.color || 'red'), ln[0].charAt(0) + '，' + ln[1]); ch.appendChild(linkify(h('span', 'full'), o.txt + (o.m.loc ? '\n地點：' + o.m.loc : '') + (o.m.note ? '\n備註：' + o.m.note : ''))); td.classList.add('mg'); ch.dataset.act = 'mgrset'; ch.dataset.mid = o.m.id; ch.title = '點一下修改「' + o.m.name + '」'; td.appendChild(ch); });
+          if (def.k === 'mgr') { var mgw = h('div', 'items mgw'); mgrInfos(col.dn).forEach(function (o) { var ln = o.txt.split('\n'), ch = h('span', 'chip mgr mc-' + (o.m.color || 'red'), ln[0].charAt(0) + '，' + ln[1]); ch.appendChild(linkify(h('span', 'full'), o.txt + (o.m.loc ? '\n地點：' + o.m.loc : '') + (o.m.note ? '\n備註：' + o.m.note : ''))); td.classList.add('mg'); ch.dataset.act = 'mgrset'; ch.dataset.mid = o.m.id; ch.title = '點一下修改「' + o.m.name + '」'; mgw.appendChild(ch); }); if (mgw.firstChild) td.appendChild(mgw); }
           if (def.k === 'mgr') { var mp = h('button', 'add', '＋'); mp.type = 'button'; mp.dataset.act = 'mgrset'; mp.dataset.dn = String(col.dn); mp.title = '新增會議'; mp.setAttribute('aria-label', mp.title); td.appendChild(mp); }
           else if (txt) { var chip = h('span', 'chip' + (def.k === 'routine' ? ' plain' : ''), txt); td.appendChild(chip); }
         } else paintCell(td, col, def.k);
