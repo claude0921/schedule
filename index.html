@@ -935,7 +935,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var bar = h('div', 'pickbar'), pok = h('button', 'btn primary', '√'), pno = h('button', 'btn', '✕');
       pok.type = pno.type = 'button'; pok.dataset.act = 'copyok'; pno.dataset.act = 'copyno'; pok.title = '確定複製勾選的工作項目（這一天所有主項目）'; pno.title = '取消複製';
       pok.setAttribute('aria-label', pok.title); pno.setAttribute('aria-label', pno.title);
-      bar.appendChild(pok); bar.appendChild(pno); td.appendChild(bar); return;
+      bar.appendChild(pok); bar.appendChild(pno); box.appendChild(bar); return;   // inside the items box, so it shows in the bubble of a clipped cell too
     }
     var add = h('button', 'add', '＋'); add.type = 'button'; add.dataset.act = 'add'; add.title = '新增工作'; add.setAttribute('aria-label', '新增工作'); td.appendChild(add);
     if (clip) { var ps = h('button', 'add pst', '📋'); ps.type = 'button'; ps.dataset.act = 'paste'; ps.title = '貼上剛複製的工作項目（' + clip.from + '）到這一欄的對應工作項目列'; ps.setAttribute('aria-label', ps.title); td.appendChild(ps); }
@@ -1915,7 +1915,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var top = sr.top + (window.pageYOffset || 0), room = (window.innerHeight - 6 - top - below) / UZ;
     sh.style.maxHeight = Math.max(300, Math.floor(room)) + 'px';
   }
-  function scheduleClip() { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(function () { fitSheet(); markClipped(); }); }
+  function scheduleClip() { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(function () { fitSheet(); markClipped(); if (bubTd && document.body.contains(bubTd)) bubbleOn(bubTd); }); }   // a repaint of the hovered cell makes a new items box: set the bubble on it again
   var clipMo = new MutationObserver(scheduleClip); clipMo.observe($('tbl'), { childList: true, subtree: true }); clipMo.observe($('starChips'), { childList: true, subtree: true }); clipMo.observe($('watchBox'), { childList: true, subtree: true });
   window.addEventListener('resize', scheduleClip); window.addEventListener('load', scheduleClip); scheduleClip();
   function setRowH(tr, px) {
