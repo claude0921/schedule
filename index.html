@@ -244,7 +244,7 @@ td.c.more::after { content: '...'; position: absolute; right: 5px; bottom: 0; pa
 td.a.fixh .lbrow { max-height: calc(var(--rh) - 4px); overflow: hidden; }   /* a hand-set / equalised row clips its name too, so rows can be as short as the screen needs */
 body:not(.dragmode) td.c.fixh:hover, td.c.fixh.peek { overflow: visible; z-index: 5; }
 body:not(.dragmode) td.c.fixh:hover > .items, body:not(.dragmode) td.c.fixh:hover > .chip, td.c.fixh.peek > .items, td.c.fixh.peek > .chip { overflow: visible; }   /* point at a clipped cell to see all of it */
-body:not(.dragmode) td.c.fixh.more:hover > .items, body:not(.dragmode) td.c.fixh.more:hover > .chip, td.c.fixh.more.peek > .items, td.c.fixh.more.peek > .chip { position: fixed; max-height: none; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; z-index: 6; background: var(--card); border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); outline: 1px solid var(--line); padding: 4px 6px 22px; }   /* a bubble that grows to hold the whole cell, floating over the rows below */   /* the preview of a clipped cell is a solid box, so it does not mix with the rows below */
+body:not(.dragmode) td.c.fixh.more:hover > .items, body:not(.dragmode) td.c.fixh.more:hover > .chip, td.c.fixh.more.peek > .items, td.c.fixh.more.peek > .chip { position: fixed; max-height: none; overflow: visible; box-sizing: border-box; z-index: 6; background: var(--card); border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); outline: 1px solid var(--line); padding: 4px 6px 22px; }   /* a bubble that grows to hold the whole cell, floating over the rows below */   /* the preview of a clipped cell is a solid box, so it does not mix with the rows below */
 td.c.fixh > .add { position: absolute; right: 4px; bottom: 2px; margin: 0; }
 .cz { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; touch-action: none; z-index: 7; }
 .cz:hover, .cz.on { background: var(--accent); opacity: .45; }
@@ -680,7 +680,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   /* ---------- formulas (same logic as the Excel cells) ---------- */
   function prevMo(m) { return m === 1 ? 13 : m - 1; }                    // IF(LEFT(C2,2)-1=0,13,LEFT(C2,2)-1)
-  function wdLabel(w) { return pad(w.mo) + '工第' + pad(w.dayno) + '天'; } // row 2
+  function wdLabel(w) { return pad(w.mo) + '工W' + (Math.floor((w.dayno - 1) / 7) + 1) + '第' + pad(w.dayno) + '天'; } // row 2
   function fieldInfo(w) {                                                // row 6
     var p = prevMo(w.mo), d = w.dayno;
     if (d === 9)  return { txt: p + '工\n業績核實\n(跑資料)', note: '上一工作月 ' + p + ' 的業績核實，開始跑資料' };
@@ -2530,7 +2530,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function xRoutineF(L) { return 'IF(' + L + '4="星期三","提醒交週報",IF(ISNUMBER(SEARCH("19",' + L + '2)),"5PR報表",""))'; }
   function xWdF(L) {
     var m = 'MATCH(' + L + '$3,工作月!$E$3:$E$999,1)';
-    return 'TEXT(MOD(INDEX(工作月!$D$3:$D$999,' + m + '),100),"00")&"工第"&TEXT(' + L + '$3-INDEX(工作月!$E$3:$E$999,' + m + ')+1,"00")&"天"';
+    return 'TEXT(MOD(INDEX(工作月!$D$3:$D$999,' + m + '),100),"00")&"工W"&(INT((' + L + '$3-INDEX(工作月!$E$3:$E$999,' + m + '))/7)+1)&"第"&TEXT(' + L + '$3-INDEX(工作月!$E$3:$E$999,' + m + ')+1,"00")&"天"';
   }
   function xMgrF(L) {
     return 'IF(' + L + '3<工作月!$B$11,工作月!$B$10&CHAR(10)&"剩"&TEXT(工作月!$B$11-' + L + '3,"00")&"天",' +
