@@ -59,7 +59,7 @@ html { zoom: .8; }   /* default view size = the browser at 80% */
   --ink2: #64707f;
   --accent: #1d6b48;
   --accent-ink: #ffffff;
-  --star: #e09500;
+  --star: #e09500; --blue: #0b3fbf;
   --star-bg: #fff4d6; --star-today: #ffd98a;
   --today: #fff8dc;
   --today-line: #e6b800;
@@ -108,13 +108,13 @@ td.mg:hover { overflow: visible; z-index: 5; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #14171b; --card: #1c2025; --line: #2e343b; --line2: #434b54; --ink: #e8eaed; --ink2: #98a2ae; --accent: #4fbf86; --accent-ink: #0b1a12;
-    --star: #ffbf3c; --star-bg: #3a3014; --today: #2c2a14; --today-line: #c9a400; --wk: #1f2328; --chip: #1e3426; --chip-ink: #6fd9a2;
+    --star: #ffbf3c; --blue: #7aa2ff; --star-bg: #3a3014; --today: #2c2a14; --today-line: #c9a400; --wk: #1f2328; --chip: #1e3426; --chip-ink: #6fd9a2;
     --mgr: #3b2420; --mgr-ink: #ff9a85; --red: #ff7b7b; --edit: #2b2a17; --hlov: rgba(79, 191, 134, .22); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #14171b; --card: #1c2025; --line: #2e343b; --line2: #434b54; --ink: #e8eaed; --ink2: #98a2ae; --accent: #4fbf86; --accent-ink: #0b1a12;
-  --star: #ffbf3c; --star-bg: #3a3014; --today: #2c2a14; --today-line: #c9a400; --wk: #1f2328; --chip: #1e3426; --chip-ink: #6fd9a2;
+  --star: #ffbf3c; --blue: #7aa2ff; --star-bg: #3a3014; --today: #2c2a14; --today-line: #c9a400; --wk: #1f2328; --chip: #1e3426; --chip-ink: #6fd9a2;
   --mgr: #3b2420; --mgr-ink: #ff9a85; --red: #ff7b7b; --edit: #2b2a17; --hlov: rgba(79, 191, 134, .22); color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -152,6 +152,10 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .tstrip { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
 .tline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
 .tdate { color: var(--red); font-weight: 700; font-size: 17px; }
+#nextLine { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }   /* countdowns: nearest first; the 大金馬 note sits at the right edge */
+#nextLine .cd { color: var(--blue); font-weight: 700; }
+#nextLine .cd .soon { color: var(--red); text-decoration: underline; }   /* 10 days or less */
+#nextLine .jm { margin-left: auto; }
 .srow { display: flex; align-items: flex-start; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .slabel { color: var(--star); font-weight: 700; white-space: nowrap; padding-top: 3px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; flex: 1; }
@@ -337,7 +341,9 @@ td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display
 .chip-s.late { border-color: #c0392b; background: #fdeaea; color: #8a1f14; }
 .chip-s.late b { color: #c0392b; }
 .wtools { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 6px; font-size: 12px; color: var(--ink2); }
-.wtools .btn { min-height: 0; padding: 0 8px; font-size: 12px; }
+.wtools .btn, #starBtn .btn { min-height: 0; padding: 0 8px; font-size: 12px; }
+.slcol { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }   /* 置頂工作 label with its hide / show button underneath */
+#starBtn { color: var(--ink2); }
 .wtools label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .wempty { color: var(--ink2); font-size: 13px; padding-top: 3px; }
 .hbtn { border: 0; background: transparent; cursor: pointer; font: inherit; font-weight: 700; padding: 3px 0 0; }
@@ -465,6 +471,13 @@ td.c:hover .add, td.c.sel .add, td.c:focus-within .add, td.a:hover > .add { opac
 td.a input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; font-weight: 700; }
 td.editing .composer textarea, td.editing .it textarea { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; height: auto; resize: none; overflow: hidden; font: inherit; line-height: 1.35; display: block; box-sizing: border-box; }
 .it .tx { white-space: pre-wrap; }
+.ted { white-space: pre-wrap; overflow-wrap: anywhere; outline: none; cursor: text; }
+.ted:empty::before { content: attr(data-ph); color: var(--ink2); opacity: .7; }
+td.editing .composer .ted, td.editing .it .ted, td.a .ted { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; line-height: 1.35; display: block; box-sizing: border-box; font: inherit; }
+#rtb { position: fixed; z-index: 70; display: none; align-items: center; gap: 4px; background: var(--card); color: var(--ink); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); padding: 3px 5px; font-size: 13px; white-space: nowrap; }
+#rtb select { font: inherit; padding: 1px 2px; max-width: 120px; }
+#rtb .rb { min-width: 26px; padding: 1px 6px; border: 1px solid var(--line2); border-radius: 5px; background: var(--card); line-height: 1.4; }
+#rtb .rb.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .composer input, .it input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; }
 .crow { display: flex; flex-wrap: wrap; gap: 4px; }
 .crow .btn { min-height: 28px; padding: 1px 8px; font-size: 12px; border-radius: 6px; }
@@ -526,7 +539,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   <section class="tstrip" aria-label="今天與置頂工作">
     <div class="tline"><span class="tdate" id="todayDate"></span><span class="sub" id="nextLine"></span></div>
-    <div class="srow"><span class="slabel">★ 置頂工作</span><div class="chips" id="starChips"></div></div>
+    <div class="srow"><div class="slcol"><span class="slabel" id="starTog">★ 置頂工作</span><div id="starBtn"></div></div><div class="chips" id="starChips"></div></div>
     <div id="watchBox"></div>
   </section>
 
@@ -552,7 +565,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         <button class="btn" type="button" data-mode="cm" title="像一般月曆：一個曆月一頁">曆月</button>
       </span>
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
-      <button class="btn" id="fmtBtn" title="設定主項目、工作項目、待定事項的字體、大小、粗體、斜體、底線">Aa 字型</button>
       <button class="btn" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button>
       <span class="seg" id="hideSeg" role="group" aria-label="隱藏"><span class="seglabel">隱藏</span><button class="btn" type="button" id="toggleB" title="隱藏／顯示待定事項欄">待定事項</button><button class="btn" type="button" id="toggleWk" title="隱藏／顯示週六、週日">六日</button></span>
       <span class="mlabel" id="mLabel"></span>
@@ -872,7 +884,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (!r || (r.row || 'routine') !== rk || !ruleHits(r, dn)) return;   // series deleted, or no longer falls on this day
       seen[it.r] = 1;
       if (it.x) return;                                               // this day was removed
-      var o = { t: it.e ? it.t : expandT(r.t, dn), s: (it.s || (r.st1 && dn === todayDn)) ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; if (it.l) o.l = it.l; out.push(o);
+      var o = { t: it.e ? it.t : expandT(r.t, dn), s: (it.s || (r.st1 && dn === todayDn)) ? 1 : 0, d: it.d ? 1 : 0, r: it.r }; if (it.e) o.e = 1; if (it.n) o.n = it.n; if (it.l) o.l = it.l; if (it.fm) o.fm = it.fm; out.push(o);
     });
     rulesFor(rk).forEach(function (r) { if (!seen[r.id] && ruleHits(r, dn)) out.push({ t: expandT(r.t, dn), s: (r.st || (r.st1 && dn === todayDn)) ? 1 : 0, d: 0, r: r.id }); });
     return out;
@@ -911,7 +923,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var gr = h('span', 'gr', '☰'); gr.title = '按住拖曳：調整順序，或移到別的格子'; gr.setAttribute('aria-label', '拖曳排序');
       var st = h('button', 'st', it.s ? '★' : '☆'); st.type = 'button'; st.dataset.act = 'star';
       st.title = it.s ? '取消星號' : '標上星號，會出現在最上方的置頂工作'; st.setAttribute('aria-label', st.title);
-      var tx = h('span', 'tx', it.t); tx.dataset.act = 'edit'; tx.title = it.n ? '備註：' + it.n + '\n（點一下修改工作內容）' : '點一下修改';
+      var tx = h('span', 'tx'); fillRich(tx, it.t, it.fm); tx.dataset.act = 'edit'; tx.title = it.n ? '備註：' + it.n + '\n（點一下修改工作內容）' : '點一下修改';
       var isArmed = armed === cellKey(col, k) + '#' + i;
       var x = h('button', 'x' + (isArmed ? ' armed' : ''), isArmed ? '確定刪除？' : '×'); x.type = 'button'; x.dataset.act = 'del';
       x.setAttribute('aria-label', '刪除這項工作');
@@ -945,7 +957,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function paintLabel(td, def, i, n) {
     td.textContent = '';
     var rzh = h('span', 'rh'); rzh.title = '拖曳調整這一列的高度，雙擊還原'; rzh.dataset.k = def.k; rzh.addEventListener('pointerdown', startRowResize); rzh.addEventListener('dblclick', function () { delete rhUser[def.k]; saveSizes(); var tr = td.parentNode; if (tr) clearRowH(tr); }); td.appendChild(rzh);
-    var lb = h('div', 'lb', def.label); lb.title = '點一下開啟「' + flat(def.label) + '」的記事本';
+    var lb = h('div', 'lb'); fillRich(lb, def.label, lfmOf(def.k)); lb.title = '點一下修改「' + flat(def.label) + '」的名稱（記事本請按下方的「記事本」或 📓）';
     var hasPad = !!((notes['pad-' + def.k] && notes['pad-' + def.k].text) || '');   // the 📓 shows only when the notepad has something in it
     var pd = h('button', 'pd on', '📓'); pd.type = 'button'; pd.dataset.act = 'rowpad';
     pd.title = '開啟「' + flat(def.label) + '」的記事本（裡面已有內容）'; pd.setAttribute('aria-label', pd.title);
@@ -956,7 +968,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var tools = h('div', 'rowtools');
     var npd = h('button', 'rt', '記事本'); npd.type = 'button'; npd.dataset.act = 'rowpad'; npd.title = '開啟這個工作項目的記事本'; tools.appendChild(npd);
     if (isRR(def.k)) { var rr = h('button', 'rt', '重複規則'); rr.type = 'button'; rr.dataset.act = 'rowrules'; rr.title = '查看、修改、刪除「' + flat(def.label) + '」的所有重複規則'; tools.appendChild(rr); }
-    var ren = h('button', 'rt', '改名'); ren.type = 'button'; ren.dataset.act = 'rowrename'; ren.title = '修改這個工作項目的名稱'; tools.appendChild(ren);
     var hide = h('button', 'rt', '隱藏'); hide.type = 'button'; hide.dataset.act = 'rowhide';
     hide.title = '先收起這一列，上方會留下標籤提醒'; tools.appendChild(hide);
     var del = h('button', 'rt rtdel' + (rowArmed === def.k ? ' armed' : ''), rowArmed === def.k ? '確定刪除？' : '刪除'); del.type = 'button'; del.dataset.act = 'rowdel';
@@ -1194,13 +1205,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function renderTop() {
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
-    var line = '';
-    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) line += (line ? '　' : '') + mc.name + ' 剩' + z2(ms - todayDn) + '天'; });
+    var cds = [], box = $('nextLine'); box.textContent = '';
+    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) cds.push({ d: ms - todayDn, name: mc.name }); });
+    cds.sort(function (a, b) { return a.d - b.d; });                       // the nearest comes first
+    cds.forEach(function (c) { var sp = h('span', 'cd', c.name + ' 剩'); sp.appendChild(h('span', c.d <= 10 ? 'soon' : null, z2(c.d) + '天')); box.appendChild(sp); });
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
-      if (fi.length) { line += (line ? '　' : '') + '大金馬：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'); break; }
+      if (fi.length) { box.appendChild(h('span', 'jm', '大金馬：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'))); break; }
     }
-    $('nextLine').textContent = line;
   }
 
   /* starred items from today onward, soonest first */
@@ -1224,7 +1236,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     renderWatch();
     var box = $('starChips'); box.textContent = '';
     var list = starredList();
-    if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
+    var stHide = !!(meta.starbar && meta.starbar.hide);
+    function setStarHide(v) { meta.starbar = { hide: v ? 1 : 0 }; backend.put('meta', 'starbar', meta.starbar).catch(failToast); renderStars(); }
+    var sbtn = $('starBtn'); sbtn.textContent = '';
+    $('starTog').textContent = '★ 置頂工作' + (stHide ? '(' + list.length + ')' : '');   // folded: the count stays in brackets
+    if (stHide) {                                                    // same as 關注清單: one small line with a way back
+      var ss = h('button', 'btn', '顯示'); ss.type = 'button'; ss.addEventListener('click', function () { setStarHide(false); });
+      sbtn.appendChild(ss); box.appendChild(h('span', 'hint', '（已隱藏）')); return;
+    }
+    if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。'));
+      var sh1 = h('button', 'btn', '隱藏'); sh1.type = 'button'; sh1.addEventListener('click', function () { setStarHide(true); }); sbtn.appendChild(sh1); return; }
     list.forEach(function (s) {
       var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : ''));
       if (s.note) w.dataset.note = '1';
@@ -1235,6 +1256,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (s.n) { w.classList.add('hasnote'); go.title += '\n備註：' + s.n; }
       w.appendChild(ck); w.appendChild(go); box.appendChild(w);
     });
+    var sh2 = h('button', 'btn', '隱藏'); sh2.type = 'button'; sh2.title = '把置頂工作收起來（可以按「顯示」叫回來）';
+    sh2.addEventListener('click', function () { setStarHide(true); });
+    sbtn.appendChild(sh2);
   }
   /* ---------- 關注清單: every item whose text / note contains a keyword; from today on, plus overdue ones that are not finished ---------- */
   var NOTE_DN = null;
@@ -1321,7 +1345,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     });
     box.appendChild(grid);
     var tools = h('div', 'wtools');
-    var add = h('button', 'btn', '＋ 新增關注關鍵字'); add.type = 'button';
+    var add = h('button', 'btn', '＋ 新增關鍵字'); add.type = 'button';
     add.addEventListener('click', function () {
       var v = window.prompt('要關注的關鍵字（例如：副總、協理）'); v = v && v.trim(); if (!v) return;
       var c = watchCfg(); if (c.words.indexOf(v) < 0) c.words.push(v); saveWatch(c);
@@ -1330,7 +1354,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     cb.addEventListener('change', function () { var c = watchCfg(); c.done = cb.checked; saveWatch(c); });
     var lb2 = h('label'), cb2 = h('input'); cb2.type = 'checkbox'; cb2.checked = cfg.nolate; lb2.appendChild(cb2); lb2.appendChild(document.createTextNode('隱藏逾期'));
     cb2.addEventListener('change', function () { var c = watchCfg(); c.nolate = cb2.checked; saveWatch(c); });
-    var hb = h('button', 'btn', '隱藏關注清單'); hb.type = 'button'; hb.title = '把這個清單收起來（可以按「顯示」或「復原」叫回來）';
+    var hb = h('button', 'btn', '隱藏'); hb.type = 'button'; hb.title = '把這個清單收起來（可以按「顯示」或「復原」叫回來）';
     hb.addEventListener('click', function () { var c = watchCfg(); c.hide = true; saveWatch(c); });
     tools.appendChild(add); tools.appendChild(lb); tools.appendChild(lb2); tools.appendChild(hb); box.appendChild(tools);
   }
@@ -1440,7 +1464,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }
     var legacyNote = isNoteId(id) && notes[k] && notes[k].text;
     if (!items.length && !legacyNote) { delete cellsMap[id]; p = backend.del('cells', id); }
-    else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
+    else { var data = { date: iso(col.dn), row: k, items: items.map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.fm) o.fm = x.fm; if (x.r) o.r = x.r; if (x.e) o.e = 1; if (x.x) o.x = 1; return o; }) }; cellsMap[id] = data; p = backend.put('cells', id, data); }
     p.catch(failToast);
     if (typeof renderHidden === 'function' && cols.length) renderHidden();
   }
@@ -1454,7 +1478,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     else { store[key] = { text: text }; p = backend.put(name, id, { text: text }); }
     p.catch(failToast);
   }
-  function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
+  function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.fm) o.fm = x.fm; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
   function toggleDone(dn, k, i) {
     var col = { dn: dn }, items = itemsNow(col, k); if (!items[i]) return;
     items[i].d = items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0;   // finished → drops off the 置頂 list
@@ -1481,7 +1505,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function finishEdit(save) {
     if (!editing) return;
-    var e = editing; editing = null;
+    var e = editing; editing = null; hideRtb();
     if (save) {
       if (e.kind === 'note') saveNote(e.s, e.ta.value.replace(/\s+$/, ''));
       else if (e.kind === 'pad') saveNote({ k: 'pad-' + e.k, c: -1 }, e.ta.value.replace(/\s+$/, ''));
@@ -1490,20 +1514,22 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         if (its[e.i]) { if (nt) its[e.i].n = nt; else delete its[e.i].n; saveItems(c2, e.k, its); }
       }
       else if (e.kind === 'label') {
-        var name = e.inp.value.trim(), def0 = rowDef(e.k), base = null;
+        var rcl = richClean(e.inp.rich(), 30), name = rcl.text, def0 = rowDef(e.k), base = null, chg = false;
         BASE.forEach(function (d) { if (d.k === e.k) base = d; });
+        var lay = layoutNow(), oldR = JSON.stringify(lfmOf(e.k) || []);
         if (name && name !== e.orig) {
-          var lay = layoutNow();
           if (def0.custom) { lay.custom[e.k] = { label: name }; if (def0.rep) lay.custom[e.k].rep = 1; }
-          else if (base && name === flat(base.label)) delete lay.labels[e.k];   // back to the original name
+          else if (base && (name === base.label || name === flat(base.label))) delete lay.labels[e.k];   // back to the original name
           else lay.labels[e.k] = name;
-          saveLayout(lay);
+          chg = true;
         }
+        if (name && JSON.stringify(rcl.runs) !== oldR) { if (rcl.runs.length) lay.lfm[e.k] = rcl.runs; else delete lay.lfm[e.k]; chg = true; }
+        if (chg) saveLayout(lay);
       }
       else {
-        var col = colAt(e.c), text = e.inp.value.trim(), items = itemsNow(col, e.k);
-        if (e.kind === 'add') { if (text) items.push({ t: text, s: e.star ? 1 : 0 }); }
-        else if (e.kind === 'item') { if (text) { if (items[e.i].t !== text && items[e.i].r) items[e.i].e = 1; items[e.i].t = text; } else items.splice(e.i, 1); }
+        var col = colAt(e.c), rc = richClean(e.inp.rich(), 400), text = rc.text, items = itemsNow(col, e.k);
+        if (e.kind === 'add') { if (text) { var ni = { t: text, s: e.star ? 1 : 0 }; if (rc.runs.length) ni.fm = rc.runs; items.push(ni); } }
+        else if (e.kind === 'item') { if (text) { if ((items[e.i].t !== text || JSON.stringify(rc.runs) !== JSON.stringify(items[e.i].fm || [])) && items[e.i].r) items[e.i].e = 1; items[e.i].t = text; if (rc.runs.length) items[e.i].fm = rc.runs; else delete items[e.i].fm; } else items.splice(e.i, 1); }
         saveItems(col, e.k, items);
       }
     }
@@ -1526,7 +1552,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     });
     setPick({ c: c, k0: k0, sel: sel });
   }
-  function plainItem(x) { var o = { t: x.t, s: x.s ? 1 : 0, d: 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; return o; }
+  function plainItem(x) { var o = { t: x.t, s: x.s ? 1 : 0, d: 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.fm) o.fm = x.fm; return o; }
   function dayLabel(dn) { var t = slash(dn); return t.slice(t.indexOf('/') + 1); }
   function pickOk() {
     if (!pick) return;
@@ -1563,15 +1589,153 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     clip = null; render(); toast(total ? '已貼上 ' + total + ' 項' + (miss ? '（有 ' + miss + ' 列已不存在，略過）' : '') : '沒有可以貼上的工作項目');
   }
   $('copyYest').addEventListener('click', copyYesterday);
-  function fitTa(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+
+  /* ---------- 文字格式 (like Word): select text while editing and a small tool bar appears beside it; the format is kept per character range
+     in the item's fm: [{s, e, b, i, u, ff, fs}] — the item text t stays plain, so search, export and copy keep working ---------- */
+  var RT_FONTS = [['', '預設字體'], ['Microsoft JhengHei', '微軟正黑體'], ['DFKai-SB', '標楷體'], ['PMingLiU', '新細明體'], ['Microsoft YaHei', '微軟雅黑'], ['Arial', 'Arial'], ['Times New Roman', 'Times New Roman'], ['Consolas', 'Consolas']];
+  var RT_SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
+  function fillRich(el, text, fm) {                                   // text + format ranges -> nested b / i / u / span elements
+    el.textContent = ''; text = String(text == null ? '' : text);
+    var runs = (Array.isArray(fm) ? fm : []).filter(function (r) { return r && r.e > r.s; }).sort(function (a, b) { return a.s - b.s; }), pos = 0;
+    function plain(a, b) { if (b > a) el.appendChild(document.createTextNode(text.slice(a, b))); }
+    runs.forEach(function (r) {
+      var a = Math.max(pos, r.s | 0), b = Math.min(text.length, r.e | 0); if (b <= a) return;
+      plain(pos, a);
+      var n = document.createTextNode(text.slice(a, b));
+      if (r.u) { var u = document.createElement('u'); u.appendChild(n); n = u; }
+      if (r.i) { var it = document.createElement('i'); it.appendChild(n); n = it; }
+      if (r.b === -1) { var nb = document.createElement('span'); nb.style.fontWeight = 'normal'; nb.appendChild(n); n = nb; }   // explicitly not bold (a row name or starred item is bold by default)
+      else if (r.b) { var bb = document.createElement('b'); bb.appendChild(n); n = bb; }
+      if (r.ff || r.fs) { var sp = document.createElement('span'); if (r.ff) sp.style.fontFamily = '"' + r.ff + '", sans-serif'; if (r.fs) sp.style.fontSize = r.fs + 'px'; sp.appendChild(n); n = sp; }
+      el.appendChild(n); pos = b;
+    });
+    plain(pos, text.length);
+  }
+  function parseRich(root) {                                          // editor DOM -> { text, runs }
+    var segs = [], text = '';
+    function add(str, f) { if (!str) return; segs.push({ s: text.length, e: text.length + str.length, f: f }); text += str; }
+    function flagsOf(n, f) {
+      var g = { b: f.b, i: f.i, u: f.u, ff: f.ff, fs: f.fs }, t = n.tagName, st = n.style || {};
+      if (t === 'B' || t === 'STRONG') g.b = 1;
+      if (t === 'I' || t === 'EM') g.i = 1;
+      if (t === 'U') g.u = 1;
+      if (t === 'FONT' && n.getAttribute('face')) { var fc = n.getAttribute('face').split(',')[0].replace(/["']/g, '').trim(); g.ff = (fc && fc !== 'inherit') ? fc : ''; }
+      if (st.fontWeight === 'bold' || Number(st.fontWeight) >= 600) g.b = 1; else if (st.fontWeight === 'normal') g.b = 0;
+      if (st.fontStyle === 'italic') g.i = 1; else if (st.fontStyle === 'normal') g.i = 0;
+      if (/underline/.test(st.textDecorationLine || st.textDecoration || '')) g.u = 1;
+      if (st.fontFamily) { var f2 = st.fontFamily.split(',')[0].replace(/["']/g, '').trim(); g.ff = (f2 && f2 !== 'inherit') ? f2 : ''; }
+      if (st.fontSize) { var px = /^(\d+(?:\.\d+)?)px$/.exec(st.fontSize); g.fs = px ? Math.round(Number(px[1])) : 0; }
+      return g;
+    }
+    function walk(n, f) {
+      for (var c = n.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType === 3) add(c.nodeValue.replace(/ /g, ' ').replace(/​/g, ''), f);
+        else if (c.nodeType === 1) {
+          if (c.tagName === 'BR') { if (c.parentNode !== root && /^(DIV|P)$/.test(c.parentNode.tagName) && c.parentNode.childNodes.length === 1 && /\n$/.test(text)) continue; add('\n', {}); continue; }
+          if (/^(DIV|P)$/.test(c.tagName) && text && !/\n$/.test(text)) add('\n', {});
+          walk(c, flagsOf(c, f));
+        }
+      }
+    }
+    walk(root, {});
+    var runs = [];
+    segs.forEach(function (sg) {
+      var f = sg.f, bv = f.b === 0 ? -1 : (f.b ? 1 : 0); if (!(bv || f.i || f.u || f.ff || f.fs)) return;
+      var last = runs[runs.length - 1];
+      if (last && last.e === sg.s && (last.b || 0) === bv && !!last.i === !!f.i && !!last.u === !!f.u && (last.ff || '') === (f.ff || '') && (last.fs || 0) === (f.fs || 0)) { last.e = sg.e; return; }
+      var o = { s: sg.s, e: sg.e }; if (bv) o.b = bv; if (f.i) o.i = 1; if (f.u) o.u = 1; if (f.ff) o.ff = f.ff; if (f.fs) o.fs = f.fs; runs.push(o);
+    });
+    return { text: text, runs: runs };
+  }
+  function richClean(rc, max) {                                       // trim blanks at both ends and keep the ranges in step
+    var t = rc.text, lead = t.length - t.replace(/^\s+/, '').length;
+    t = t.replace(/^\s+/, '').replace(/\s+$/, ''); if (max && t.length > max) t = t.slice(0, max);
+    var runs = [];
+    rc.runs.forEach(function (r) { var a = Math.max(0, r.s - lead), b = Math.min(t.length, r.e - lead); if (b > a) { var o = {}; for (var k in r) o[k] = r[k]; o.s = a; o.e = b; runs.push(o); } });
+    return { text: t, runs: runs };
+  }
+  function lfmOf(k) { var m = meta.layout && meta.layout.lfm; return (m && m[k]) || null; }
+  var rtbRange = null;
+  function makeRich(text, fm, label, ph) {                            // a textarea look-alike (value / focus / setSelectionRange) that can show formats
+    var el = document.createElement('div'); el.className = 'ted'; el.contentEditable = 'true'; el.spellcheck = false;
+    el.setAttribute('role', 'textbox'); el.setAttribute('aria-multiline', 'true'); el.setAttribute('aria-label', label); if (ph) el.dataset.ph = ph;
+    fillRich(el, text, fm);
+    Object.defineProperty(el, 'value', { get: function () { return parseRich(el).text; }, set: function (v) { fillRich(el, v, null); } });
+    el.rich = function () { return parseRich(el); };
+    el.setSelectionRange = function () { var r = document.createRange(); r.selectNodeContents(el); r.collapse(false); var sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); };
+    el.select = function () { el.focus(); var r = document.createRange(); r.selectNodeContents(el); var sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); };
+    el.addEventListener('paste', function (ev) { ev.preventDefault(); var t = (ev.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t.replace(/\r/g, '')); });
+    el.addEventListener('drop', function (ev) { ev.preventDefault(); });
+    el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.shiftKey && !ev.isComposing) { ev.preventDefault(); document.execCommand('insertLineBreak'); } });
+    el.addEventListener('input', function () { if (!el.textContent && el.firstChild) el.textContent = ''; });
+    return el;
+  }
+  var rtb = null;
+  function buildRtb() {
+    rtb = document.createElement('div'); rtb.id = 'rtb'; rtb.setAttribute('role', 'toolbar'); rtb.setAttribute('aria-label', '文字格式');
+    var ff = document.createElement('select'); ff.title = '字體'; RT_FONTS.forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; ff.appendChild(op); });
+    var fs = document.createElement('select'); fs.title = '字體大小'; var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '大小'; fs.appendChild(o0);
+    RT_SIZES.forEach(function (n) { var op = document.createElement('option'); op.value = String(n); op.textContent = String(n); fs.appendChild(op); });
+    rtb.appendChild(ff); rtb.appendChild(fs);
+    [['bold', 'B', '粗體 (Ctrl+B)', 'font-weight:700'], ['italic', 'I', '斜體 (Ctrl+I)', 'font-style:italic'], ['underline', 'U', '底線 (Ctrl+U)', 'text-decoration:underline']].forEach(function (x) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'rb'; b.dataset.cmd = x[0]; b.textContent = x[1]; b.title = x[2]; b.style.cssText = x[3];
+      b.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+      b.addEventListener('click', function () { rtApply(function () { document.execCommand(x[0]); }); });
+      rtb.appendChild(b);
+    });
+    ff.addEventListener('change', function () { var v = ff.value; rtApply(function () { document.execCommand('fontName', false, v || 'inherit'); }); ff.value = ''; });
+    fs.addEventListener('change', function () {
+      var v = fs.value; if (!v) return;
+      rtApply(function () {
+        document.execCommand('fontSize', false, '7');
+        var ed = editing && editing.inp;
+        if (ed) {
+          var made = [];
+          Array.prototype.slice.call(ed.querySelectorAll('font[size="7"]')).forEach(function (f) { var sp = document.createElement('span'); sp.style.fontSize = v + 'px'; var fc = f.getAttribute('face'); if (fc && fc !== 'inherit') sp.style.fontFamily = '"' + fc.split(',')[0].replace(/["']/g, '').trim() + '", sans-serif'; while (f.firstChild) sp.appendChild(f.firstChild); f.replaceWith(sp); made.push(sp); });
+          if (made.length) { var rg = document.createRange(); rg.setStartBefore(made[0]); rg.setEndAfter(made[made.length - 1]); var sl2 = getSelection(); sl2.removeAllRanges(); sl2.addRange(rg); }   // keep the same text selected
+        }
+      });
+      fs.value = '';
+    });
+    rtb.addEventListener('mousedown', function (ev) { if (!ev.target.closest('select')) ev.preventDefault(); });
+    document.body.appendChild(rtb);
+  }
+  function rtEditor() { var ed = editing && editing.inp; return ed && ed.classList && ed.classList.contains('ted') ? ed : null; }
+  function rtApply(fn) {
+    var ed = rtEditor(); if (!ed) return;
+    ed.focus();
+    if (rtbRange) { var sl = getSelection(); sl.removeAllRanges(); sl.addRange(rtbRange); }
+    fn();
+    var s2 = getSelection(); if (s2.rangeCount) rtbRange = s2.getRangeAt(0).cloneRange();
+    rtbUpdate();
+  }
+  function hideRtb() { if (rtb) rtb.style.display = 'none'; rtbRange = null; }
+  function rtbUpdate() {
+    var ed = rtEditor(), sl = getSelection();
+    if (!ed || !sl.rangeCount) { if (!(rtb && rtb.contains(document.activeElement))) hideRtb(); return; }
+    var r = sl.getRangeAt(0);
+    if (sl.isCollapsed || !ed.contains(r.commonAncestorContainer)) { if (!(rtb && rtb.contains(document.activeElement))) hideRtb(); return; }
+    rtbRange = r.cloneRange();
+    if (!rtb) buildRtb();
+    rtb.style.display = 'flex';
+    Array.prototype.forEach.call(rtb.querySelectorAll('.rb'), function (b) { var on = false; try { on = document.queryCommandState(b.dataset.cmd); } catch (e) {} b.classList.toggle('on', !!on); });
+    var sr = r.getBoundingClientRect(); if (!sr.width && !sr.height) return;
+    rtb.style.left = '0px'; rtb.style.top = '0px';
+    var a = rtb.getBoundingClientRect(), k = (a.width / rtb.offsetWidth) || 1, tw = a.width, th = a.height;     // screen pixels per page pixel in this browser
+    var L = Math.max(4, Math.min(sr.left, window.innerWidth - tw - 4)), T = sr.top - th - 6; if (T < 4) T = sr.bottom + 6;
+    rtb.style.left = ((L - a.left) / k) + 'px'; rtb.style.top = ((T - a.top) / k) + 'px';
+  }
+  document.addEventListener('selectionchange', function () { clearTimeout(rtbUpdate._t); rtbUpdate._t = setTimeout(rtbUpdate, 30); });
+  window.addEventListener('resize', function () { if (rtb && rtb.style.display !== 'none') rtbUpdate(); });
+  document.addEventListener('scroll', function () { if (rtb && rtb.style.display !== 'none') rtbUpdate(); }, true);
+  function fitTa(t) { if (t.classList && t.classList.contains('ted')) return; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
   function startAdd(td, k, c) {
     if (editing) commit();
     if (c !== -1 && isRR(k)) { openRule(cols[c].dn, null, k); return; }          // 例行公事 asks for the repeat settings first
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     td.classList.add('editing');
     var add = td.querySelector('.add'); if (add) add.remove();
-    var wrap = h('div', 'composer'), inp = document.createElement('textarea'); inp.rows = 1;
-    inp.maxLength = 400; inp.placeholder = '工作內容，Enter 加入，Shift+Enter 換行'; inp.setAttribute('aria-label', '新增工作');
+    var wrap = h('div', 'composer'), inp = makeRich('', null, '新增工作', '工作內容，Enter 加入，Shift+Enter 換行（選取文字可設定格式）');
     var row = h('div', 'crow'), star = h('button', 'btn cstar', '☆ 標星號'), ok = h('button', 'btn primary', '加入'), no = h('button', 'btn', '取消');
     star.type = ok.type = no.type = 'button';
     wrap.appendChild(inp); row.appendChild(star); row.appendChild(ok); row.appendChild(no); wrap.appendChild(row); td.appendChild(wrap);
@@ -1586,8 +1750,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (editing) commit();
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     var row = td.querySelector('.it[data-i="' + i + '"]'); if (!row) return;
-    var tx = row.querySelector('.tx'), inp = document.createElement('textarea'); inp.rows = 1;
-    inp.maxLength = 400; inp.value = tx.textContent; inp.setAttribute('aria-label', '修改工作');
+    var tx = row.querySelector('.tx'), inp = makeRich(tx.textContent, (itemsNow(colAt(c), k)[i] || {}).fm, '修改工作');
     tx.replaceWith(inp); td.classList.add('editing');
     editing = { kind: 'item', k: k, c: c, i: i, node: td, inp: inp };
     inp.addEventListener('keydown', function (ev) {
@@ -1596,7 +1759,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         ev.preventDefault();
         var e0 = editing, col0 = colAt(e0.c), its0 = itemsNow(col0, e0.k), it0 = its0[e0.i]; if (!it0) return;
         var a0 = Number(it0.l) || 0, b0 = Math.max(0, Math.min(3, a0 + (ev.shiftKey ? -1 : 1))); if (a0 === b0) return;
-        var txt0 = inp.value.trim(); if (txt0 && txt0 !== it0.t) { if (it0.r) it0.e = 1; it0.t = txt0; }
+        var rc0 = richClean(inp.rich(), 400); if (rc0.text && (rc0.text !== it0.t || JSON.stringify(rc0.runs) !== JSON.stringify(it0.fm || []))) { if (it0.r) it0.e = 1; it0.t = rc0.text; if (rc0.runs.length) it0.fm = rc0.runs; else delete it0.fm; }
         if (b0) it0.l = b0; else delete it0.l;
         saveItems(col0, e0.k, its0); var k0 = e0.k, c0 = e0.c, i0 = e0.i, td0 = e0.node; editing = null; td0.classList.remove('editing'); paintCell(td0, col0, k0); startItem(td0, k0, c0, i0);
       }
@@ -1653,9 +1816,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function startLabel(k) {
     if (editing) commit();
     var td = $('tbl').querySelector('td.a[data-k="' + k + '"]'), def = rowDef(k); if (!td || !def) return;
-    var inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 30; inp.value = flat(def.label); inp.setAttribute('aria-label', '修改工作項目名稱');
+    var inp = makeRich(def.label, lfmOf(k), '修改工作項目名稱');
     td.textContent = ''; td.classList.add('editing'); td.appendChild(inp);
-    editing = { kind: 'label', k: k, node: td, inp: inp, orig: inp.value };
+    editing = { kind: 'label', k: k, node: td, inp: inp, orig: def.label };
     inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commit(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
     inp.focus(); inp.select();
   }
@@ -1674,7 +1837,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   /* ---------- events ---------- */
   document.addEventListener('mousedown', function (ev) {
-    if (editing && !editing.node.contains(ev.target)) commit();
+    if (editing && !editing.node.contains(ev.target) && !(ev.target.closest && ev.target.closest('#rtb'))) commit();
   }, true);
   $('tbl').addEventListener('click', function (ev) {
     var btn = ev.target.closest('[data-act]');
@@ -1689,7 +1852,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         var opened = document.querySelectorAll('td.a.open'); for (var o = 0; o < opened.length; o++) opened[o].classList.remove('open');
         if (!wasOpen) td.classList.add('open');
       } else if (btn) rowAction(btn.dataset.act, td.dataset.k);
-      else if (ev.target.closest('.lb')) openPad(td.dataset.k);   // click the name: open its notepad
+      else if (ev.target.closest('.lb')) startLabel(td.dataset.k);   // click the name: edit it in place, like a work item (the notepad has its own button)
       return;
     }
     if (!btn || !td) return;
@@ -2034,7 +2197,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var hidden = {}, hs = hiddenSet(); Object.keys(hs).forEach(function (k) { if (hs[k]) hidden[k] = 1; });
     var labels = {}, ls = (meta.layout && meta.layout.labels) || {}; Object.keys(ls).forEach(function (k) { if (ls[k]) labels[k] = ls[k]; });
     var purged = {}, pgs = (meta.layout && meta.layout.purged) || {}; Object.keys(pgs).forEach(function (k) { if (pgs[k]) purged[k] = 1; });
-    return { order: r.map(function (d) { return d.k; }), custom: custom, hidden: hidden, labels: labels, removed: removed, purged: purged };
+    var lfm = {}, lm = (meta.layout && meta.layout.lfm) || {}; Object.keys(lm).forEach(function (k) { if (lm[k] && lm[k].length) lfm[k] = lm[k]; });
+    return { order: r.map(function (d) { return d.k; }), custom: custom, hidden: hidden, labels: labels, removed: removed, purged: purged, lfm: lfm };
   }
   function hiddenSet() { return (meta.layout && meta.layout.hidden) || {}; }
   function visibleRows() { var hs = hiddenSet(); return rows().filter(function (d) { return !hs[d.k]; }); }
@@ -2457,63 +2621,6 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
 
-  /* ---------- 字型設定: font / size / bold / italic / underline for 主項目, 工作項目, 待定事項 (kept in meta.fmt, shared like the rest) ---------- */
-  var FMT_GROUPS = [
-    { g: 'lb', name: '主項目', sel: '#tbl .lbrow .lb' },
-    { g: 'it', name: '工作項目', sel: '#tbl td.c:not(.b) .it .tx' },
-    { g: 'bd', name: '待定事項', sel: '#tbl td.b .it .tx' }
-  ];
-  var FMT_FONTS = [['', '預設'], ['"Microsoft JhengHei", "微軟正黑體", sans-serif', '微軟正黑體'], ['"DFKai-SB", "BiauKai", "標楷體", serif', '標楷體'], ['"PMingLiU", "MingLiU", "新細明體", serif', '新細明體'], ['"Microsoft YaHei", "微軟雅黑", sans-serif', '微軟雅黑'], ['Arial, sans-serif', 'Arial'], ['"Times New Roman", serif', 'Times New Roman'], ['Consolas, "Courier New", monospace', '等寬字型']];
-  function fmtOf(g) { var f = meta.fmt && meta.fmt[g]; return f || {}; }
-  function applyFmt() {
-    var st = $('fmtCss'); if (!st) { st = document.createElement('style'); st.id = 'fmtCss'; document.head.appendChild(st); }
-    var css = '';
-    FMT_GROUPS.forEach(function (G) {
-      var f = fmtOf(G.g), r = [];
-      if (f.ff) r.push('font-family:' + f.ff + ' !important');
-      if (f.fs) r.push('font-size:' + f.fs + 'px !important');
-      if (f.b) r.push('font-weight:700 !important');
-      if (f.i) r.push('font-style:italic !important');
-      if (f.u) r.push('text-decoration-line:underline !important');
-      if (r.length) css += G.sel + '{' + r.join(';') + '}\n';
-    });
-    st.textContent = css;
-    if (typeof scheduleClip === 'function') scheduleClip();
-  }
-  function saveFmt(g, f) {
-    var all = {}; FMT_GROUPS.forEach(function (G) { all[G.g] = fmtOf(G.g); }); all[g] = f;
-    meta.fmt = all; backend.put('meta', 'fmt', all).catch(failToast); applyFmt();
-  }
-  function openFmt() {
-    var old = $('fmtPanel'); if (old) { old.remove(); return; }
-    var pn = h('div', 'fmtpanel'); pn.id = 'fmtPanel';
-    pn.style.cssText = 'position:fixed;top:70px;right:20px;z-index:60;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);padding:10px 14px;font-size:13px;';
-    var tt = h('div', null, '字型設定（改了馬上套用，所有裝置共用）'); tt.style.cssText = 'font-weight:700;margin-bottom:8px;'; pn.appendChild(tt);
-    FMT_GROUPS.forEach(function (G) {
-      var f = fmtOf(G.g), row = h('div'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:6px 0;';
-      var nm = h('span', null, G.name); nm.style.cssText = 'width:64px;font-weight:700;'; row.appendChild(nm);
-      var sel = h('select'); FMT_FONTS.forEach(function (o) { var op = h('option', null, o[1]); op.value = o[0]; if (o[0] === (f.ff || '')) op.selected = true; sel.appendChild(op); });
-      var sz = h('input'); sz.type = 'number'; sz.min = '8'; sz.max = '60'; sz.step = '1'; sz.placeholder = '大小'; sz.style.width = '60px'; if (f.fs) sz.value = f.fs;
-      row.appendChild(sel); row.appendChild(sz);
-      function cur() { var c = Object.assign({}, fmtOf(G.g)); return c; }
-      sel.addEventListener('change', function () { var c = cur(); if (sel.value) c.ff = sel.value; else delete c.ff; saveFmt(G.g, c); });
-      sz.addEventListener('change', function () { var c = cur(), n = Math.round(Number(sz.value)); if (n >= 8 && n <= 60) c.fs = n; else { delete c.fs; sz.value = ''; } saveFmt(G.g, c); });
-      [['b', 'B', 'font-weight:700'], ['i', 'I', 'font-style:italic'], ['u', 'U', 'text-decoration:underline']].forEach(function (x) {
-        var bt = h('button', 'btn', x[1]); bt.type = 'button'; bt.style.cssText = x[2] + ';min-width:30px;'; bt.title = { b: '粗體', i: '斜體', u: '底線' }[x[0]];
-        function paint() { bt.classList.toggle('primary', !!fmtOf(G.g)[x[0]]); }
-        paint();
-        bt.addEventListener('click', function () { var c = cur(); if (c[x[0]]) delete c[x[0]]; else c[x[0]] = 1; saveFmt(G.g, c); paint(); });
-        row.appendChild(bt);
-      });
-      var rs = h('button', 'btn', '還原'); rs.type = 'button'; rs.title = '把「' + G.name + '」的字型設定還原成預設';
-      rs.addEventListener('click', function () { saveFmt(G.g, {}); pn.remove(); openFmt(); });
-      row.appendChild(rs); pn.appendChild(row);
-    });
-    var cl = h('button', 'btn primary', '關閉'); cl.type = 'button'; cl.style.marginTop = '4px'; cl.addEventListener('click', function () { pn.remove(); });
-    pn.appendChild(cl); document.body.appendChild(pn);
-  }
-  $('fmtBtn').addEventListener('click', openFmt);
-  applyFmt();
   $('resetCW').addEventListener('click', resetCW);
   $('resetRH').addEventListener('click', function () {
     rhUser = {}; saveSizes();
@@ -2934,7 +3041,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function onData(which) {
     return function (o, cached) {
-      if (which === 'cells') cellsMap = o; else if (which === 'rowNotes') notes = o; else { meta = o; ROWS = null; applyFmt(); }
+      if (which === 'cells') cellsMap = o; else if (which === 'rowNotes') notes = o; else { meta = o; ROWS = null; }
       if (which === 'cells' && !cached && !window.__schedLocal) setSync('on', '已同步');
       if (!cached || window.__schedLocal) live[which] = true;
       if (which === 'meta' || which === 'cells') seedRules();
