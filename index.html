@@ -922,7 +922,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     td.textContent = '';
     var items = itemsOf(cellKey(col, k)), box = h('div', 'items'), isPick = !!(pick && pick.c === col.i && pick.sel[k]);
     items.forEach(function (it, i) {
-      var row = h('div', 'it' + (it.s && !it.d ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '') + (isPick && !it.r ? ' pick' + (pick.sel[k][i] ? ' on' : '') : '')); row.dataset.i = String(i);
+      var row = h('div', 'it' + (it.s && !it.d ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '') + (isPick && (!it.r || pick.mode === 'del') ? ' pick' + (pick.sel[k][i] ? ' on' : '') : '')); row.dataset.i = String(i);
       var lv = Math.max(0, Math.min(3, Number(it.l) || 0)); if (lv) row.style.marginLeft = (lv * 14) + 'px';
       var ind = h('button', 'ind', '⇥'); ind.type = 'button'; ind.dataset.act = 'indent'; ind.title = '向內縮排'; ind.setAttribute('aria-label', ind.title); if (lv >= 3) ind.disabled = true;
       var outd = h('button', 'ind', '⇤'); outd.type = 'button'; outd.dataset.act = 'outdent'; outd.title = '向外縮排'; outd.setAttribute('aria-label', outd.title); if (lv <= 0) outd.disabled = true;
@@ -942,10 +942,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var bul = h('span', 'bul', it.d ? '☑' : it.s ? '★' : '•'); bul.setAttribute('aria-hidden', 'true');
       var tb = h('div', 'itb');
       var cp = h('button', 'cpy', '⧉'); cp.type = 'button'; cp.dataset.act = 'copy'; cp.title = '複製這一欄的工作項目'; cp.setAttribute('aria-label', cp.title);
-      if (!it.r) tb.appendChild(cp); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(nt);
+      var dm = h('button', 'cpy', '🗑'); dm.type = 'button'; dm.dataset.act = 'delm'; dm.title = '選取多個工作項目一起刪除'; dm.setAttribute('aria-label', dm.title);
+      if (!it.r) tb.appendChild(cp); tb.appendChild(dm); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(nt);
       if (it.r) { var rp = h('button', 'rp', '⋮'); rp.type = 'button'; rp.dataset.act = 'rule'; rp.title = '這是重複事項：點一下修改或刪除整個重複設定'; rp.setAttribute('aria-label', rp.title); tb.appendChild(rp); }
       tb.appendChild(x);
-      if (isPick && !it.r) {                                         // ticking items to copy: a check box replaces the bullet, the tool bar is left out
+      if (isPick && (!it.r || pick.mode === 'del')) {                // ticking items to copy / delete: a check box replaces the bullet, the tool bar is left out
         var pk = h('button', 'pk', pick.sel[k][i] ? '◉' : '○'); pk.type = 'button'; pk.dataset.act = 'pick'; pk.setAttribute('aria-label', '選取這項工作');
         tx.dataset.act = 'pick'; tx.title = '點一下選取／取消選取';
         row.appendChild(pk); row.appendChild(tx); box.appendChild(row); return;
@@ -955,8 +956,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     });
     td.appendChild(box);
     if (pick && pick.c === col.i && pick.k0 === k) {
-      var bar = h('div', 'pickbar'), pok = h('button', 'btn primary', '√'), pno = h('button', 'btn', '✕');
-      pok.type = pno.type = 'button'; pok.dataset.act = 'copyok'; pno.dataset.act = 'copyno'; pok.title = '確定複製勾選的工作項目（這一天所有主項目）'; pno.title = '取消複製';
+      var isDel = pick.mode === 'del', nSel = 0; Object.keys(pick.sel).forEach(function (kk) { pick.sel[kk].forEach(function (f) { if (f) nSel++; }); });
+      var bar = h('div', 'pickbar'), pok = h('button', 'btn primary', isDel ? (pick.arm ? '確定刪除 ' + nSel + ' 項？' : '刪除') : '√'), pno = h('button', 'btn', '✕');
+      pok.type = pno.type = 'button'; pok.dataset.act = isDel ? 'delok' : 'copyok'; pno.dataset.act = 'copyno';
+      pok.title = isDel ? '刪除勾選的工作項目（這一天所有主項目），按兩下確認' : '確定複製勾選的工作項目（這一天所有主項目）'; pno.title = isDel ? '取消刪除' : '取消複製';
       pok.setAttribute('aria-label', pok.title); pno.setAttribute('aria-label', pno.title);
       bar.appendChild(pok); bar.appendChild(pno); box.appendChild(bar); return;   // inside the items box, so it shows in the bubble of a clipped cell too
     }
@@ -1566,17 +1569,29 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function repaintAt(k, c) { var td = cellAt(k, c); if (td && colAt(c)) paintCell(td, colAt(c), k); }
   function repaintCol(c) { rows().forEach(function (def) { if (!isCalc(def)) repaintAt(def.k, c); }); }
   function setPick(p) { var old = pick; pick = p; if (old) repaintCol(old.c); if (p) repaintCol(p.c); }
-  function startPick(k0, c, i0) {                                          // every row of that day becomes tickable (rule-made items fill themselves, so they are left out)
+  function startPick(k0, c, i0, mode) {                                    // every row of that day becomes tickable (copy: rule-made items fill themselves, so they are left out; delete: they can go too)
     var col = colAt(c), sel = {};
     rows().forEach(function (def) {
       if (isCalc(def)) return;
       var its = itemsNow(col, def.k); if (!its.length) return;
-      sel[def.k] = its.map(function (x, j) { return def.k === k0 && j === i0 && !x.r; });
+      sel[def.k] = its.map(function (x, j) { return def.k === k0 && j === i0 && (!x.r || mode === 'del'); });
     });
-    setPick({ c: c, k0: k0, sel: sel });
+    setPick({ c: c, k0: k0, sel: sel, mode: mode || 'copy' });
   }
   function plainItem(x) { var o = { t: x.t, s: x.s ? 1 : 0, d: 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.fm) o.fm = x.fm; return o; }
   function dayLabel(dn) { var t = slash(dn); return t.slice(t.indexOf('/') + 1); }
+  function pickDel() {                                                     // delete every ticked item of the day; the first press asks, the second does it
+    if (!pick || pick.mode !== 'del') return;
+    var n = 0; Object.keys(pick.sel).forEach(function (kk) { pick.sel[kk].forEach(function (f) { if (f) n++; }); });
+    if (!n) { toast('請先勾選要刪除的工作項目'); return; }
+    if (!pick.arm) { pick.arm = true; repaintCol(pick.c); clearTimeout(pickDel._t); pickDel._t = setTimeout(function () { if (pick && pick.arm) { pick.arm = false; repaintCol(pick.c); } }, 4000); return; }
+    var col = colAt(pick.c), sel = pick.sel; clearTimeout(pickDel._t);
+    rows().forEach(function (def) {
+      var flags = sel[def.k]; if (!flags || !flags.some(Boolean)) return;
+      saveItems(col, def.k, itemsNow(col, def.k).filter(function (x, i) { return !flags[i]; }));
+    });
+    pick = null; render(); renderStars(); toast('已刪除 ' + n + ' 項（可以按「復原」）', 4500);
+  }
   function pickOk() {
     if (!pick) return;
     var col = colAt(pick.c), out = [], total = 0;
@@ -1905,10 +1920,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (act === 'add') return startAdd(td, k, c);
     if (act === 'paste') return doPaste(c);
     if (act === 'copyok') return pickOk();
+    if (act === 'delok') return pickDel();
     if (act === 'copyno') return setPick(null);
     var row = btn.closest('.it'); if (!row) return;
     var i = Number(row.dataset.i), col = colAt(c);
     if (act === 'copy') return startPick(k, c, i);
+    if (act === 'delm') return startPick(k, c, i, 'del');
     if (act === 'pick') { if (pick && pick.sel[k]) { pick.sel[k][i] = !pick.sel[k][i]; paintCell(td, col, k); } return; }
     if (act === 'rule') { var it0 = itemsNow(col, k)[i]; if (it0 && it0.r) openRule(col.dn, it0.r); return; }
     if (act === 'edit') return startItem(td, k, c, i);
@@ -1922,7 +1939,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect(); if (r.width && r.right > sr.right) nit.classList.add('flip');
     }
     if (act === 'indent' || act === 'outdent') { var l0 = Number(items[i].l) || 0, l1 = Math.max(0, Math.min(3, l0 + (act === 'indent' ? 1 : -1))); if (l1 === l0) return; if (l1) items[i].l = l1; else delete items[i].l; saveItems(col, k, items); paintCell(td, col, k); reHot(); }
-    else if (act === 'done') { items[i].d =items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
+    else if (act === 'done') { items[i].d = items[i].d ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
     else if (act === 'star') { items[i].s = items[i].s ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
     else if (act === 'del') {
       var key = cellKey(col, k) + '#' + i;
