@@ -390,6 +390,8 @@ td.b:hover .ed, .foot-txt:hover .ed, td.b.sel .ed { opacity: 1; }
 body.monthv #addRow { display: none; }   /* the button group then starts at the calendar's left edge */
 .mlabel { display: none; align-items: center; gap: 8px; margin-left: 12px; white-space: nowrap; line-height: 1.1; }
 body.monthv .mlabel { display: inline-flex; }
+body.fillwin header.top, body.fillwin .tstrip, body.fillwin .addrow, body.fillwin #footBox, body.fillwin #footHid, body.fillwin #wmBox { display: none !important; }   /* 放大表格: only the tool bar and the table stay */
+body.fillwin .page { gap: 6px; }
 .midbar { position: relative; }
 .midbar > .tools { flex: 1 1 auto; }
 .midbar .btn { padding: 2px 8px; min-height: 26px; }   /* compact tool bar: less space between a button's text and its frame */
@@ -577,6 +579,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       </span>
       <span class="seg" id="sizeSeg" role="group" aria-label="欄列"><span class="seglabel">欄列</span><button class="btn" type="button" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button><button class="btn" type="button" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button><button class="btn" type="button" id="fitCWBtn" title="日期欄寬調成剛好放得下目前這一週最長的工作項目">適應欄寬</button><button class="btn" type="button" id="fitRHBtn" title="每一列的高度都調成剛好放得下裡面的工作項目">適應列高</button></span>
       <span class="seg" id="hideSeg" role="group" aria-label="隱藏"><span class="seglabel">隱藏</span><button class="btn" type="button" id="toggleB" title="隱藏／顯示待定事項欄">待定事項</button><button class="btn" type="button" id="toggleWk" title="隱藏／顯示週六、週日">六日</button></span>
+      <button class="btn" type="button" id="fillWin" title="把表格放大到整個瀏覽器視窗（暫時隱藏上方與下方其他區塊），再按一次還原" aria-pressed="false">⛶ 放大表格</button>
       <span class="mlabel" id="mLabel"></span>
     </div>
   </div>
@@ -1004,7 +1007,37 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     try { if (localStorage.getItem('sched2.footOpen') === '0') fb.open = false; } catch (e) {}
     fb.addEventListener('toggle', function () { try { localStorage.setItem('sched2.footOpen', fb.open ? '1' : '0'); } catch (e) {} });
   })();
-  function linkify(el, text) {                                      // plain text with every http(s) address turned into a link that opens in a new tab
+  (function () {                                                       // 放大表格: the table grows to fill the whole browser window (not full screen)
+    var btn = $('fillWin'), sh = $('sheet');
+    function fit() { fitSheet(); }
+    function set(on) {
+      document.body.classList.toggle('fillwin', on); btn.textContent = on ? '⛶ 還原大小' : '⛶ 放大表格'; btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      window.scrollTo(0, 0); fit(); setTimeout(fit, 60);    }
+    btn.addEventListener('click', function () { set(!document.body.classList.contains('fillwin')); });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && document.body.classList.contains('fillwin') && !editing && !ev.defaultPrevented) set(false); });
+  })();
+  (function () {                                                       // a cell whose bottom is below the screen keeps its ＋ at the bottom of the screen (still at the cell's right edge)
+    var touched = [], pend = 0;
+    function run() {
+      pend = 0;
+      touched.forEach(function (b) { b.style.transform = ''; }); touched = [];
+      var tds = document.querySelectorAll('td.c:hover, td.c.sel, td.c:focus-within, td.a:hover');
+      Array.prototype.forEach.call(tds, function (td) {
+        var r = td.getBoundingClientRect(), k = (td.offsetHeight ? r.height / td.offsetHeight : 1) || 1, lim = window.innerHeight, sh = td.closest('.sheet');
+        if (sh) { var sr = sh.getBoundingClientRect(), sk = (sh.offsetHeight ? sr.height / sh.offsetHeight : 1) || 1; lim = Math.min(lim, sr.bottom - (sh.offsetHeight - sh.clientHeight) * sk); }   // the table scrolls inside .sheet, so its bottom edge (above the horizontal scroll bar) is the visible bottom
+        var over = r.bottom - lim + 6;
+        if (over <= 0 || r.top > lim) return;
+        Array.prototype.forEach.call(td.querySelectorAll(':scope > .add'), function (b) {
+          var room = (r.height - b.getBoundingClientRect().height - 4) / k, d = Math.min(over / k, Math.max(0, room));
+          if (d > 0) { b.style.transform = 'translateY(' + (-d) + 'px)'; touched.push(b); }
+        });
+      });
+    }
+    function sched() { if (!pend) pend = setTimeout(run, 16); }
+    ['scroll', 'resize'].forEach(function (n) { window.addEventListener(n, sched, true); });
+    ['mouseover', 'click', 'focusin'].forEach(function (n) { document.addEventListener(n, sched); });
+  })();
+  function linkify(el, text) {                                     // plain text with every http(s) address turned into a link that opens in a new tab
     String(text).split(/(https?:\/\/[^\s]+)/).forEach(function (part, i) {
       if (i % 2) { var a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.addEventListener('mousedown', function (ev) { ev.stopPropagation(); }); el.appendChild(a); }
       else if (part) el.appendChild(document.createTextNode(part));
@@ -2149,6 +2182,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function fitSheet() {                                                 // the sheet grows down until the 隱藏工作項目 row sits just above the bottom of the window
     var sh = $('sheet'), ar = document.querySelector('.addrow'); if (!sh || !ar || document.body.classList.contains('monthv')) return;
     var sr = sh.getBoundingClientRect(); if (!sr.height) return;
+    if (document.body.classList.contains('fillwin')) { sh.style.maxHeight = Math.max(240, Math.floor((window.innerHeight - 10 - sr.top) / UZ)) + 'px'; return; }   // 放大表格: down to the bottom of the window
     var below = ar.getBoundingClientRect().bottom - sr.bottom;           // screen px from the sheet's bottom edge to the bottom of that row (does not depend on the sheet height)
     var top = sr.top + (window.pageYOffset || 0), room = (window.innerHeight - 6 - top - below) / UZ;
     sh.style.maxHeight = Math.max(300, Math.floor(room)) + 'px';
