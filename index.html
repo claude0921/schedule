@@ -592,10 +592,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
 
   <details class="fold" id="footBox" open>
-    <summary>※ 備註</summary>
+    <summary>※ 備註<button type="button" class="btn" id="footHide" style="float:right;min-height:0;padding:0 8px;font-size:12px" title="隱藏備註區塊">隱藏</button></summary>
     <div class="foot-h"><span></span><span>雙擊或點「編輯」修改</span></div>
     <div class="foot-txt" id="footTxt" data-k="foot"></div>
   </details>
+  <div class="srow" id="footHid" hidden><div class="slcol"><span class="slabel">※ 備註</span><div class="wbtn"><button type="button" class="btn" id="footShow">顯示</button></div></div><span class="hint">（已隱藏）</span></div>
 
   <details class="wm" id="wmBox">
     <summary>工作月對照表</summary>
@@ -993,7 +994,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var f = $('footTxt'); f.textContent = '';
     f.appendChild(document.createTextNode(textOf({ k: 'foot', c: -2 })));
     var b = h('button', 'ed', '編輯'); b.type = 'button'; b.dataset.act = 'foot'; f.appendChild(b);
+    var hid = !!(meta.footui && meta.footui.hide); $('footBox').hidden = hid; $('footHid').hidden = !hid;
   }
+  function setFootHide(v) { meta.footui = { hide: v ? 1 : 0 }; backend.put('meta', 'footui', meta.footui).catch(failToast); paintFoot(); }
+  $('footHide').addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); setFootHide(true); });
+  $('footShow').addEventListener('click', function () { setFootHide(false); });
   (function () {                                                       // remember whether the 備註 box was folded (per viewer)
     var fb = $('footBox');
     try { if (localStorage.getItem('sched2.footOpen') === '0') fb.open = false; } catch (e) {}
