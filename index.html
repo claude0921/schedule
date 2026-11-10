@@ -344,6 +344,11 @@ td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display
 .wtools .btn, #starBtn .btn { min-height: 0; padding: 0 8px; font-size: 12px; }
 .slcol { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }   /* 置頂工作 label with its hide / show button underneath */
 #starBtn { color: var(--ink2); }
+.wbtn .btn { min-height: 0; padding: 0 8px; font-size: 12px; }
+.wbtn.wvert { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 12px; color: var(--ink2); }
+.wbtn label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+.slcol { width: 112px; flex: none; }   /* both lines (置頂工作, 關注清單) use the same left column, so their items start at the same place */
+.srow .wgrid { border-top: 0; padding-top: 0; flex: 1; min-width: 0; }
 .wtools label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .wempty { color: var(--ink2); font-size: 13px; padding-top: 3px; }
 .hbtn { border: 0; background: transparent; cursor: pointer; font: inherit; font-weight: 700; padding: 3px 0 0; }
@@ -912,7 +917,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     td.textContent = '';
     var items = itemsOf(cellKey(col, k)), box = h('div', 'items'), isPick = !!(pick && pick.c === col.i && pick.sel[k]);
     items.forEach(function (it, i) {
-      var row = h('div', 'it' + (it.s ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '') + (isPick && !it.r ? ' pick' + (pick.sel[k][i] ? ' on' : '') : '')); row.dataset.i = String(i);
+      var row = h('div', 'it' + (it.s && !it.d ? ' star' : '') + (it.d ? ' done' : '') + (it.n ? ' hasnote' : '') + (isPick && !it.r ? ' pick' + (pick.sel[k][i] ? ' on' : '') : '')); row.dataset.i = String(i);
       var lv = Math.max(0, Math.min(3, Number(it.l) || 0)); if (lv) row.style.marginLeft = (lv * 14) + 'px';
       var ind = h('button', 'ind', '⇥'); ind.type = 'button'; ind.dataset.act = 'indent'; ind.title = '向內縮排'; ind.setAttribute('aria-label', ind.title); if (lv >= 3) ind.disabled = true;
       var outd = h('button', 'ind', '⇤'); outd.type = 'button'; outd.dataset.act = 'outdent'; outd.title = '向外縮排'; outd.setAttribute('aria-label', outd.title); if (lv <= 0) outd.disabled = true;
@@ -929,7 +934,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       x.setAttribute('aria-label', '刪除這項工作');
       if (it.r) x.title = '只刪除這一天（整個重複事項請點 ⋮）';
       /* a plain bullet (or the lit ★ / ☑) is all that shows until the mouse is over the item; then the tool buttons appear above the text */
-      var bul = h('span', 'bul', it.s ? '★' : it.d ? '☑' : '•'); bul.setAttribute('aria-hidden', 'true');
+      var bul = h('span', 'bul', it.d ? '☑' : it.s ? '★' : '•'); bul.setAttribute('aria-hidden', 'true');
       var tb = h('div', 'itb');
       var cp = h('button', 'cpy', '⧉'); cp.type = 'button'; cp.dataset.act = 'copy'; cp.title = '複製這一欄的工作項目'; cp.setAttribute('aria-label', cp.title);
       if (!it.r) tb.appendChild(cp); tb.appendChild(outd); tb.appendChild(ind); tb.appendChild(nt);
@@ -1216,8 +1221,9 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
 
   /* starred items from today onward, soonest first */
-  function starredList() {
-    var out = [];
+  function starCfg() { var b = meta.starbar || {}; return { hide: !!b.hide, done: !!b.done, nolate: b.nolate === undefined ? true : !!b.nolate }; }   // overdue ones stay hidden unless asked for, as before
+  function starredList(cfg) {
+    cfg = cfg || starCfg(); var out = [];
     var ids = Object.keys(cellsMap), have = {}; ids.forEach(function (id) { have[id] = 1; });
     if (rulesList().some(function (r) { return r.st || r.st1; })) {            // repeating items marked ★ show up in the next 90 days even before they are touched
       for (var dd = todayDn; dd <= todayDn + 90; dd++) rows().filter(function (d) { return isRR(d.k); }).forEach(function (d) { var rid = iso(dd) + '_' + d.k; if (!have[rid]) { ids.push(rid); have[rid] = 1; } });
@@ -1226,39 +1232,43 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var d = cellsMap[id], parts = id.split('_'), date = (d && d.date) || parts[0], row = (d && d.row) || parts.slice(1).join('_');
       var dn = isoToDn(date), def = rowDef(row);
       var isNote = isNoteId(id);                                                 // 待定事項 items have no date: starred ones sit after the dated ones
-      if (isNaN(dn) || (!isNote && dn < todayDn) || !def) return;
-      itemsOf(id).forEach(function (it, i) { if (it.s) out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def), note: isNote }); });
+      if (isNaN(dn) || !def) return;
+      var late = !isNote && dn < todayDn;
+      if (late && cfg.nolate) return;
+      itemsOf(id).forEach(function (it, i) { if (!it.s) return; if (it.d && (!cfg.done || late)) return; out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def), note: isNote, late: late }); });
     });
-    out.sort(function (a, b) { return (a.note ? 1 : 0) - (b.note ? 1 : 0) || a.dn - b.dn || a.o - b.o || a.i - b.i; });
+    out.sort(function (a, b) { return (b.late ? 1 : 0) - (a.late ? 1 : 0) || (a.note ? 1 : 0) - (b.note ? 1 : 0) || a.dn - b.dn || a.o - b.o || a.i - b.i; });
     return out;
   }
   function renderStars() {
     renderWatch();
     var box = $('starChips'); box.textContent = '';
-    var list = starredList();
-    var stHide = !!(meta.starbar && meta.starbar.hide);
-    function setStarHide(v) { meta.starbar = { hide: v ? 1 : 0 }; backend.put('meta', 'starbar', meta.starbar).catch(failToast); renderStars(); }
+    var cfg = starCfg(), list = starredList(cfg), stHide = cfg.hide;
+    function setStar(patch) { var c = starCfg(); for (var k in patch) c[k] = patch[k]; meta.starbar = { hide: c.hide ? 1 : 0, done: c.done ? 1 : 0, nolate: c.nolate ? 1 : 0 }; backend.put('meta', 'starbar', meta.starbar).catch(failToast); renderStars(); }
     var sbtn = $('starBtn'); sbtn.textContent = '';
     $('starTog').textContent = '★ 置頂工作' + (stHide ? '(' + list.length + ')' : '');   // folded: the count stays in brackets
     if (stHide) {                                                    // same as 關注清單: one small line with a way back
-      var ss = h('button', 'btn', '顯示'); ss.type = 'button'; ss.addEventListener('click', function () { setStarHide(false); });
+      var ss = h('button', 'btn', '顯示'); ss.type = 'button'; ss.addEventListener('click', function () { setStar({ hide: false }); });
       sbtn.appendChild(ss); box.appendChild(h('span', 'hint', '（已隱藏）')); return;
     }
-    if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。'));
-      var sh1 = h('button', 'btn', '隱藏'); sh1.type = 'button'; sh1.addEventListener('click', function () { setStarHide(true); }); sbtn.appendChild(sh1); return; }
+    var stl = h('div', 'wbtn wvert');                                // the same function keys as 關注清單
+    var lb = h('label'), cb = h('input'); cb.type = 'checkbox'; cb.checked = cfg.done; lb.appendChild(cb); lb.appendChild(document.createTextNode('顯示已完成'));
+    cb.addEventListener('change', function () { setStar({ done: cb.checked }); });
+    var lb2 = h('label'), cb2 = h('input'); cb2.type = 'checkbox'; cb2.checked = cfg.nolate; lb2.appendChild(cb2); lb2.appendChild(document.createTextNode('隱藏逾期'));
+    cb2.addEventListener('change', function () { setStar({ nolate: cb2.checked }); });
+    var hb = h('button', 'btn', '隱藏'); hb.type = 'button'; hb.title = '把置頂工作收起來（可以按「顯示」叫回來）'; hb.addEventListener('click', function () { setStar({ hide: true }); });
+    stl.appendChild(lb); stl.appendChild(lb2); stl.appendChild(hb); sbtn.appendChild(stl);
+    if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
     list.forEach(function (s) {
-      var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : ''));
+      var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.late ? ' late' : '') + (!s.late && s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : ''));
       if (s.note) w.dataset.note = '1';
       w.dataset.dn = String(s.dn); w.dataset.k = s.k; w.dataset.i = String(s.i);
       var ck = h('button', 'cks', s.d ? '☑' : '☐'); ck.type = 'button'; ck.title = s.d ? '標回未完成' : '標示已完成'; ck.setAttribute('aria-label', ck.title);
       var go = h('button', 'cgo'); go.type = 'button'; go.title = s.label + '：' + s.t + '（點一下跳到那一格）';
-      go.appendChild(h('b', null, s.note ? '待定' : o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週'))); go.appendChild(document.createTextNode(s.label + '：' + s.t));
+      go.appendChild(h('b', null, (s.late ? '逾期 ' : '') + (s.note ? '待定' : o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週')))); go.appendChild(document.createTextNode(s.label + '：' + s.t));
       if (s.n) { w.classList.add('hasnote'); go.title += '\n備註：' + s.n; }
       w.appendChild(ck); w.appendChild(go); box.appendChild(w);
     });
-    var sh2 = h('button', 'btn', '隱藏'); sh2.type = 'button'; sh2.title = '把置頂工作收起來（可以按「顯示」叫回來）';
-    sh2.addEventListener('click', function () { setStarHide(true); });
-    sbtn.appendChild(sh2);
   }
   /* ---------- 關注清單: every item whose text / note contains a keyword; from today on, plus overdue ones that are not finished ---------- */
   var NOTE_DN = null;
@@ -1316,9 +1326,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var box = $('watchBox'); if (!box) return; box.textContent = '';
     var cfg = watchCfg();
     if (cfg.hide) {                                                  // folded away: one small line with a way back
-      var hr = h('div', 'wtools'), sh = h('button', 'btn', '顯示'); sh.type = 'button';
+      var hr = h('div', 'srow'), hc = h('div', 'slcol'), sh = h('button', 'btn', '顯示'); sh.type = 'button';   // laid out like the 置頂工作 line: label, the button under it, 「（已隱藏）」 beside
       sh.addEventListener('click', function () { var c = watchCfg(); c.hide = false; saveWatch(c); });
-      hr.appendChild(document.createTextNode('👁 關注清單（已隱藏）')); hr.appendChild(sh); box.appendChild(hr); return;
+      var sb = h('div', 'wbtn'); sb.appendChild(sh); hc.appendChild(h('span', 'slabel', '👁 關注清單')); hc.appendChild(sb);
+      hr.appendChild(hc); hr.appendChild(h('span', 'hint', '（已隱藏）')); box.appendChild(hr); return;
     }
     var grid = h('div', 'wgrid'); grid.style.gridTemplateColumns = 'repeat(' + Math.max(1, cfg.words.length) + ', minmax(0, 1fr))';   // keywords side by side, every column the same width
     cfg.words.forEach(function (word, wi) {
@@ -1343,8 +1354,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       });
       col.appendChild(chips); grid.appendChild(col);
     });
-    box.appendChild(grid);
-    var tools = h('div', 'wtools');
+    var wrow = h('div', 'srow'), wlc = h('div', 'slcol');                      // same layout as the 置頂工作 line: the label with the function buttons stacked under it, the items to the right
+    var tools = h('div', 'wbtn wvert');
     var add = h('button', 'btn', '＋ 新增關鍵字'); add.type = 'button';
     add.addEventListener('click', function () {
       var v = window.prompt('要關注的關鍵字（例如：副總、協理）'); v = v && v.trim(); if (!v) return;
@@ -1356,7 +1367,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     cb2.addEventListener('change', function () { var c = watchCfg(); c.nolate = cb2.checked; saveWatch(c); });
     var hb = h('button', 'btn', '隱藏'); hb.type = 'button'; hb.title = '把這個清單收起來（可以按「顯示」或「復原」叫回來）';
     hb.addEventListener('click', function () { var c = watchCfg(); c.hide = true; saveWatch(c); });
-    tools.appendChild(add); tools.appendChild(lb); tools.appendChild(lb2); tools.appendChild(hb); box.appendChild(tools);
+    tools.appendChild(add); tools.appendChild(lb); tools.appendChild(lb2); tools.appendChild(hb);
+    wlc.appendChild(h('span', 'slabel', '👁 關注清單')); wlc.appendChild(tools); wrow.appendChild(wlc); wrow.appendChild(grid); box.appendChild(wrow);
   }
   $('watchBox').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
@@ -1481,7 +1493,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.fm) o.fm = x.fm; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
   function toggleDone(dn, k, i) {
     var col = { dn: dn }, items = itemsNow(col, k); if (!items[i]) return;
-    items[i].d = items[i].d ? 0 : 1; if (items[i].d) items[i].s = 0;   // finished → drops off the 置頂 list
+    items[i].d = items[i].d ? 0 : 1;   // finished → leaves the 置頂 list unless 「顯示已完成」 is on (the star stays, so un-ticking brings it back)
     saveItems(col, k, items);
     cols.forEach(function (c) {
       if (c.dn !== dn) return;
