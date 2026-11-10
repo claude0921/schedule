@@ -552,6 +552,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         <button class="btn" type="button" data-mode="cm" title="像一般月曆：一個曆月一頁">曆月</button>
       </span>
       <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
+      <button class="btn" id="fmtBtn" title="設定主項目、工作項目、待定事項的字體、大小、粗體、斜體、底線">Aa 字型</button>
       <button class="btn" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button>
       <span class="seg" id="hideSeg" role="group" aria-label="隱藏"><span class="seglabel">隱藏</span><button class="btn" type="button" id="toggleB" title="隱藏／顯示待定事項欄">待定事項</button><button class="btn" type="button" id="toggleWk" title="隱藏／顯示週六、週日">六日</button></span>
       <span class="mlabel" id="mLabel"></span>
@@ -2455,6 +2456,64 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var left = lead && mode === 'week' ? lead.offsetLeft - stick : th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
+
+  /* ---------- 字型設定: font / size / bold / italic / underline for 主項目, 工作項目, 待定事項 (kept in meta.fmt, shared like the rest) ---------- */
+  var FMT_GROUPS = [
+    { g: 'lb', name: '主項目', sel: '#tbl .lbrow .lb' },
+    { g: 'it', name: '工作項目', sel: '#tbl td.c:not(.b) .it .tx' },
+    { g: 'bd', name: '待定事項', sel: '#tbl td.b .it .tx' }
+  ];
+  var FMT_FONTS = [['', '預設'], ['"Microsoft JhengHei", "微軟正黑體", sans-serif', '微軟正黑體'], ['"DFKai-SB", "BiauKai", "標楷體", serif', '標楷體'], ['"PMingLiU", "MingLiU", "新細明體", serif', '新細明體'], ['"Microsoft YaHei", "微軟雅黑", sans-serif', '微軟雅黑'], ['Arial, sans-serif', 'Arial'], ['"Times New Roman", serif', 'Times New Roman'], ['Consolas, "Courier New", monospace', '等寬字型']];
+  function fmtOf(g) { var f = meta.fmt && meta.fmt[g]; return f || {}; }
+  function applyFmt() {
+    var st = $('fmtCss'); if (!st) { st = document.createElement('style'); st.id = 'fmtCss'; document.head.appendChild(st); }
+    var css = '';
+    FMT_GROUPS.forEach(function (G) {
+      var f = fmtOf(G.g), r = [];
+      if (f.ff) r.push('font-family:' + f.ff + ' !important');
+      if (f.fs) r.push('font-size:' + f.fs + 'px !important');
+      if (f.b) r.push('font-weight:700 !important');
+      if (f.i) r.push('font-style:italic !important');
+      if (f.u) r.push('text-decoration-line:underline !important');
+      if (r.length) css += G.sel + '{' + r.join(';') + '}\n';
+    });
+    st.textContent = css;
+    if (typeof scheduleClip === 'function') scheduleClip();
+  }
+  function saveFmt(g, f) {
+    var all = {}; FMT_GROUPS.forEach(function (G) { all[G.g] = fmtOf(G.g); }); all[g] = f;
+    meta.fmt = all; backend.put('meta', 'fmt', all).catch(failToast); applyFmt();
+  }
+  function openFmt() {
+    var old = $('fmtPanel'); if (old) { old.remove(); return; }
+    var pn = h('div', 'fmtpanel'); pn.id = 'fmtPanel';
+    pn.style.cssText = 'position:fixed;top:70px;right:20px;z-index:60;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);padding:10px 14px;font-size:13px;';
+    var tt = h('div', null, '字型設定（改了馬上套用，所有裝置共用）'); tt.style.cssText = 'font-weight:700;margin-bottom:8px;'; pn.appendChild(tt);
+    FMT_GROUPS.forEach(function (G) {
+      var f = fmtOf(G.g), row = h('div'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:6px 0;';
+      var nm = h('span', null, G.name); nm.style.cssText = 'width:64px;font-weight:700;'; row.appendChild(nm);
+      var sel = h('select'); FMT_FONTS.forEach(function (o) { var op = h('option', null, o[1]); op.value = o[0]; if (o[0] === (f.ff || '')) op.selected = true; sel.appendChild(op); });
+      var sz = h('input'); sz.type = 'number'; sz.min = '8'; sz.max = '60'; sz.step = '1'; sz.placeholder = '大小'; sz.style.width = '60px'; if (f.fs) sz.value = f.fs;
+      row.appendChild(sel); row.appendChild(sz);
+      function cur() { var c = Object.assign({}, fmtOf(G.g)); return c; }
+      sel.addEventListener('change', function () { var c = cur(); if (sel.value) c.ff = sel.value; else delete c.ff; saveFmt(G.g, c); });
+      sz.addEventListener('change', function () { var c = cur(), n = Math.round(Number(sz.value)); if (n >= 8 && n <= 60) c.fs = n; else { delete c.fs; sz.value = ''; } saveFmt(G.g, c); });
+      [['b', 'B', 'font-weight:700'], ['i', 'I', 'font-style:italic'], ['u', 'U', 'text-decoration:underline']].forEach(function (x) {
+        var bt = h('button', 'btn', x[1]); bt.type = 'button'; bt.style.cssText = x[2] + ';min-width:30px;'; bt.title = { b: '粗體', i: '斜體', u: '底線' }[x[0]];
+        function paint() { bt.classList.toggle('primary', !!fmtOf(G.g)[x[0]]); }
+        paint();
+        bt.addEventListener('click', function () { var c = cur(); if (c[x[0]]) delete c[x[0]]; else c[x[0]] = 1; saveFmt(G.g, c); paint(); });
+        row.appendChild(bt);
+      });
+      var rs = h('button', 'btn', '還原'); rs.type = 'button'; rs.title = '把「' + G.name + '」的字型設定還原成預設';
+      rs.addEventListener('click', function () { saveFmt(G.g, {}); pn.remove(); openFmt(); });
+      row.appendChild(rs); pn.appendChild(row);
+    });
+    var cl = h('button', 'btn primary', '關閉'); cl.type = 'button'; cl.style.marginTop = '4px'; cl.addEventListener('click', function () { pn.remove(); });
+    pn.appendChild(cl); document.body.appendChild(pn);
+  }
+  $('fmtBtn').addEventListener('click', openFmt);
+  applyFmt();
   $('resetCW').addEventListener('click', resetCW);
   $('resetRH').addEventListener('click', function () {
     rhUser = {}; saveSizes();
@@ -2875,7 +2934,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function onData(which) {
     return function (o, cached) {
-      if (which === 'cells') cellsMap = o; else if (which === 'rowNotes') notes = o; else { meta = o; ROWS = null; }
+      if (which === 'cells') cellsMap = o; else if (which === 'rowNotes') notes = o; else { meta = o; ROWS = null; applyFmt(); }
       if (which === 'cells' && !cached && !window.__schedLocal) setSync('on', '已同步');
       if (!cached || window.__schedLocal) live[which] = true;
       if (which === 'meta' || which === 'cells') seedRules();
