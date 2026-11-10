@@ -1212,10 +1212,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     ids.forEach(function (id) {
       var d = cellsMap[id], parts = id.split('_'), date = (d && d.date) || parts[0], row = (d && d.row) || parts.slice(1).join('_');
       var dn = isoToDn(date), def = rowDef(row);
-      if (isNaN(dn) || dn < todayDn || !def) return;
-      itemsOf(id).forEach(function (it, i) { if (it.s) out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def) }); });
+      var isNote = isNoteId(id);                                                 // 待定事項 items have no date: starred ones sit after the dated ones
+      if (isNaN(dn) || (!isNote && dn < todayDn) || !def) return;
+      itemsOf(id).forEach(function (it, i) { if (it.s) out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def), note: isNote }); });
     });
-    out.sort(function (a, b) { return a.dn - b.dn || a.o - b.o || a.i - b.i; });
+    out.sort(function (a, b) { return (a.note ? 1 : 0) - (b.note ? 1 : 0) || a.dn - b.dn || a.o - b.o || a.i - b.i; });
     return out;
   }
   function renderStars() {
@@ -1225,10 +1226,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!list.length) { box.appendChild(h('span', 'hint', '還沒有置頂工作。把滑鼠移到日期格子上按「＋」，或點工作前面的 ☆，標上星號就會出現在這裡。')); return; }
     list.forEach(function (s) {
       var o = fromDn(s.dn), w = h('div', 'chip-s' + (s.dn === todayDn ? ' today-c' : '') + (s.d ? ' done' : ''));
+      if (s.note) w.dataset.note = '1';
       w.dataset.dn = String(s.dn); w.dataset.k = s.k; w.dataset.i = String(s.i);
       var ck = h('button', 'cks', s.d ? '☑' : '☐'); ck.type = 'button'; ck.title = s.d ? '標回未完成' : '標示已完成'; ck.setAttribute('aria-label', ck.title);
       var go = h('button', 'cgo'); go.type = 'button'; go.title = s.label + '：' + s.t + '（點一下跳到那一格）';
-      go.appendChild(h('b', null, o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週'))); go.appendChild(document.createTextNode(s.label + '：' + s.t));
+      go.appendChild(h('b', null, s.note ? '待定' : o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週'))); go.appendChild(document.createTextNode(s.label + '：' + s.t));
       if (s.n) { w.classList.add('hasnote'); go.title += '\n備註：' + s.n; }
       w.appendChild(ck); w.appendChild(go); box.appendChild(w);
     });
@@ -1743,7 +1745,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   $('starChips').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
-    if (ev.target.closest('.cgo')) jumpTo(Number(w.dataset.dn), w.dataset.k);
+    if (!ev.target.closest('.cgo')) return;
+    if (w.dataset.note) {                                           // starred 待定事項 item: show that column and flash the cell
+      if (hideB) { hideB = false; try { localStorage.setItem('sched2.hideB', '0'); } catch (e) {} render(); }
+      var td = $('tbl').querySelector('td.b[data-k="' + w.dataset.k + '"]');
+      if (td) { td.scrollIntoView({ block: 'center', inline: 'nearest' }); td.classList.add('flash'); setTimeout(function () { td.classList.remove('flash'); }, 1700); }
+      return;
+    }
+    jumpTo(Number(w.dataset.dn), w.dataset.k);
   });
   /* ---------- one wheel notch = exactly one row (up/down) or one date column (Shift + wheel, or a sideways wheel) ---------- */
   var wheelStep = null;                                                 // set by the scroll-step block below
