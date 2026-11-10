@@ -392,6 +392,9 @@ body.monthv #addRow { display: none; }   /* the button group then starts at the 
 body.monthv .mlabel { display: inline-flex; }
 .midbar { position: relative; }
 .midbar > .tools { flex: 1 1 auto; }
+.midbar .btn { padding: 2px 8px; min-height: 26px; }   /* compact tool bar: less space between a button's text and its frame */
+.midbar .seglabel { padding: 0 6px; }
+.midbar .tools { gap: 4px; }
 #copyYest { order: 99; margin-left: auto; }   /* 複製昨天的工作項目 sits alone at the far right */
 @media (min-width: 1100px) { body.monthv .mlabel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; } }   /* centred over the calendar */
 .mlabel .ml-l { display: flex; flex-direction: column; align-items: center; }
@@ -482,6 +485,9 @@ td.editing .composer .ted, td.editing .it .ted, td.a .ted { width: 100%; border:
 #rtb { position: fixed; z-index: 70; display: none; align-items: center; gap: 4px; background: var(--card); color: var(--ink); border: 1px solid var(--line2); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.35); padding: 3px 5px; font-size: 13px; white-space: nowrap; }
 #rtb select { font: inherit; padding: 1px 2px; max-width: 120px; }
 #rtb .rb { min-width: 26px; padding: 1px 6px; border: 1px solid var(--line2); border-radius: 5px; background: var(--card); line-height: 1.4; }
+#rtb .rsw { display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; }
+#rtb .rc { width: 18px; height: 18px; padding: 0; border: 1px solid var(--line2); border-radius: 50%; line-height: 1; font-size: 11px; font-weight: 700; background: var(--card); color: var(--ink); }
+#rtb .rpick { width: 24px; height: 20px; padding: 0; border: 1px solid var(--line2); border-radius: 4px; background: var(--card); }
 #rtb .rb.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .composer input, .it input { width: 100%; border: 1px solid var(--accent); border-radius: 6px; padding: 4px 6px; background: var(--edit); min-height: 30px; }
 .crow { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -563,14 +569,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="next">下一工作月 ›</button>
       <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶ 復原</button>
       <button class="btn" id="redoBtn" title="重做剛剛復原的動作（Ctrl+Y）" disabled>↷ 重做</button>
-      <button class="btn" id="copyYest" title="複製昨天的工作項目（遇到週末、國定假日就往前找上一個上班日），再到要貼的日期格子按 ＋ 旁的貼上圖示">⧉ 複製昨天的工作項目</button>
+      <button class="btn" id="copyYest" title="複製昨天的工作項目（遇到週末、國定假日就往前找上一個上班日），再到要貼的日期格子按 ＋ 旁的貼上圖示">⧉ 複製昨日項目</button>
       <span class="seg" id="viewSeg" role="group" aria-label="切換顯示方式">
         <button class="btn" type="button" data-mode="week" title="一次看一週（可以編輯）">週</button>
         <button class="btn" type="button" data-mode="wm" title="整個工作月一頁：4 週 × 7 天">工作月</button>
         <button class="btn" type="button" data-mode="cm" title="像一般月曆：一個曆月一頁">曆月</button>
       </span>
-      <button class="btn" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button>
-      <button class="btn" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button>
+      <span class="seg" id="sizeSeg" role="group" aria-label="欄列"><span class="seglabel">欄列</span><button class="btn" type="button" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button><button class="btn" type="button" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button><button class="btn" type="button" id="fitCWBtn" title="日期欄寬調成剛好放得下目前這一週最長的工作項目">適應欄寬</button><button class="btn" type="button" id="fitRHBtn" title="每一列的高度都調成剛好放得下裡面的工作項目">適應列高</button></span>
       <span class="seg" id="hideSeg" role="group" aria-label="隱藏"><span class="seglabel">隱藏</span><button class="btn" type="button" id="toggleB" title="隱藏／顯示待定事項欄">待定事項</button><button class="btn" type="button" id="toggleWk" title="隱藏／顯示週六、週日">六日</button></span>
       <span class="mlabel" id="mLabel"></span>
     </div>
@@ -1197,7 +1202,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var curIdx = wmOf(todayDn).idx;
       cols.forEach(function (col) {
         if (col.w.idx !== curIdx) return;
-        if (isCalc(def)) return;                                     // a countdown is not a to-do: nothing to count
+        if (isCalc(def) || def.k === 'field') return;             // a countdown (and 大金馬, which is not a to-do) has nothing to finish: nothing to count
         n += itemsOf(cellKey(col, def.k)).filter(function (x) { return !x.d; }).length;
       });
       var b = h('button', 'chip-h' + (n ? ' has' : ''), flat(def.label) + (n ? '｜本月 ' + n + ' 項未完成' : ''));
@@ -1211,7 +1216,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
     var cds = [], box = $('nextLine'); box.textContent = '';
-    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) cds.push({ d: ms - todayDn, name: mc.name }); });
+    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) { var o = fromDn(ms); cds.push({ d: ms - todayDn, name: o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週') + ' ' + mc.name }); } });   // date and weekday come first
     cds.sort(function (a, b) { return a.d - b.d; });                       // the nearest comes first
     cds.forEach(function (c) { var sp = h('span', 'cd', c.name + ' 剩'); sp.appendChild(h('span', c.d <= 10 ? 'soon' : null, z2(c.d) + '天')); box.appendChild(sp); });
     for (var n = 0; n <= 60; n++) {
@@ -1237,6 +1242,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (late && cfg.nolate) return;
       itemsOf(id).forEach(function (it, i) { if (!it.s) return; if (it.d && (!cfg.done || late)) return; out.push({ dn: dn, k: row, label: flat(def.label), t: it.t, i: i, d: it.d ? 1 : 0, n: it.n || '', o: rows().indexOf(def), note: isNote, late: late }); });
     });
+    var rank = function (x) { return x.note ? 3 : x.late ? 2 : 1; }, best = {};      // the same wording on several days: only the nearest one is listed (upcoming before overdue before 待定事項)
+    out.forEach(function (x) {
+      var key = String(x.t).replace(/\s+/g, ' ').trim(), cur = best[key];
+      if (!cur || rank(x) < rank(cur) || (rank(x) === rank(cur) && (x.late ? x.dn > cur.dn : x.dn < cur.dn))) best[key] = x;
+    });
+    out = out.filter(function (x) { return best[String(x.t).replace(/\s+/g, ' ').trim()] === x; });
     out.sort(function (a, b) { return (b.late ? 1 : 0) - (a.late ? 1 : 0) || (a.note ? 1 : 0) - (b.note ? 1 : 0) || a.dn - b.dn || a.o - b.o || a.i - b.i; });
     return out;
   }
@@ -1618,16 +1629,25 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (r.i) { var it = document.createElement('i'); it.appendChild(n); n = it; }
       if (r.b === -1) { var nb = document.createElement('span'); nb.style.fontWeight = 'normal'; nb.appendChild(n); n = nb; }   // explicitly not bold (a row name or starred item is bold by default)
       else if (r.b) { var bb = document.createElement('b'); bb.appendChild(n); n = bb; }
-      if (r.ff || r.fs) { var sp = document.createElement('span'); if (r.ff) sp.style.fontFamily = '"' + r.ff + '", sans-serif'; if (r.fs) sp.style.fontSize = r.fs + 'px'; sp.appendChild(n); n = sp; }
+      if (r.ff || r.fs || r.c) { var sp = document.createElement('span'); if (r.c) sp.style.color = r.c; if (r.ff) sp.style.fontFamily = '"' + r.ff + '", sans-serif'; if (r.fs) sp.style.fontSize = r.fs + 'px'; sp.appendChild(n); n = sp; }
       el.appendChild(n); pos = b;
     });
     plain(pos, text.length);
   }
+  function hexOf(v) {                                                 // '#abc' / '#aabbcc' / 'rgb(r, g, b)' -> '#aabbcc' ('' when not a colour)
+    v = String(v || '').trim().toLowerCase(); var m;
+    if ((m = /^#([0-9a-f]{3})$/.exec(v))) return '#' + m[1].split('').map(function (c) { return c + c; }).join('');
+    if (/^#[0-9a-f]{6}$/.test(v)) return v;
+    if ((m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(v))) return '#' + [m[1], m[2], m[3]].map(function (n) { return ('0' + Number(n).toString(16)).slice(-2); }).join('');
+    return '';
+  }
   function parseRich(root) {                                          // editor DOM -> { text, runs }
-    var segs = [], text = '';
+    var segs = [], text = '', base = hexOf(getComputedStyle(root).color);
     function add(str, f) { if (!str) return; segs.push({ s: text.length, e: text.length + str.length, f: f }); text += str; }
     function flagsOf(n, f) {
-      var g = { b: f.b, i: f.i, u: f.u, ff: f.ff, fs: f.fs }, t = n.tagName, st = n.style || {};
+      var g = { b: f.b, i: f.i, u: f.u, ff: f.ff, fs: f.fs, c: f.c }, t = n.tagName, st = n.style || {};
+      if (t === 'FONT' && n.getAttribute('color')) g.c = hexOf(n.getAttribute('color'));
+      if (st.color) g.c = hexOf(st.color);
       if (t === 'B' || t === 'STRONG') g.b = 1;
       if (t === 'I' || t === 'EM') g.i = 1;
       if (t === 'U') g.u = 1;
@@ -1652,10 +1672,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     walk(root, {});
     var runs = [];
     segs.forEach(function (sg) {
-      var f = sg.f, bv = f.b === 0 ? -1 : (f.b ? 1 : 0); if (!(bv || f.i || f.u || f.ff || f.fs)) return;
+      var f = sg.f, bv = f.b === 0 ? -1 : (f.b ? 1 : 0), cc = (f.c && f.c !== base) ? f.c : ''; if (!(bv || f.i || f.u || f.ff || f.fs || cc)) return;
       var last = runs[runs.length - 1];
-      if (last && last.e === sg.s && (last.b || 0) === bv && !!last.i === !!f.i && !!last.u === !!f.u && (last.ff || '') === (f.ff || '') && (last.fs || 0) === (f.fs || 0)) { last.e = sg.e; return; }
-      var o = { s: sg.s, e: sg.e }; if (bv) o.b = bv; if (f.i) o.i = 1; if (f.u) o.u = 1; if (f.ff) o.ff = f.ff; if (f.fs) o.fs = f.fs; runs.push(o);
+      if (last && last.e === sg.s && (last.b || 0) === bv && !!last.i === !!f.i && !!last.u === !!f.u && (last.ff || '') === (f.ff || '') && (last.fs || 0) === (f.fs || 0) && (last.c || '') === cc) { last.e = sg.e; return; }
+      var o = { s: sg.s, e: sg.e }; if (bv) o.b = bv; if (f.i) o.i = 1; if (f.u) o.u = 1; if (f.ff) o.ff = f.ff; if (f.fs) o.fs = f.fs; if (cc) o.c = cc; runs.push(o);
     });
     return { text: text, runs: runs };
   }
@@ -1709,7 +1729,18 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       });
       fs.value = '';
     });
-    rtb.addEventListener('mousedown', function (ev) { if (!ev.target.closest('select')) ev.preventDefault(); });
+    var sw = document.createElement('span'); sw.className = 'rsw';                          // text colour: a few swatches that read well on light and dark, 預設 and a free picker
+    [['', '預設顏色'], ['#d93025', '紅'], ['#e37400', '橘'], ['#188038', '綠'], ['#1a73e8', '藍'], ['#9334e6', '紫'], ['#70757a', '灰']].forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'rc'; b.title = c[1]; b.setAttribute('aria-label', '文字顏色：' + c[1]);
+      if (c[0]) b.style.background = c[0]; else { b.textContent = 'A'; b.classList.add('rc0'); }
+      b.addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+      b.addEventListener('click', function () { var ed = rtEditor(); var v = c[0] || (ed ? hexOf(getComputedStyle(ed).color) : '#000000'); rtApply(function () { document.execCommand('foreColor', false, v); }); });
+      sw.appendChild(b);
+    });
+    var pk = document.createElement('input'); pk.type = 'color'; pk.className = 'rpick'; pk.title = '自選顏色'; pk.value = '#d93025';
+    pk.addEventListener('change', function () { var v = pk.value; rtApply(function () { document.execCommand('foreColor', false, v); }); });
+    sw.appendChild(pk); rtb.appendChild(sw);
+    rtb.addEventListener('mousedown', function (ev) { if (!ev.target.closest('select, input')) ev.preventDefault(); });
     document.body.appendChild(rtb);
   }
   function rtEditor() { var ed = editing && editing.inp; return ed && ed.classList && ed.classList.contains('ted') ? ed : null; }
@@ -2634,6 +2665,31 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
 
   $('resetCW').addEventListener('click', resetCW);
+  $('fitCWBtn').addEventListener('click', function () {                 // widest item of the week on show decides the width of every date column
+    if (span === 28 || document.body.classList.contains('monthv')) return;
+    var pr = h('span'); pr.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden;white-space:pre;'; document.body.appendChild(pr);
+    var best = 0, rows0 = $('tbl').querySelectorAll('td.c:not(.b) .it .tx');
+    Array.prototype.forEach.call(rows0, function (tx) {
+      var cs = getComputedStyle(tx); pr.style.font = cs.font; pr.style.fontWeight = cs.fontWeight;
+      var ind = parseFloat((tx.closest('.it') || {}).style && tx.closest('.it').style.marginLeft) || 0;
+      pr.textContent = tx.textContent; best = Math.max(best, pr.offsetWidth + ind);
+    });
+    pr.remove();
+    if (!best) { toast('這一週還沒有工作項目可以量'); return; }
+    var w = Math.max(70, Math.min(600, Math.ceil(best + 64)));              // + bullet, tool column and cell padding
+    cwUser[span] = w; saveSizes();
+    var sheet = $('sheet'), k = colIndexAt(sheet.scrollLeft), dn = cols[k] && cols[k].dn;
+    applyCW(w); if (dn != null) scrollToDn(dn);
+  });
+  $('fitRHBtn').addEventListener('click', function () {                 // every row is as tall as its date cells need: the 主項目 and 待定事項 cells do not count (they are clipped like in a hand-set row)
+    if (document.body.classList.contains('monthv')) return;
+    var trs = Array.prototype.slice.call($('tbl').querySelectorAll('tbody tr')); if (!trs.length) return;
+    rhUser = {}; trs.forEach(clearRowH);
+    trs.forEach(function (tr) { Array.prototype.forEach.call(tr.querySelectorAll('td.a, td.b'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', '1px'); }); });   // squeeze those two out of the measurement
+    var hs = trs.map(function (tr) { return Math.max(26, Math.ceil(tr.getBoundingClientRect().height / UZ)); });
+    trs.forEach(function (tr, n) { clearRowH(tr); setRowH(tr, hs[n]); var a = tr.querySelector('td.a'); if (a) rhUser[a.dataset.k] = hs[n]; });
+    saveSizes(); fitSheet(); scheduleClip();
+  });
   $('resetRH').addEventListener('click', function () {
     rhUser = {}; saveSizes();
     var trs = Array.prototype.slice.call($('tbl').querySelectorAll('tbody tr')); if (!trs.length) return;
