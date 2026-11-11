@@ -1543,9 +1543,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     p.catch(failToast);
   }
   function itemsNow(col, k) { return itemsOf(cellKey(col, k)).map(function (x) { var o = { t: x.t, s: x.s ? 1 : 0, d: x.d ? 1 : 0 }; if (x.n) o.n = x.n; if (x.l) o.l = x.l; if (x.fm) o.fm = x.fm; if (x.r) o.r = x.r; if (x.e) o.e = 1; return o; }); }
+  function flipDone(items, i) {                                        // tick / untick one item and move it: ticked ones sink below the open ones, the latest ticked right under them (so the earliest finished end up at the bottom)
+    var it = items.splice(i, 1)[0]; it.d = it.d ? 0 : 1;
+    var n = 0; items.forEach(function (x) { if (!x.d) n++; });
+    items.splice(n, 0, it);
+  }
   function toggleDone(dn, k, i) {
     var col = { dn: dn }, items = itemsNow(col, k); if (!items[i]) return;
-    items[i].d = items[i].d ? 0 : 1;   // finished → leaves the 置頂 list unless 「顯示已完成」 is on (the star stays, so un-ticking brings it back)
+    flipDone(items, i);   // finished → leaves the 置頂 list unless 「顯示已完成」 is on (the star stays, so un-ticking brings it back)
     saveItems(col, k, items);
     cols.forEach(function (c) {
       if (c.dn !== dn) return;
@@ -1977,7 +1982,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect(); if (r.width && r.right > sr.right) nit.classList.add('flip');
     }
     if (act === 'indent' || act === 'outdent') { var l0 = Number(items[i].l) || 0, l1 = Math.max(0, Math.min(3, l0 + (act === 'indent' ? 1 : -1))); if (l1 === l0) return; if (l1) items[i].l = l1; else delete items[i].l; saveItems(col, k, items); paintCell(td, col, k); reHot(); }
-    else if (act === 'done') { items[i].d = items[i].d ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
+    else if (act === 'done') { flipDone(items, i); saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
     else if (act === 'star') { items[i].s = items[i].s ? 0 : 1; saveItems(col, k, items); paintCell(td, col, k); renderStars(); reHot(); }
     else if (act === 'del') {
       var key = cellKey(col, k) + '#' + i;
