@@ -399,6 +399,8 @@ body.fillwin .page { gap: 6px; }
 .midbar .tools { gap: 4px; }
 #copyYest { order: 99; margin-left: auto; }   /* 複製昨天的工作項目 sits alone at the far right */
 @media (min-width: 1100px) { body.monthv .mlabel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; } }   /* centred over the calendar */
+body.monthv #sizeSeg { margin-left: auto; }   /* month views: the 欄列 buttons and 放大表格 sit together at the right edge */
+body.monthv #copyYest { display: none; }   /* 複製昨日項目 only belongs to the week view */
 .mlabel .ml-l { display: flex; flex-direction: column; align-items: center; }
 .mlabel .ml-y { font-size: 22px; }   /* same size as the 工作排程 title; the other two scale from the sample picture */
 .mlabel .ml-r { font-size: 13px; }
@@ -425,7 +427,14 @@ body.fillwin .page { gap: 6px; }
 .mcal .mt { min-width: 0; overflow-wrap: anywhere; }
 .mcal .mt .mk { color: var(--ink2); }
 .mcal .empty { color: var(--ink2); font-size: 12px; }
-body.monthv #resetCW, body.monthv #resetRH, body.monthv #hideSeg, body.monthv .addrow, body.monthv #addForm { display: none; }
+.mcal.mfit { overflow: hidden; }
+.mcal.mfit .md { min-height: 0; overflow: hidden; padding: 2px 6px 3px; }
+.mcal.mfit .mdh { margin-bottom: 0; font-size: calc(12px * var(--ms, 1)); }
+.mcal.mfit .mdh b { font-size: calc(15px * var(--ms, 1)); }
+.mcal.mfit .mi { font-size: calc(13px * var(--ms, 1)); line-height: 1.25; padding: 0; }
+.mcal.mfit .mtag { font-size: calc(12px * var(--ms, 1)); margin-bottom: 1px; }
+.mcal.mfit .mh { padding: 3px 4px; }
+body.monthv #hideSeg, body.monthv .addrow, body.monthv #addForm { display: none; }
 .seg { display: inline-flex; gap: 0; }
 .seg .btn { border-radius: 0; margin-left: -1px; }
 .seglabel { display: inline-flex; align-items: center; padding: 0 8px; font-size: 13px; color: var(--ink2); border: 1px solid var(--line2); border-radius: 8px 0 0 8px; background: var(--card); }
@@ -1009,7 +1018,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   })();
   (function () {                                                       // 放大表格: the table grows to fill the whole browser window (not full screen)
     var btn = $('fillWin'), sh = $('sheet');
-    function fit() { fitSheet(); }
+    function fit() { fitSheet(); fitMcal(); }
     function set(on) {
       document.body.classList.toggle('fillwin', on); btn.textContent = on ? '⛶ 還原大小' : '⛶ 放大表格'; btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       window.scrollTo(0, 0); fit(); setTimeout(fit, 60);    }
@@ -1161,7 +1170,24 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (!any && !meet) cell.appendChild(h('div', 'empty', ' '));
       box.appendChild(cell);
     });
+    fitMcal();
   }
+  var mScroll = true;
+  var mFit = false; try { mFit = localStorage.getItem('sched2.mfit') === '1'; } catch (e) {}
+  function setMFit(on) { mFit = on; mScroll = on; try { localStorage.setItem('sched2.mfit', on ? '1' : '0'); } catch (e) {} fitMcal(); }
+  function fitMcal() {                                                  // 預設列高 in the month views: the whole month fills the window, every week the same height, and the items shrink to stay inside their day
+    var box = $('mcal'); if (!box || mode === 'week' || box.hidden) return;
+    box.classList.toggle('mfit', mFit); box.style.height = ''; box.style.gridTemplateRows = ''; box.style.setProperty('--ms', '1');
+    if (!mFit) return;
+    var cells = Array.prototype.slice.call(box.querySelectorAll('.md')), n = Math.max(1, Math.round(cells.length / 7));
+    if (mScroll) { mScroll = false; var mb = document.querySelector('.midbar'); if (mb) window.scrollTo(0, Math.max(0, mb.getBoundingClientRect().top + (window.pageYOffset || 0) - 4)); }   // the tool bar goes to the top of the window, the calendar fills the rest
+    var r = box.getBoundingClientRect(), k = (box.offsetHeight ? r.height / box.offsetHeight : 1) || 1;
+    box.style.height = Math.max(300, Math.floor((window.innerHeight - 8 - r.top) / k)) + 'px';
+    box.style.gridTemplateRows = 'auto repeat(' + n + ', minmax(0, 1fr))';
+    var s = 1; function over() { return cells.some(function (c) { return c.scrollHeight > c.clientHeight + 1; }); }
+    while (over() && s > 0.4) { s = Math.round((s - 0.04) * 100) / 100; box.style.setProperty('--ms', String(s)); }
+  }
+  window.addEventListener('resize', function () { fitMcal(); });
   $('mcal').addEventListener('click', function (ev) {                    // click a day or an item: open the week view there
     var c = ev.target.closest('.md'); if (!c) return;
     var mi = ev.target.closest('.mi'), k = mi ? mi.dataset.k : null;
@@ -2725,7 +2751,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
   }
 
-  $('resetCW').addEventListener('click', resetCW);
+  $('resetCW').addEventListener('click', function () { if (mode !== 'week') { renderMcal(); toast('已還原成預設欄寬'); return; } resetCW(); });
   $('fitCWBtn').addEventListener('click', function () {                 // widest item of the week on show decides the width of every date column
     if (span === 28 || document.body.classList.contains('monthv')) return;
     var pr = h('span'); pr.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden;white-space:pre;'; document.body.appendChild(pr);
@@ -2743,7 +2769,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     applyCW(w); if (dn != null) scrollToDn(dn);
   });
   $('fitRHBtn').addEventListener('click', function () {                 // every row is as tall as its date cells need: the 主項目 and 待定事項 cells do not count (they are clipped like in a hand-set row)
-    if (document.body.classList.contains('monthv')) return;
+    if (document.body.classList.contains('monthv')) { setMFit(false); return; }   // month views: back to each week being as tall as its busiest day
     var trs = Array.prototype.slice.call($('tbl').querySelectorAll('tbody tr')); if (!trs.length) return;
     rhUser = {}; trs.forEach(clearRowH);
     trs.forEach(function (tr) { Array.prototype.forEach.call(tr.querySelectorAll('td.a, td.b'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', '1px'); }); });   // squeeze those two out of the measurement
@@ -2752,6 +2778,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     saveSizes(); fitSheet(); scheduleClip();
   });
   $('resetRH').addEventListener('click', function () {
+    if (mode !== 'week') { setMFit(true); toast('已把整個月平均成相同列高，工作事項縮進格子內'); return; }
     rhUser = {}; saveSizes();
     var trs = Array.prototype.slice.call($('tbl').querySelectorAll('tbody tr')); if (!trs.length) return;
     trs.forEach(clearRowH);
@@ -2767,6 +2794,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function setMode(to) {
     if (editing) commit();
     if (to === mode) return;
+    mScroll = true;
     var today = fromDn(todayDn), todayCm = today.y * 12 + today.m - 1;
     if (mode === 'week' && cols.length) {                           // leaving the sheet: the month in the middle of the screen (today's when today is within a week of it)
       var sh0 = $('sheet'), vis0 = sh0.clientWidth - stickW(), k0 = colIndexAt(sh0.scrollLeft + vis0 / 2), mid = cols[k0].dn;
