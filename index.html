@@ -428,12 +428,14 @@ body.monthv #copyYest { display: none; }   /* 複製昨日項目 only belongs to
 .mcal .mt .mk { color: var(--ink2); }
 .mcal .empty { color: var(--ink2); font-size: 12px; }
 .mcal.mfit { overflow: hidden; }
-.mcal.mfit .md { min-height: 0; overflow: hidden; padding: 2px 6px 3px; }
-.mcal.mfit .mdh { margin-bottom: 0; font-size: calc(12px * var(--ms, 1)); }
-.mcal.mfit .mdh b { font-size: calc(15px * var(--ms, 1)); }
-.mcal.mfit .mi { font-size: calc(13px * var(--ms, 1)); line-height: 1.25; padding: 0; }
-.mcal.mfit .mtag { font-size: calc(12px * var(--ms, 1)); margin-bottom: 1px; }
-.mcal.mfit .mh { padding: 3px 4px; }
+.mcal.mfit .md { min-height: 0; overflow: hidden; position: relative; }
+.mcal.mfit .md.more::after { content: '...'; position: absolute; right: 5px; bottom: 0; padding: 0 3px; background: var(--card); font-size: 13px; line-height: 1; font-weight: 700; color: var(--ink2); pointer-events: none; }   /* this day holds more than the row height shows */
+.mbub { position: fixed; z-index: 60; box-sizing: border-box; overflow: auto; background: var(--card); color: var(--ink); border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); outline: 1px solid var(--line); padding: 6px 10px 10px; }
+.mbub[hidden] { display: none; }
+.mbub .mbh { font-weight: 700; margin-bottom: 4px; }
+.mbub .mbl { font-size: 12px; font-weight: 700; color: var(--ink2); margin-top: 4px; }
+.mbub td.c { display: block; position: relative; border: 0; padding: 0 0 4px; min-width: 0; width: auto; background: transparent; }
+.mbub .cpy, .mbub .gr, .mbub .pk { display: none; }   /* copy / multi-delete / drag need the whole sheet: use them in the week view */
 body.monthv #hideSeg, body.monthv .addrow, body.monthv #addForm { display: none; }
 .seg { display: inline-flex; gap: 0; }
 .seg .btn { border-radius: 0; margin-left: -1px; }
@@ -595,6 +597,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   <div class="sheet" id="sheet" aria-label="工作月排程表"><table id="tbl"></table></div>
   <div class="mcal" id="mcal" aria-label="工作月月曆" hidden></div>
+  <div class="mbub" id="mbub" hidden aria-label="這一天的所有工作項目"></div>
 
   <div class="addrow">
     <span class="hiddenwrap" id="hiddenRow" hidden><button type="button" class="slabel hl hbtn" id="hiddenToggle" aria-expanded="false">▫ 隱藏工作項目</button><span class="chips" id="hiddenChips" hidden></span></span>
@@ -852,7 +855,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   /* The 子項目／備註 column is one more cell per row, stored like a date cell under a fixed date (c = -1). Old free-text notes show as one item per line until the cell is first edited. */
   var NOTE_ISO = '2000-01-01', NOTECOL = null;
   function noteCol() { return NOTECOL || (NOTECOL = { dn: isoToDn(NOTE_ISO), i: -1 }); }
-  function colAt(c) { return c === -1 ? noteCol() : cols[c]; }
+  var MCOLS = {};
+  function colAt(c) {                                                   // c <= -100: a day shown in the month-view bubble (not one of the sheet's own columns)
+    if (c === -1) return noteCol();
+    if (c <= -100) { var dn = -c - 100; return MCOLS[dn] || (MCOLS[dn] = { dn: dn, i: c, w: wmOf(dn), wd: fromDn(dn).w }); }
+    return cols[c];
+  }
   function isNoteId(id) { return id.slice(0, 10) === NOTE_ISO; }
   function noteItems(id) {
     if (cellsMap[id]) return storedItems(id);
@@ -918,7 +926,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var def = rowDef(s.k);
     if (s.c === -2) return def.label || '';
     if (s.c === -1) return cellText(itemsOf(cellKey(noteCol(), s.k)));
-    var col = cols[s.c];
+    var col = colAt(s.c);
     if (isCalc(def)) return s.k === 'field' ? fieldInfo(col.w).txt : s.k === 'mgr' ? mgrInfos(col.dn).map(function (o) { return o.txt; }).join('\n') : routineInfo(col.w, col.wd).txt;
     return cellText(itemsOf(cellKey(col, s.k)));
   }
@@ -1170,24 +1178,54 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (!any && !meet) cell.appendChild(h('div', 'empty', ' '));
       box.appendChild(cell);
     });
+    if (mFirst && Object.keys(cellsMap).length) { mFirst = false; mScroll = true; }   // the first time real data has arrived: bring the tool bar to the top of the window
     fitMcal();
   }
-  var mScroll = true;
-  var mFit = false; try { mFit = localStorage.getItem('sched2.mfit') === '1'; } catch (e) {}
+  var mFirst = true, mScroll = true;
+  window.addEventListener('load', function () { mScroll = true; fitMcal(); });
+  var mFit = true; try { mFit = localStorage.getItem('sched2.mfit') !== '0'; } catch (e) {}   // the month views open already fitted to the window (預設列高); 適應列高 turns it off
   function setMFit(on) { mFit = on; mScroll = on; try { localStorage.setItem('sched2.mfit', on ? '1' : '0'); } catch (e) {} fitMcal(); }
   function fitMcal() {                                                  // 預設列高 in the month views: the whole month fills the window, every week the same height, and the items shrink to stay inside their day
     var box = $('mcal'); if (!box || mode === 'week' || box.hidden) return;
-    box.classList.toggle('mfit', mFit); box.style.height = ''; box.style.gridTemplateRows = ''; box.style.setProperty('--ms', '1');
+    box.classList.toggle('mfit', mFit); box.style.height = ''; box.style.gridTemplateRows = '';
+    Array.prototype.forEach.call(box.querySelectorAll('.md.more'), function (c) { c.classList.remove('more'); });
     if (!mFit) return;
     var cells = Array.prototype.slice.call(box.querySelectorAll('.md')), n = Math.max(1, Math.round(cells.length / 7));
     if (mScroll) { mScroll = false; var mb = document.querySelector('.midbar'); if (mb) window.scrollTo(0, Math.max(0, mb.getBoundingClientRect().top + (window.pageYOffset || 0) - 4)); }   // the tool bar goes to the top of the window, the calendar fills the rest
     var r = box.getBoundingClientRect(), k = (box.offsetHeight ? r.height / box.offsetHeight : 1) || 1;
     box.style.height = Math.max(300, Math.floor((window.innerHeight - 8 - r.top) / k)) + 'px';
     box.style.gridTemplateRows = 'auto repeat(' + n + ', minmax(0, 1fr))';
-    var s = 1; function over() { return cells.some(function (c) { return c.scrollHeight > c.clientHeight + 1; }); }
-    while (over() && s > 0.4) { s = Math.round((s - 0.04) * 100) / 100; box.style.setProperty('--ms', String(s)); }
+    cells.forEach(function (c) { c.classList.toggle('more', c.scrollHeight > c.clientHeight + 1); });   // what does not fit is cut off and the day gets a "..." at its bottom right
   }
-  window.addEventListener('resize', function () { fitMcal(); });
+  window.addEventListener('resize', function () { fitMcal(); mbubOff(); });
+  /* the bubble of a cut-off day: the whole day with the same tool buttons as the week view (its cells are real cells, handled by the sheet's own click handler) */
+  var mbDn = null;
+  function mbubOff() { var b = $('mbub'); if (!b || b.hidden) return; b.hidden = true; b.textContent = ''; mbDn = null; }
+  function mbubOn(md) {
+    var dn = Number(md.dataset.dn), b = $('mbub'); if (!b.hidden && mbDn === dn) return;
+    b.textContent = ''; b.hidden = false; mbDn = dn;
+    var o = fromDn(dn), col = colAt(-100 - dn);
+    b.appendChild(h('div', 'mbh', o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週')));
+    visibleRows().filter(function (d) { return d.k !== 'mgr'; }).forEach(function (def) {
+      var td = mk('td', 'c manual' + (dn === todayDn ? ' today' : ''), def.k, col.i); paintCell(td, col, def.k);
+      if (!td.querySelector('.it')) return;
+      var wrap = h('div', 'mbrow'); wrap.appendChild(h('div', 'mbl', flat(def.label))); wrap.appendChild(td); b.appendChild(wrap);
+    });
+    var r = md.getBoundingClientRect(); b.style.left = '0px'; b.style.top = '0px'; b.style.width = '100px'; b.style.maxHeight = '';
+    var a = b.getBoundingClientRect(), k = (a.width / 100) || 1, w = Math.max(r.width, 320);   // screen px per page px, then place by measurement (as the week view's bubble does)
+    b.style.width = (w / k) + 'px'; b.style.maxHeight = ((window.innerHeight - 12) / k) + 'px';
+    var need = b.getBoundingClientRect().height, left = Math.max(6, Math.min(r.left, window.innerWidth - w - 6)), top = Math.max(6, Math.min(r.top, window.innerHeight - need - 6));
+    b.style.left = ((left - a.left) / k) + 'px'; b.style.top = ((top - a.top) / k) + 'px';
+  }
+  function mbubBusy() { var b = $('mbub'); return !!(editing && b.contains(editing.node)); }
+  document.addEventListener('mouseover', function (ev) {
+    var b = $('mbub'); if (document.body.classList.contains('dragmode') || (b.hidden && mode === 'week')) return;
+    var t = ev.target; if (!t || !t.closest || t.closest('#mbub')) return;
+    var md = t.closest('#mcal.mfit .md.more');
+    if (md) { if (!mbubBusy()) mbubOn(md); } else if (!b.hidden && !mbubBusy()) mbubOff();
+  });
+  document.addEventListener('scroll', function (ev) { var t = ev.target; if (t && t.closest && t.closest('#mbub')) return; if (!mbubBusy()) mbubOff(); }, true);
+  new MutationObserver(function () { clearTimeout(mbubOn._t); mbubOn._t = setTimeout(function () { if (!$('mbub').hidden && mode !== 'week') renderMcal(); }, 60); }).observe($('mbub'), { childList: true, subtree: true });
   $('mcal').addEventListener('click', function (ev) {                    // click a day or an item: open the week view there
     var c = ev.target.closest('.md'); if (!c) return;
     var mi = ev.target.closest('.mi'), k = mi ? mi.dataset.k : null;
@@ -1858,7 +1896,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function fitTa(t) { if (t.classList && t.classList.contains('ted')) return; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
   function startAdd(td, k, c) {
     if (editing) commit();
-    if (c !== -1 && isRR(k)) { openRule(cols[c].dn, null, k); return; }          // 例行公事 asks for the repeat settings first
+    if (c !== -1 && isRR(k)) { openRule(colAt(c).dn, null, k); return; }          // 例行公事 asks for the repeat settings first
     td = $('tbl').querySelector('td.c[data-k="' + k + '"][data-c="' + c + '"]') || td;
     td.classList.add('editing');
     var add = td.querySelector('.add'); if (add) add.remove();
@@ -1966,7 +2004,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   document.addEventListener('mousedown', function (ev) {
     if (editing && !editing.node.contains(ev.target) && !(ev.target.closest && ev.target.closest('#rtb'))) commit();
   }, true);
-  $('tbl').addEventListener('click', function (ev) {
+  function tblClick(ev) {                                               // the sheet's cells and the day bubble of the month view share this handler
     var btn = ev.target.closest('[data-act]');
     var td = ev.target.closest('td');
     if (td && td.classList.contains('c')) {
@@ -2002,7 +2040,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var items = itemsNow(col, k);
     function reHot() {                                            // repainting the cell drops the item's tool bar; show it again, or the mouse (now over the neighbouring cell) loses the buttons
       var nit = td.querySelector('.it[data-i="' + i + '"]'); if (!nit) return;
-      var old = $('tbl').querySelector('.it.hot'); if (old && old !== nit) old.classList.remove('hot');
+      var old = (td.closest('#mbub') || $('tbl')).querySelector('.it.hot'); if (old && old !== nit) old.classList.remove('hot');
       nit.classList.add('hot'); nit.classList.remove('flip');
       var tb = nit.querySelector('.itb'); if (!tb) return;
       var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect(); if (r.width && r.right > sr.right) nit.classList.add('flip');
@@ -2015,14 +2053,15 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (armed === key) { armed = null; clearTimeout(armTimer); items.splice(i, 1); saveItems(col, k, items); paintCell(td, col, k); renderStars(); }
       else { armed = key; clearTimeout(armTimer); paintCell(td, col, k); reHot(); armTimer = setTimeout(function () { armed = null; if (!editing) paintCell(td, col, k); }, 3000); }
     }
-  });
+  }
+  $('tbl').addEventListener('click', tblClick); $('mbub').addEventListener('click', tblClick);
   $('footTxt').addEventListener('click', function (ev) { if (ev.target.dataset && ev.target.dataset.act === 'foot') startNote({ k: 'foot', c: -2 }); });
   $('footTxt').addEventListener('dblclick', function (ev) { if (!editing && ev.target.tagName !== 'TEXTAREA') startNote({ k: 'foot', c: -2 }); });
   $('hiddenChips').addEventListener('click', function (ev) {
     var b = ev.target.closest('.chip-h'); if (b) rowAction('rowshow', b.dataset.k);
   });
-  $('tbl').addEventListener('mouseover', function (ev) {   // tool buttons sit to the right of the item; flip them to the left only when the sheet edge is in the way
-    var hot = $('tbl').querySelector('.it.hot'), it = ev.target.closest && ev.target.closest('.it');
+  function tblOver(ev) {   // tool buttons sit to the right of the item; flip them to the left only when the sheet edge is in the way
+    var root = ev.currentTarget, hot = root.querySelector('.it.hot'), it = ev.target.closest && ev.target.closest('.it');
     if (!it) {                                                     // over the cell's own ＋ button: keep the tools of the item just left, so the mouse can still get across to them
       if (hot && !(hot.closest('td') && hot.closest('td').contains(ev.target))) hot.classList.remove('hot');
       return;
@@ -2032,9 +2071,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var tb = it.querySelector('.itb'); if (!tb) return;
     it.classList.remove('flip');                                   // decide again every time: the sheet may have been scrolled since the last hover
     var r = tb.getBoundingClientRect(), sr = $('sheet').getBoundingClientRect();
-    if (r.width && r.right > sr.right) it.classList.add('flip');
-  });
-  $('tbl').addEventListener('mouseleave', function () { var hot = $('tbl').querySelector('.it.hot'); if (hot) hot.classList.remove('hot'); });
+    if (r.width && r.right > (root === $('tbl') ? sr.right : window.innerWidth)) it.classList.add('flip');
+  }
+  $('tbl').addEventListener('mouseover', tblOver); $('mbub').addEventListener('mouseover', tblOver);
+  [$('tbl'), $('mbub')].forEach(function (root) { root.addEventListener('mouseleave', function () { var hot = root.querySelector('.it.hot'); if (hot) hot.classList.remove('hot'); }); });
   $('starChips').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
