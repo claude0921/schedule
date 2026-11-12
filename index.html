@@ -243,6 +243,7 @@ td.c.fixh { overflow: hidden; position: relative; }
 td.c.fixh > .items, td.c.fixh > .chip { max-height: calc(var(--rh) - 6px); overflow: hidden; }
 td.a.fixh { padding-top: 2px; padding-bottom: 2px; }
 td.c.fixh > .chip { margin-bottom: 0; vertical-align: top; }
+td.c.more:hover > .add, td.c.more.peek > .add { z-index: 8; opacity: 1; }   /* above the bubble, in its bottom right corner */
 td.c.more:hover::after { right: 66px; }   /* make room for the ＋ / 📋 buttons that show on hover */
 td.c.more::after { content: '...'; position: absolute; right: 5px; bottom: 0; padding: 0 3px; background: var(--card); font-size: 13px; line-height: 1; font-weight: 700; color: var(--ink2); pointer-events: none; }   /* this cell holds more than the row height shows */
 td.a.fixh .lbrow { max-height: calc(var(--rh) - 4px); overflow: hidden; }   /* a hand-set / equalised row clips its name too, so rows can be as short as the screen needs */
@@ -1040,6 +1041,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       touched.forEach(function (b) { b.style.transform = ''; }); touched = [];
       var tds = document.querySelectorAll('td.c:hover, td.c.sel, td.c:focus-within, td.a:hover');
       Array.prototype.forEach.call(tds, function (td) {
+        if (td === bubTd) return;                                       // a bubble is open on this cell: its ＋ sits at the bubble's corner instead
         var r = td.getBoundingClientRect(), k = (td.offsetHeight ? r.height / td.offsetHeight : 1) || 1, lim = window.innerHeight, sh = td.closest('.sheet');
         if (sh) { var sr = sh.getBoundingClientRect(), sk = (sh.offsetHeight ? sr.height / sh.offsetHeight : 1) || 1; lim = Math.min(lim, sr.bottom - (sh.offsetHeight - sh.clientHeight) * sk); }   // the table scrolls inside .sheet, so its bottom edge (above the horizontal scroll bar) is the visible bottom
         var over = r.bottom - lim + 6;
@@ -2558,6 +2560,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function bubbleOff() {
     if (!bubTd) return;
     var b = bubTd.querySelector(':scope > .items, :scope > .chip'); if (b) { b.style.left = b.style.top = b.style.width = b.style.maxHeight = ''; }
+    Array.prototype.forEach.call(bubTd.querySelectorAll(':scope > .add'), function (ad) { ad.style.transform = ''; });
     bubTd = null;
   }
   function bubbleOn(td) {                                           // the bubble is fixed to the window, so the sheet's own scroll area never cuts it off; it sits on the cell and slides up when it would run past the bottom
@@ -2570,6 +2573,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     b.style.width = (r.width / k) + 'px'; b.style.maxHeight = ((window.innerHeight - 12) / k) + 'px';
     var need = b.getBoundingClientRect().height, topPx = Math.max(6, Math.min(r.top, window.innerHeight - need - 6));
     b.style.left = ((r.left - a.left) / k) + 'px'; b.style.top = ((topPx - a.top) / k) + 'px';
+    var bb = b.getBoundingClientRect();                              // the ＋ / 📋 buttons ride down to the bottom right corner of the bubble
+    Array.prototype.forEach.call(td.querySelectorAll(':scope > .add'), function (ad) { ad.style.transform = 'translateY(' + ((bb.bottom - r.bottom) / k) + 'px)'; });
   }
   document.addEventListener('mouseover', function (ev) {
     if (document.body.classList.contains('dragmode')) return;
