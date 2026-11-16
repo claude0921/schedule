@@ -583,7 +583,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="next">下一工作月 ›</button>
       <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶ 復原</button>
       <button class="btn" id="redoBtn" title="重做剛剛復原的動作（Ctrl+Y）" disabled>↷ 重做</button>
-      <button class="btn" id="copyYest" title="複製昨天的工作項目（遇到週末、國定假日就往前找上一個上班日），再到要貼的日期格子按 ＋ 旁的貼上圖示">⧉ 複製昨日項目</button>
+      <button class="btn" id="copyYest" title="把今天還沒打勾的工作項目，複製到下一個上班日（明天；遇到週末、國定假日就順延）的對應主項目">⧉ 複製今日未完成項目</button>
       <span class="seg" id="viewSeg" role="group" aria-label="切換顯示方式">
         <button class="btn" type="button" data-mode="week" title="一次看一週（可以編輯）">週</button>
         <button class="btn" type="button" data-mode="wm" title="整個工作月一頁：4 週 × 7 天">工作月</button>
@@ -1713,18 +1713,27 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     clip = { from: pick.c === -1 ? '待定事項' : dayLabel(col.dn), rows: out };
     pick = null; render(); toast('已複製 ' + total + ' 項，到要貼上的日期格子，按 ＋ 旁邊的 📋', 4500);
   }
-  function copyYesterday() {
+  function copyYesterday() {                                                         // 複製今日未完成項目：today's unticked items go straight to the same row of the next working day
     if (editing) commit();
-    var d = todayDn - 1, n = 0;
-    while (n++ < 30 && (HOL[d] || fromDn(d).w === 0 || fromDn(d).w === 6)) d--;      // weekends and national holidays have no work: take the working day before
-    var out = [], total = 0;
+    var d = todayDn + 1, n = 0;
+    while (n++ < 30 && (HOL[d] || fromDn(d).w === 0 || fromDn(d).w === 6)) d++;      // weekends and national holidays have no work: take the next working day
+    var total = 0, skip = 0;
     rows().forEach(function (def) {
       if (isCalc(def) || isRR(def.k)) return;                                          // rows driven by repeat rules fill themselves
-      var its = itemsNow({ dn: d }, def.k).map(plainItem); if (its.length) { out.push({ k: def.k, items: its }); total += its.length; }
+      var src = itemsNow({ dn: todayDn }, def.k).filter(function (x) { return !x.d && !x.r; }); if (!src.length) return;
+      var cur = itemsNow({ dn: d }, def.k), add = [];
+      src.forEach(function (x) {
+        if (cur.some(function (y) { return y.t === x.t; })) { skip++; return; }        // pressing twice does not duplicate
+        add.push(plainItem(x));
+      });
+      if (!add.length) return;
+      var n0 = 0; cur.forEach(function (y) { if (!y.d) n0++; });                       // new items go above the ticked ones, like every other new item
+      cur.splice.apply(cur, [n0, 0].concat(add)); total += add.length;
+      saveItems({ dn: d }, def.k, cur);
     });
-    if (!total) { toast(dayLabel(d) + ' 沒有可以複製的工作項目'); return; }
-    clip = { from: dayLabel(d) + ' 的全部工作', rows: out }; pick = null; render();
-    toast('已複製 ' + dayLabel(d) + ' 的 ' + total + ' 項，到要貼上的日期格子，按 ＋ 旁邊的 📋', 4500);
+    if (!total) { toast(skip ? '今日未完成項目已經都在 ' + dayLabel(d) + ' 了' : '今日沒有未完成的工作項目可以複製'); return; }
+    pick = null; render(); renderStars();
+    toast('已把今日未完成的 ' + total + ' 項複製到 ' + dayLabel(d) + ' 的對應主項目（可以按「復原」，復原後也可以按「重做」）', 4500);
   }
   function doPaste(c) {
     if (!clip) return; var col = colAt(c), total = 0, miss = 0;
