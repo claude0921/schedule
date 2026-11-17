@@ -303,6 +303,7 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .todorow .tin { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; overflow: hidden; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 28px; padding: 0 2px; border-bottom: 1px solid transparent; }
 .todorow .tin:focus { border-bottom-color: var(--line); }
 .todorow.done .tin { text-decoration: line-through; color: var(--ink2); }
+.todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
 .todorow:hover .tgr, .todorow:focus-within .tgr { opacity: .8; }
 #pad.pdrag { pointer-events: none; background: transparent; }
@@ -2102,7 +2103,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       });
       var del = h('button', 'tdel', '×'); del.type = 'button'; del.title = '刪除這個待辦事項'; del.setAttribute('aria-label', del.title);
       del.addEventListener('click', function () { todoPush(); todoArr.splice(i, 1); todoRender(); todoChanged(); });
-      var gr = h('span', 'tgr', '☰'); gr.title = '按住拖曳到表格同一個主項目的某一日：直接拖＝移到那天的工作項目（待辦移除）；Ctrl＋拖曳＝複製到那天並與待辦連結（待辦保留）';
+      var gr = h('span', 'tgr', '☰'); gr.title = '按住拖曳：在記事本內上下拖＝調整順序、左右拖＝調整縮排；拖到表格同一個主項目的某一日：直接拖＝移到那天的工作項目（待辦移除）；Ctrl＋拖曳＝複製到那天並與待辦連結（待辦保留）';
       gr.addEventListener('pointerdown', function (ev) { padDragStart(ev, x); });
       row.appendChild(gr); row.appendChild(ck); row.appendChild(ta);
       if (x.lk) { var lk = h('span', 'tlk', '🔗'); lk.title = '已連結 ' + x.lk.slice(5).replace('-', '/') + ' 的工作項目'; row.appendChild(lk); }
@@ -2116,7 +2117,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function padDragStart(ev, x) {
     if (ev.button && ev.button !== 0) return;
     ev.preventDefault(); if (!x.t.trim()) { toast('請先輸入待辦事項的文字'); return; }
-    pd = { x: x, x0: ev.clientX, y0: ev.clientY, on: false, t: null, copy: !!(ev.ctrlKey || ev.metaKey) };
+    pd = { x: x, x0: ev.clientX, y0: ev.clientY, on: false, t: null, copy: !!(ev.ctrlKey || ev.metaKey), v0: x.v || 0, mode: '' };
     document.addEventListener('pointermove', padDragMove); document.addEventListener('pointerup', padDragUp);
     document.addEventListener('pointercancel', padDragCancel); document.addEventListener('keydown', padDragKey); document.addEventListener('keyup', padDragKeyUp);
   }
@@ -2130,6 +2131,18 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }
     pd.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; pd.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
     clearDrop();
+    var cr = $('padCard').getBoundingClientRect(), srow = $('todoList').querySelectorAll('.todorow')[todoArr.indexOf(pd.x)];
+    if (srow) srow.classList.remove('dragging');
+    if (ev.clientX >= cr.left && ev.clientX <= cr.right && ev.clientY >= cr.top && ev.clientY <= cr.bottom) {   // still inside the notepad: reorder (up / down) and indent (left / right) inside the todo list
+      pd.mode = 'pad'; pd.t = null; $('pad').classList.remove('pdrag'); if (srow) srow.classList.add('dragging');
+      var rws = $('todoList').querySelectorAll('.todorow'), idx = 0, i2;
+      for (i2 = 0; i2 < rws.length; i2++) { var rr = rws[i2].getBoundingClientRect(); if (ev.clientY > rr.top + rr.height / 2) idx = i2 + 1; }
+      pd.idx = idx; pd.v = Math.max(0, Math.min(4, pd.v0 + Math.round((ev.clientX - pd.x0) / 24)));
+      var ln = h('div', 'dropline'); ln.style.marginLeft = (pd.v * 24 + 20) + 'px';
+      if (idx < rws.length) rws[idx].parentNode.insertBefore(ln, rws[idx]); else $('todoList').appendChild(ln);
+      return;
+    }
+    pd.mode = ''; $('pad').classList.add('pdrag');
     var t = dropTarget(ev.clientX, ev.clientY);
     if (t && (t.td.dataset.k !== todoK || Number(t.td.dataset.c) === -1)) t = null;      // only a day of this same main work item
     pd.t = t;
@@ -2147,7 +2160,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     document.removeEventListener('pointercancel', padDragCancel); document.removeEventListener('keydown', padDragKey); document.removeEventListener('keyup', padDragKeyUp);
     clearDrop(); document.body.classList.remove('dragmode'); $('pad').classList.remove('pdrag');
     if (d.ghost) d.ghost.remove();
+    var dr = $('todoList').querySelector('.todorow.dragging'); if (dr) dr.classList.remove('dragging');
     if (!d.on || cancelIt) return;
+    if (d.mode === 'pad') {                                                           // dropped inside the list: move it to the marked place with the marked indent
+      var from = todoArr.indexOf(d.x), to = d.idx; if (from < 0) return;
+      if (to > from) to -= 1;
+      if (to === from && d.v === d.v0) return;
+      todoPush(); todoArr.splice(from, 1); d.x.v = d.v; todoArr.splice(to, 0, d.x); todoRender(); todoChanged(); return;
+    }
     if (!d.t) { toast('請拖到表格裡「' + flat((rowDef(todoK) || {}).label || '') + '」同一個主項目的某一天格子'); return; }
     var c = Number(d.t.td.dataset.c), col = colAt(c), cur = itemsNow(col, todoK);
     var it = { t: d.x.t.trim(), s: 0, d: d.x.d ? 1 : 0 };
