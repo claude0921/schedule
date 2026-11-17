@@ -288,10 +288,35 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 @media (hover: none) { .mo { display: block; } }
 /* notepad */
 #pad { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .42); display: flex; align-items: center; justify-content: center; padding: 16px; }
-.padcard { background: var(--card); width: min(780px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); overflow: hidden; }
+.padcard { background: var(--card); width: min(1180px, 100%); height: min(760px, calc(100vh - 32px)); display: flex; flex-direction: column; border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); overflow: hidden; }
 .padhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .padtitle { font-weight: 700; font-size: 17px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.padarea { flex: 1; min-height: min(60vh, 520px); border: 0; outline: 0; resize: none; padding: 10px 20px; font-size: 15px; line-height: 28px; color: var(--ink); background-color: var(--card);
+.padsplit { flex: 1; min-height: 0; display: flex; }
+.padpane { flex: 1 1 50%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.padpane + .padpane { border-left: 1px solid var(--line); }
+.padtab { flex: none; text-align: left; font: inherit; font-weight: 700; font-size: 14px; padding: 8px 16px; border: 0; border-bottom: 2px solid var(--line); background: var(--card); color: var(--ink2); cursor: pointer; }
+#padCard[data-tab="todo"] #tabTodo, #padCard[data-tab="note"] #tabNote { color: var(--ink); border-bottom-color: #2e7d32; }
+.todolist { flex: 1; min-height: 0; overflow: auto; padding: 6px 12px; }
+.todorow { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; }
+.todorow .tck { flex: none; width: 28px; height: 28px; border: 0; background: none; font-size: 20px; line-height: 28px; cursor: pointer; color: var(--ink2); padding: 0; }
+.todorow.done .tck { color: #2e7d32; }
+.todorow .tin { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; overflow: hidden; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 28px; padding: 0 2px; border-bottom: 1px solid transparent; }
+.todorow .tin:focus { border-bottom-color: var(--line); }
+.todorow.done .tin { text-decoration: line-through; color: var(--ink2); }
+.todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
+.todorow:hover .tgr, .todorow:focus-within .tgr { opacity: .8; }
+#pad.pdrag { pointer-events: none; background: transparent; }
+#pad.pdrag .padcard { opacity: .18; }
+.todorow .tlk { flex: none; font-size: 12px; line-height: 28px; opacity: .7; }
+.todorow .tdel { flex: none; width: 24px; height: 28px; border: 0; background: none; color: var(--ink2); cursor: pointer; opacity: 0; font-size: 15px; padding: 0; }
+.todorow:hover .tdel, .todorow:focus-within .tdel { opacity: 1; }
+.todoadd { flex: none; margin: 6px 12px 10px; align-self: flex-start; }
+@media (max-width: 760px) {
+  .padsplit { flex-direction: column; }
+  #padCard[data-tab="todo"] #notePane, #padCard[data-tab="note"] #todoPane { display: none; }
+  .padpane + .padpane { border-left: 0; }
+}
+.padarea { flex: 1; min-height: 0; border: 0; outline: 0; resize: none; padding: 10px 20px; font-size: 15px; line-height: 28px; color: var(--ink); background-color: var(--card);
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--line) 27px, var(--line) 28px); background-attachment: local; background-origin: content-box; }
 .padfoot { display: flex; justify-content: space-between; gap: 8px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink2); }
 /* crosshair: the hovered cell's column and row get a light green tint (a translucent layer, so today / weekend colours still show) */
@@ -679,13 +704,23 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   </div>
 </div>
 <div id="pad" hidden role="dialog" aria-modal="true" aria-labelledby="padTitle">
-  <div class="padcard" id="padCard">
+  <div class="padcard" id="padCard" data-tab="todo">
     <div class="padhead">
       <span class="padtitle" id="padTitle"></span>
       <button class="btn" id="padDate" type="button">插入今天日期</button>
       <button class="btn primary" id="padClose" type="button">完成</button>
     </div>
-    <textarea class="padarea" id="padArea" aria-label="記事本內容" placeholder="在這裡寫下這個工作項目的紀錄、待辦、聯絡人……（輸入後會自動儲存）"></textarea>
+    <div class="padsplit">
+      <section class="padpane" id="todoPane">
+        <button class="padtab" id="tabTodo" type="button">☑ 待辦事項</button>
+        <div class="todolist" id="todoList"></div>
+        <button class="btn todoadd" id="todoAdd" type="button">＋ 新增待辦事項</button>
+      </section>
+      <section class="padpane" id="notePane">
+        <button class="padtab" id="tabNote" type="button">📓 記事本</button>
+        <textarea class="padarea" id="padArea" aria-label="記事本內容" placeholder="在這裡寫下這個工作項目的紀錄、聯絡人……（輸入後會自動儲存）"></textarea>
+      </section>
+    </div>
     <div class="padfoot"><span id="padStatus"></span><span id="padCount"></span></div>
   </div>
 </div>
@@ -993,7 +1028,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     td.textContent = '';
     var rzh = h('span', 'rh'); rzh.title = '拖曳調整這一列的高度，雙擊還原'; rzh.dataset.k = def.k; rzh.addEventListener('pointerdown', startRowResize); rzh.addEventListener('dblclick', function () { delete rhUser[def.k]; saveSizes(); var tr = td.parentNode; if (tr) clearRowH(tr); }); td.appendChild(rzh);
     var lb = h('div', 'lb'); fillRich(lb, def.label, lfmOf(def.k)); lb.title = '點一下修改「' + flat(def.label) + '」的名稱（記事本請按下方的「記事本」或 📓）';
-    var hasPad = !!((notes['pad-' + def.k] && notes['pad-' + def.k].text) || '');   // the 📓 shows only when the notepad has something in it
+    var hasPad = !!((notes['pad-' + def.k] && notes['pad-' + def.k].text) || (notes['todo-' + def.k] && notes['todo-' + def.k].text) || '');   // the 📓 shows only when the notepad has something in it
     var pd = h('button', 'pd on', '📓'); pd.type = 'button'; pd.dataset.act = 'rowpad';
     pd.title = '開啟「' + flat(def.label) + '」的記事本（裡面已有內容）'; pd.setAttribute('aria-label', pd.title);
     var gr = h('button', 'rgr', '☰'); gr.type = 'button'; gr.dataset.k = def.k;
@@ -1255,7 +1290,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var lay = layoutNow(); delete lay.removed[k]; delete lay.hidden[k]; lay.purged = {};
     var ps = (meta.layout && meta.layout.purged) || {}; Object.keys(ps).forEach(function (x) { if (ps[x]) lay.purged[x] = 1; }); lay.purged[k] = 1;
     Object.keys(cellsMap).forEach(function (id) { if (id.charAt(10) === '_' && id.slice(11) === k) { delete cellsMap[id]; backend.del('cells', id).catch(failToast); } });
-    [k, 'pad-' + k].forEach(function (id) { if (notes[id]) { delete notes[id]; backend.del('rowNotes', id).catch(failToast); } });
+    [k, 'pad-' + k, 'todo-' + k].forEach(function (id) { if (notes[id]) { delete notes[id]; backend.del('rowNotes', id).catch(failToast); } });
     var rl = rulesList(), keep = rl.filter(function (r) { return (r.row || 'routine') !== k; });
     if (keep.length !== rl.length) writeRules(keep);
     saveLayout(lay); render(); renderStars();
@@ -1643,7 +1678,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var e = editing; editing = null; hideRtb();
     if (save) {
       if (e.kind === 'note') saveNote(e.s, e.ta.value.replace(/\s+$/, ''));
-      else if (e.kind === 'pad') saveNote({ k: 'pad-' + e.k, c: -1 }, e.ta.value.replace(/\s+$/, ''));
+      else if (e.kind === 'pad') padSaveAll(e.k);
       else if (e.kind === 'inote') {
         var c2 = colAt(e.c), its = itemsNow(c2, e.k), nt = e.ta.value.trim();
         if (its[e.i]) { if (nt) its[e.i].n = nt; else delete its[e.i].n; saveItems(c2, e.k, its); }
@@ -1963,20 +1998,156 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   /* ---------- notepad: a full-page notebook for one main work item (same text as its 子項目／備註) ---------- */
   var padTimer = null;
-  function padCount() { $('padCount').textContent = $('padArea').value.length + ' 字'; }
+  function padCount() { $('padCount').textContent = '記事本 ' + $('padArea').value.length + ' 字　待辦 ' + todoArr.filter(function (x) { return !x.d && x.t; }).length + ' 項未完成'; }
+  /* 待辦事項: a checklist next to the notepad (○ open, ● done); stored in rowNotes 'todo-<row>' as JSON text [{t, d}] */
+  var todoArr = [], todoK = '';
+  function todoLink(k, text) {                                                       // the latest-dated work item of this main row whose text is exactly the todo's text
+    text = String(text || '').trim(); if (!text) return null;
+    var sfx = '_' + k, dates = [];
+    Object.keys(cellsMap).forEach(function (id) { if (id.length === 10 + sfx.length && id.slice(10) === sfx) dates.push(id.slice(0, 10)); });
+    dates.sort().reverse();
+    for (var a = 0; a < dates.length; a++) {
+      var dn = isoToDn(dates[a]), its = itemsNow({ dn: dn }, k);
+      for (var i = 0; i < its.length; i++) if (String(its[i].t).trim() === text) return { dn: dn, i: i, d: its[i].d ? 1 : 0, date: dates[a] };
+    }
+    return null;
+  }
+  function todoRelink() {                                                             // linked todos follow their work item's tick; returns true when something changed
+    var chg = false;
+    todoArr.forEach(function (x) {
+      var l = todoLink(todoK, x.t), was = x.lk || '';
+      x.lk = l ? l.date : '';
+      if (l && (x.d ? 1 : 0) !== l.d) { x.d = l.d; chg = true; }
+      if (was !== x.lk) chg = true;
+    });
+    return chg;
+  }
+  function todoLoad(k) {
+    todoArr = []; todoK = k;
+    try { var a = JSON.parse((notes['todo-' + k] && notes['todo-' + k].text) || '[]'); if (Array.isArray(a)) a.forEach(function (x) { if (x && x.t) todoArr.push({ t: String(x.t), d: x.d ? 1 : 0, v: Math.max(0, Math.min(4, x.v | 0)) }); }); } catch (e) {}
+    todoRelink();
+    var open = todoArr.filter(function (x) { return !x.d; }), done = todoArr.filter(function (x) { return x.d; });   // ticked ones sink to the bottom
+    todoArr = open.concat(done);
+  }
+  function todoText() { var a = todoArr.filter(function (x) { return x.t.trim(); }).map(function (x) { var o = { t: x.t.trim(), d: x.d ? 1 : 0 }; if (x.v) o.v = x.v; return o; }); return a.length ? JSON.stringify(a) : ''; }
+  function todoFit(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  function todoRender(focusIdx) {
+    var box = $('todoList'); box.textContent = '';
+    todoArr.forEach(function (x, i) {
+      var row = h('div', 'todorow' + (x.d ? ' done' : '')); row.style.paddingLeft = ((x.v || 0) * 24) + 'px';
+      var ck = h('button', 'tck', x.d ? '●' : '○'); ck.type = 'button'; ck.setAttribute('aria-label', x.d ? '取消完成' : '標記完成');
+      ck.title = (x.d ? '取消完成' : '標記完成') + (x.lk ? '（已連結 ' + x.lk.slice(5).replace('-', '/') + ' 的工作項目，會一起勾選）' : '');
+      ck.addEventListener('click', function () {
+        if (!x.t.trim()) return;
+        var l = todoLink(todoK, x.t);
+        if (l) { toggleDone(l.dn, todoK, l.i); todoRelink(); }                        // linked: tick the work item itself, the todo follows it
+        todoArr.splice(i, 1); if (!l) x.d = x.d ? 0 : 1;
+        var n = 0; todoArr.forEach(function (y) { if (!y.d) n++; });                  // ticked ones sink below the open ones
+        todoArr.splice(n, 0, x); todoRender(); todoChanged();
+      });
+      var ta = h('textarea', 'tin'); ta.rows = 1; ta.value = x.t; ta.placeholder = '待辦事項…（Tab 縮排、Shift+Tab 減少縮排）'; ta.setAttribute('aria-label', '待辦事項');
+      ta.addEventListener('input', function () { x.t = ta.value.replace(/\n/g, ' '); todoFit(ta); todoChanged(); });
+      ta.addEventListener('blur', function () { if (todoRelink()) { var st = box.scrollTop; todoRender(); box.scrollTop = st; todoChanged(); } });
+      ta.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); if (!x.t.trim()) return; todoArr.splice(i + 1, 0, { t: '', d: 0, v: x.v || 0 }); todoRender(i + 1); }
+        else if (ev.key === 'Tab') { ev.preventDefault(); var v = Math.max(0, Math.min(4, (x.v || 0) + (ev.shiftKey ? -1 : 1))); if (v !== (x.v || 0)) { x.v = v; row.style.paddingLeft = (v * 24) + 'px'; todoFit(ta); todoChanged(); } }
+        else if (ev.key === 'Backspace' && !ta.value) { ev.preventDefault(); todoArr.splice(i, 1); todoRender(Math.max(0, i - 1) < todoArr.length && i > 0 ? i - 1 : -1); todoChanged(); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); commit(); }
+      });
+      var del = h('button', 'tdel', '×'); del.type = 'button'; del.title = '刪除這個待辦事項'; del.setAttribute('aria-label', del.title);
+      del.addEventListener('click', function () { todoArr.splice(i, 1); todoRender(); todoChanged(); });
+      var gr = h('span', 'tgr', '☰'); gr.title = '按住拖曳到表格同一個主項目的某一日：直接拖＝移到那天的工作項目（待辦移除）；Ctrl＋拖曳＝複製到那天並與待辦連結（待辦保留）';
+      gr.addEventListener('pointerdown', function (ev) { padDragStart(ev, x); });
+      row.appendChild(gr); row.appendChild(ck); row.appendChild(ta);
+      if (x.lk) { var lk = h('span', 'tlk', '🔗'); lk.title = '已連結 ' + x.lk.slice(5).replace('-', '/') + ' 的工作項目'; row.appendChild(lk); }
+      row.appendChild(del); box.appendChild(row);
+    });
+    var tas = box.querySelectorAll('.tin'); tas.forEach(todoFit);
+    if (focusIdx != null && focusIdx >= 0 && tas[focusIdx]) { tas[focusIdx].focus(); var l = tas[focusIdx].value.length; tas[focusIdx].setSelectionRange(l, l); }
+  }
+  /* drag a todo onto a day of the same main row in the table behind: plain = move (the todo leaves the list), Ctrl = copy (the todo stays and, having the same text, is linked) */
+  var pd = null;
+  function padDragStart(ev, x) {
+    if (ev.button && ev.button !== 0) return;
+    ev.preventDefault(); if (!x.t.trim()) { toast('請先輸入待辦事項的文字'); return; }
+    pd = { x: x, x0: ev.clientX, y0: ev.clientY, on: false, t: null, copy: !!(ev.ctrlKey || ev.metaKey) };
+    document.addEventListener('pointermove', padDragMove); document.addEventListener('pointerup', padDragUp);
+    document.addEventListener('pointercancel', padDragCancel); document.addEventListener('keydown', padDragKey); document.addEventListener('keyup', padDragKeyUp);
+  }
+  function padDragMark() { if (pd && pd.ghost) pd.ghost.textContent = (pd.copy ? '＋ ' : '') + pd.x.t; }
+  function padDragMove(ev) {
+    if (!pd) return;
+    if (!pd.on) {
+      if (Math.abs(ev.clientX - pd.x0) + Math.abs(ev.clientY - pd.y0) < 5) return;
+      pd.on = true; pd.ghost = h('div', 'ghost', ''); document.body.appendChild(pd.ghost);
+      $('pad').classList.add('pdrag'); document.body.classList.add('dragmode'); padDragMark();
+    }
+    pd.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; pd.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
+    clearDrop();
+    var t = dropTarget(ev.clientX, ev.clientY);
+    if (t && (t.td.dataset.k !== todoK || Number(t.td.dataset.c) === -1)) t = null;      // only a day of this same main work item
+    pd.t = t;
+    if (t) {
+      t.td.classList.add('dropt');
+      var line = h('div', 'dropline'), items = t.td.querySelectorAll('.it');
+      if (t.idx < items.length) items[t.idx].parentNode.insertBefore(line, items[t.idx]);
+      else { var box = t.td.querySelector('.items'); if (box) box.appendChild(line); }
+    }
+  }
+  function padDragEnd(cancelIt, ev) {
+    if (!pd) return;
+    var d = pd; pd = null;
+    document.removeEventListener('pointermove', padDragMove); document.removeEventListener('pointerup', padDragUp);
+    document.removeEventListener('pointercancel', padDragCancel); document.removeEventListener('keydown', padDragKey); document.removeEventListener('keyup', padDragKeyUp);
+    clearDrop(); document.body.classList.remove('dragmode'); $('pad').classList.remove('pdrag');
+    if (d.ghost) d.ghost.remove();
+    if (!d.on || cancelIt) return;
+    if (!d.t) { toast('請拖到表格裡「' + flat((rowDef(todoK) || {}).label || '') + '」同一個主項目的某一天格子'); return; }
+    var c = Number(d.t.td.dataset.c), col = colAt(c), cur = itemsNow(col, todoK);
+    var it = { t: d.x.t.trim(), s: 0, d: d.x.d ? 1 : 0 };
+    if (it.d) cur.push(it); else cur.splice(Math.min(d.t.idx, cur.filter(function (y) { return !y.d; }).length), 0, it);
+    saveItems(col, todoK, cur);
+    var td = $('tbl').querySelector('td.c[data-k="' + todoK + '"][data-c="' + c + '"]'); if (td) paintCell(td, col, todoK);
+    renderStars();
+    if (d.copy) { todoRelink(); todoRender(); todoChanged(); toast('已複製到 ' + dayLabel(col.dn) + '，並與待辦事項連結', 4000); }
+    else { var at = todoArr.indexOf(d.x); if (at >= 0) todoArr.splice(at, 1); todoRender(); todoChanged(); toast('已移到 ' + dayLabel(col.dn) + ' 的工作項目（待辦事項已移除，可以按「復原」還原工作項目）', 4500); }
+  }
+  function padDragUp(ev) { if (pd && ev) pd.copy = !!(ev.ctrlKey || ev.metaKey); padDragEnd(false); }
+  function padDragCancel() { padDragEnd(true); }
+  function padDragKey(ev) { if (ev.key === 'Escape') padDragEnd(true); else if ((ev.key === 'Control' || ev.key === 'Meta') && pd && !pd.copy) { pd.copy = true; padDragMark(); } }
+  function padDragKeyUp(ev) { if ((ev.key === 'Control' || ev.key === 'Meta') && pd && pd.copy) { pd.copy = false; padDragMark(); } }
+  function todoChanged() { padCount(); $('padStatus').textContent = '輸入中…'; clearTimeout(padTimer); padTimer = setTimeout(padSave, 700); }
+  function padTab(t) { $('padCard').dataset.tab = t; }
+  $('tabTodo').addEventListener('click', function () { padTab('todo'); var f = $('todoList').querySelector('.tin'); if (f) f.focus(); });
+  $('tabNote').addEventListener('click', function () { padTab('note'); $('padArea').focus(); });
+  $('todoPane').addEventListener('focusin', function () { padTab('todo'); });
+  $('notePane').addEventListener('focusin', function () { padTab('note'); });
+  $('todoAdd').addEventListener('click', function () {
+    var open = todoArr.filter(function (x) { return !x.d; }).length;
+    todoArr.splice(open, 0, { t: '', d: 0 }); todoRender(open);
+    var b = $('todoList'); b.scrollTop = b.scrollHeight;
+  });
   function openPad(k) {
     if (editing) commit();
     var def = rowDef(k); if (!def) return;
     var ta = $('padArea'); ta.value = (notes['pad-' + k] && notes['pad-' + k].text) || '';   // its own text, separate from the 子項目／備註 column
+    todoLoad(k);
     $('padTitle').textContent = '📓 ' + flat(def.label); $('pad').hidden = false; document.body.style.overflow = 'hidden';
     editing = { kind: 'pad', k: k, node: $('padCard'), ta: ta };
     $('padStatus').textContent = '輸入後會自動儲存'; padCount();
-    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); ta.scrollTop = ta.scrollHeight;
+    todoRender();
+    if (!todoArr.length && !ta.value) { padTab('todo'); todoArr.push({ t: '', d: 0 }); todoRender(0); }
+    else if (ta.value && !todoArr.length) { padTab('note'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); ta.scrollTop = ta.scrollHeight; }
+    else { padTab('todo'); }
   }
   function closePad() { $('pad').hidden = true; document.body.style.overflow = ''; clearTimeout(padTimer); }
+  function padSaveAll(k) {
+    saveNote({ k: 'pad-' + k, c: -1 }, $('padArea').value.replace(/\s+$/, ''));
+    saveNote({ k: 'todo-' + k, c: -1 }, todoText());
+  }
   function padSave() {
     if (!editing || editing.kind !== 'pad') return;
-    saveNote({ k: 'pad-' + editing.k, c: -1 }, $('padArea').value.replace(/\s+$/, ''));
+    padSaveAll(editing.k);
     var d = new Date(); $('padStatus').textContent = '已儲存 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
   $('padArea').addEventListener('input', function () {
