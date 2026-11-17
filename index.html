@@ -334,7 +334,7 @@ td.a { vertical-align: middle; }
 .lbrow .rgr { position: absolute; left: 3px; top: 50%; transform: translateY(-50%); }
 .lbrow .pd { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); }
 td.a:hover, td.a.open, td.a:focus-within { z-index: 7; }   /* so the floating tools are not buried under the rows below */
-.rowtools { position: absolute; top: 2px; left: calc(100% - 1px); display: none; flex-wrap: nowrap; white-space: nowrap; gap: 3px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); z-index: 5; }
+.rowtools { position: absolute; top: 50%; transform: translateY(-50%); left: calc(100% - 1px); display: none; flex-wrap: nowrap; white-space: nowrap; gap: 3px; background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.15); z-index: 5; }
 td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display: flex; }
 .rt { border: 1px solid var(--line2); background: var(--card); border-radius: 6px; font-size: 11px; line-height: 1.4; padding: 0 7px; min-height: 22px; color: var(--ink2); font-weight: 400; }
 .rt:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
