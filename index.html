@@ -2089,6 +2089,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
           todoRender(i + 1, true); todoChanged();
         }
         else if (ev.key === 'Tab') { ev.preventDefault(); var v = Math.max(0, Math.min(4, (x.v || 0) + (ev.shiftKey ? -1 : 1))); if (v !== (x.v || 0)) { todoPush(); x.v = v; row.style.paddingLeft = (v * 24) + 'px'; todoFit(ta); todoChanged(); } }
+        else if (ev.key === 'Backspace' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && ta.selectionStart === 0 && ta.selectionEnd === 0 && i > 0) {   // Backspace at the very start: this todo joins the end of the one above
+          ev.preventDefault(); todoPush(); var up = todoArr[i - 1], at = up.t.length;
+          up.t = up.t + x.t; todoArr.splice(i, 1); todoRender(i - 1, at); todoChanged();
+        }
+        else if (ev.key === 'Delete' && !ev.ctrlKey && !ev.metaKey && !ev.altKey && ta.selectionStart === ta.value.length && ta.selectionEnd === ta.value.length && i < todoArr.length - 1) {   // Delete at the very end: the todo below joins this one
+          ev.preventDefault(); todoPush(); var nx = todoArr[i + 1], at2 = x.t.length;
+          x.t = x.t + nx.t; todoArr.splice(i + 1, 1); todoRender(i, at2); todoChanged();
+        }
         else if (ev.key === 'Backspace' && !ta.value) { ev.preventDefault(); todoPush(); todoArr.splice(i, 1); todoRender(Math.max(0, i - 1) < todoArr.length && i > 0 ? i - 1 : -1); todoChanged(); }
         else if (ev.key === 'Escape') { ev.preventDefault(); commit(); }
       });
@@ -2101,7 +2109,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       row.appendChild(del); box.appendChild(row);
     });
     var tas = box.querySelectorAll('.tin'); tas.forEach(todoFit);
-    if (focusIdx != null && focusIdx >= 0 && tas[focusIdx]) { tas[focusIdx].focus(); var l = atStart ? 0 : tas[focusIdx].value.length; tas[focusIdx].setSelectionRange(l, l); }
+    if (focusIdx != null && focusIdx >= 0 && tas[focusIdx]) { tas[focusIdx].focus(); var l = atStart === true ? 0 : (typeof atStart === 'number' ? atStart : tas[focusIdx].value.length); tas[focusIdx].setSelectionRange(l, l); }
   }
   /* drag a todo onto a day of the same main row in the table behind: plain = move (the todo leaves the list), Ctrl = copy (the todo stays and, having the same text, is linked) */
   var pd = null;
