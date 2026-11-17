@@ -303,6 +303,7 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .todorow .tin { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; overflow: hidden; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 28px; padding: 0 2px; border-bottom: 1px solid transparent; }
 .todorow .tin:focus { border-bottom-color: var(--line); }
 .todorow.done .tin { text-decoration: line-through; color: var(--ink2); }
+.mgrwd { margin-left: 8px; color: var(--ink2); white-space: nowrap; }
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
 .todorow:hover .tgr, .todorow:focus-within .tgr { opacity: .8; }
@@ -666,8 +667,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <div class="rrow"><label for="mgrName">會議名稱</label><input type="text" id="mgrName" maxlength="20"></div>
       <div class="rrow"><label for="mgrTag">標籤</label><input type="text" id="mgrTag" maxlength="20" placeholder="填了之後，重要會議那列顯示「標籤，剩00天」"></div>
       <div class="rrow"><label for="mgrLoc">地點</label><input type="text" id="mgrLoc" maxlength="30"></div>
-      <div class="rrow"><label for="mgrS">開始日</label><input type="date" id="mgrS"><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
-      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><input type="date" id="mgrE"></div>
+      <div class="rrow"><label for="mgrS">開始日</label><input type="date" id="mgrS"><span class="mgrwd" id="mgrSW"></span><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
+      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><input type="date" id="mgrE"><span class="mgrwd" id="mgrEW"></span></div>
       <div class="rrow"><label for="mgrNote">備註</label><textarea id="mgrNote" rows="3" maxlength="500" style="flex:1;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;resize:vertical;background:var(--card);color:var(--ink)"></textarea></div>
       <div class="rrow"><label>倒數顯示</label><label class="one"><input type="checkbox" id="mgrCd"> 會議前每天倒數（取消勾選＝只在會議當天／會期標記）</label></div>
       <div class="rrow"><label></label><label class="one"><input type="checkbox" id="mgrCdLim"> 剩 <input type="number" id="mgrCdN" min="1" max="365" step="1" style="width:64px"> 天才顯示倒數（不勾＝一直顯示）</label></div>
@@ -2955,8 +2956,14 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     $('mgrOne').checked = !!m && m.start === m.end; syncOne(); $('mgrNote').value = m && m.note ? m.note : ''; $('mgrCd').checked = m ? !m.nocd : true; $('mgrCdLim').checked = !!(m && m.cdn); $('mgrCdN').value = m && m.cdn ? m.cdn : ''; syncCd();
     $('mgrDel').style.display = m ? '' : 'none';
     paintMgrColors();
-    $('mgr').hidden = false; $('mgrName').focus();
+    mgrWd(); $('mgr').hidden = false; $('mgrName').focus();
   }
+  function mgrWd() {                                                      // weekday in brackets next to each date: (一)
+    [['mgrS', 'mgrSW'], ['mgrE', 'mgrEW']].forEach(function (p) {
+      var v = $(p[0]).value; $(p[1]).textContent = /^\d{4}-\d\d-\d\d$/.test(v) ? '(' + '日一二三四五六'.charAt(fromDn(isoToDn(v)).w) + ')' : '';
+    });
+  }
+  $('mgrS').addEventListener('input', mgrWd); $('mgrS').addEventListener('change', mgrWd); $('mgrE').addEventListener('input', mgrWd); $('mgrE').addEventListener('change', mgrWd);
   function syncOne() { var on = $('mgrOne').checked; $('mgrERow').style.display = on ? 'none' : ''; }
   $('mgrOne').addEventListener('change', syncOne);
   function syncCd() { var on = $('mgrCd').checked; $('mgrCdLim').disabled = !on; $('mgrCdN').disabled = !on || !$('mgrCdLim').checked; }
