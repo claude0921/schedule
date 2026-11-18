@@ -310,7 +310,7 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .dwrap input[type=date]::-webkit-calendar-picker-indicator { display: none; }
 .dwrap input[type=date] { padding-right: 0; }
 .dwrap input[type=date]::-webkit-datetime-edit { padding-right: 0; }
-.mgrwd { margin-left: 0; }
+.mgrwd { margin-left: 4px; }   /* about one half-width space */
 .dcal { border: 0; background: transparent; color: var(--ink); cursor: pointer; padding: 2px 0 2px 8px; display: inline-flex; align-items: center; }
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
@@ -2977,6 +2977,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function mgrWd() {                                                      // weekday in brackets next to each date: (一)
     [['mgrS', 'mgrSW'], ['mgrE', 'mgrEW']].forEach(function (p) {
       var v = $(p[0]).value; $(p[1]).textContent = /^\d{4}-\d\d-\d\d$/.test(v) ? '(' + '日一二三四五六'.charAt(fromDn(isoToDn(v)).w) + ')' : '';
+    });
+    mgrFit();
+  }
+  var mgrCv = null;
+  function mgrFit() {                                                    // size each date box to its text so the weekday sits right after the last digit
+    ['mgrS', 'mgrE'].forEach(function (id) {
+      var i = $(id), cs = getComputedStyle(i); mgrCv = mgrCv || document.createElement('canvas');
+      var cx = mgrCv.getContext('2d'); cx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      var w = cx.measureText(i.value ? '2026/12/02' : 'yyyy/mm/dd').width;
+      i.style.boxSizing = 'content-box'; i.style.width = Math.ceil(w + 3) + 'px';
     });
   }
   document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('.dcal'); if (!b) return; var i = $(b.dataset.for); try { i.showPicker(); } catch (e) { i.focus(); } });
