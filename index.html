@@ -2311,6 +2311,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }
   }
   $('tbl').addEventListener('click', tblClick); $('mbub').addEventListener('click', tblClick);
+  function cellDbl(ev) {                                                // double-click the empty part of a cell = press its ＋ (new work item / new meeting)
+    var td = ev.target.closest && ev.target.closest('td.c'); if (!td || editing || pick) return;
+    if (ev.target.closest('[data-act], .it, a, textarea, input, .rh, .cz, .rtb')) return;
+    var b = td.querySelector('button.add[data-act="add"], button.add[data-act="mgrset"]'); if (!b) return;
+    ev.preventDefault(); var sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges(); b.click();
+  }
+  $('tbl').addEventListener('dblclick', cellDbl); $('mbub').addEventListener('dblclick', cellDbl);
   $('footTxt').addEventListener('click', function (ev) { if (ev.target.dataset && ev.target.dataset.act === 'foot') startNote({ k: 'foot', c: -2 }); });
   $('footTxt').addEventListener('dblclick', function (ev) { if (!editing && ev.target.tagName !== 'TEXTAREA') startNote({ k: 'foot', c: -2 }); });
   $('hiddenChips').addEventListener('click', function (ev) {
