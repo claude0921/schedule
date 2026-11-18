@@ -303,7 +303,10 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .todorow .tin { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; overflow: hidden; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 28px; padding: 0 2px; border-bottom: 1px solid transparent; }
 .todorow .tin:focus { border-bottom-color: var(--line); }
 .todorow.done .tin { text-decoration: line-through; color: var(--ink2); }
-.mgrwd { margin-left: 8px; color: var(--ink2); white-space: nowrap; }
+.dwrap { display: inline-flex; align-items: center; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); padding-right: 10px; }
+.dwrap input[type=date] { border: 0 !important; background: transparent !important; min-height: 30px; outline: none; }
+.dwrap:focus-within { border-color: var(--ink2); }
+.mgrwd { color: var(--ink2); white-space: nowrap; }
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
 .todorow:hover .tgr, .todorow:focus-within .tgr { opacity: .8; }
@@ -667,8 +670,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <div class="rrow"><label for="mgrName">會議名稱</label><input type="text" id="mgrName" maxlength="20"></div>
       <div class="rrow"><label for="mgrTag">標籤</label><input type="text" id="mgrTag" maxlength="20" placeholder="填了之後，重要會議那列顯示「標籤，剩00天」"></div>
       <div class="rrow"><label for="mgrLoc">地點</label><input type="text" id="mgrLoc" maxlength="30"></div>
-      <div class="rrow"><label for="mgrS">開始日</label><input type="date" id="mgrS"><span class="mgrwd" id="mgrSW"></span><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
-      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><input type="date" id="mgrE"><span class="mgrwd" id="mgrEW"></span></div>
+      <div class="rrow"><label for="mgrS">開始日</label><span class="dwrap"><input type="date" id="mgrS"><span class="mgrwd" id="mgrSW"></span></span><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
+      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><span class="dwrap"><input type="date" id="mgrE"><span class="mgrwd" id="mgrEW"></span></span></div>
       <div class="rrow"><label for="mgrNote">備註</label><textarea id="mgrNote" rows="3" maxlength="500" style="flex:1;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;resize:vertical;background:var(--card);color:var(--ink)"></textarea></div>
       <div class="rrow"><label>倒數顯示</label><label class="one"><input type="checkbox" id="mgrCd"> 會議前每天倒數（取消勾選＝只在會議當天／會期標記）</label></div>
       <div class="rrow"><label></label><label class="one"><input type="checkbox" id="mgrCdLim"> 剩 <input type="number" id="mgrCdN" min="1" max="365" step="1" style="width:64px"> 天才顯示倒數（不勾＝一直顯示）</label></div>
@@ -789,7 +792,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function mgrById(id) { return mgrList().filter(function (m) { return m.id === id; })[0]; }
   function z2(n) { return (n < 10 ? '0' : '') + n; }
   function mgrInfos(dn) {                                              // one entry per meeting that still shows on this day
-    return mgrList().map(function (m) { var o = mgrInfo(dn, m); o.m = m; return o; }).filter(function (o) { return o.txt; });
+    return mgrList().map(function (m) { var o = mgrInfo(dn, m); o.m = m; o.rem = Math.max(0, isoToDn(m.start) - dn); return o; }).filter(function (o) { return o.txt; })
+      .map(function (o, i) { o.i = i; return o; }).sort(function (a, b) { return a.rem - b.rem || isoToDn(a.m.start) - isoToDn(b.m.start) || a.i - b.i; });   // nearest first (ongoing = 0)
   }
   function mgrInfo(dn, cfg) {                                          // row 5 (new formula); without cfg: the first meeting (used by the Excel export)
     var c = cfg || mgrCfg(), s = isoToDn(c.start), e = isoToDn(c.end);
