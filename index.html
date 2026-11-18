@@ -307,6 +307,11 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .dwrap input[type=date] { border: 0 !important; background: transparent !important; min-height: 30px; outline: none; }
 .dwrap:focus-within { border-color: var(--ink2); }
 .mgrwd { color: var(--ink2); white-space: nowrap; }
+.dwrap input[type=date]::-webkit-calendar-picker-indicator { display: none; }
+.dwrap input[type=date] { padding-right: 0; }
+.dwrap input[type=date]::-webkit-datetime-edit { padding-right: 0; }
+.mgrwd { margin-left: 0; }
+.dcal { border: 0; background: transparent; color: var(--ink); cursor: pointer; padding: 2px 0 2px 8px; display: inline-flex; align-items: center; }
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
 .todorow:hover .tgr, .todorow:focus-within .tgr { opacity: .8; }
@@ -670,8 +675,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <div class="rrow"><label for="mgrName">會議名稱</label><input type="text" id="mgrName" maxlength="20"></div>
       <div class="rrow"><label for="mgrTag">標籤</label><input type="text" id="mgrTag" maxlength="20" placeholder="填了之後，重要會議那列顯示「標籤，剩00天」"></div>
       <div class="rrow"><label for="mgrLoc">地點</label><input type="text" id="mgrLoc" maxlength="30"></div>
-      <div class="rrow"><label for="mgrS">開始日</label><span class="dwrap"><input type="date" id="mgrS"><span class="mgrwd" id="mgrSW"></span></span><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
-      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><span class="dwrap"><input type="date" id="mgrE"><span class="mgrwd" id="mgrEW"></span></span></div>
+      <div class="rrow"><label for="mgrS">開始日</label><span class="dwrap"><input type="date" id="mgrS"><span class="mgrwd" id="mgrSW"></span><button type="button" class="dcal" data-for="mgrS" title="月曆" aria-label="月曆"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg></button></span><label class="one"><input type="checkbox" id="mgrOne"> 僅一天</label></div>
+      <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><span class="dwrap"><input type="date" id="mgrE"><span class="mgrwd" id="mgrEW"></span><button type="button" class="dcal" data-for="mgrE" title="月曆" aria-label="月曆"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg></button></span></div>
       <div class="rrow"><label for="mgrNote">備註</label><textarea id="mgrNote" rows="3" maxlength="500" style="flex:1;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;resize:vertical;background:var(--card);color:var(--ink)"></textarea></div>
       <div class="rrow"><label>倒數顯示</label><label class="one"><input type="checkbox" id="mgrCd"> 會議前每天倒數（取消勾選＝只在會議當天／會期標記）</label></div>
       <div class="rrow"><label></label><label class="one"><input type="checkbox" id="mgrCdLim"> 剩 <input type="number" id="mgrCdN" min="1" max="365" step="1" style="width:64px"> 天才顯示倒數（不勾＝一直顯示）</label></div>
@@ -2974,6 +2979,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var v = $(p[0]).value; $(p[1]).textContent = /^\d{4}-\d\d-\d\d$/.test(v) ? '(' + '日一二三四五六'.charAt(fromDn(isoToDn(v)).w) + ')' : '';
     });
   }
+  document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('.dcal'); if (!b) return; var i = $(b.dataset.for); try { i.showPicker(); } catch (e) { i.focus(); } });
   $('mgrS').addEventListener('input', mgrWd); $('mgrS').addEventListener('change', mgrWd); $('mgrE').addEventListener('input', mgrWd); $('mgrE').addEventListener('change', mgrWd);
   function syncOne() { var on = $('mgrOne').checked; $('mgrERow').style.display = on ? 'none' : ''; }
   $('mgrOne').addEventListener('change', syncOne);
