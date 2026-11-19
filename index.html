@@ -1387,7 +1387,20 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
       if (fi.length) { box.appendChild(h('span', 'jm', '大金馬：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'))); break; }
     }
+  fitNextLine();
   }
+  function fitNextLine() {                                              // the countdown strip shows two lines at most; what does not fit waits until nearer ones pass
+    var box = $('nextLine'), all = [].slice.call(box.querySelectorAll('.cd'));
+    all.forEach(function (e) { e.style.display = ''; });
+    function over() {
+      var tops = [], kids = [].slice.call(box.children).filter(function (e) { return e.offsetParent; });
+      kids.forEach(function (e) { if (tops.indexOf(e.offsetTop) < 0) tops.push(e.offsetTop); });
+      return tops.length > 2;
+    }
+    if (!all.length || !over()) return;
+    for (var i = all.length - 1; i >= 0; i--) { all[i].style.display = 'none'; if (!over()) break; }   // the farthest ones wait: they appear on the two lines as the nearer ones pass
+  }
+  window.addEventListener('resize', function () { if ($('nextLine')) fitNextLine(); });
 
   /* starred items from today onward, soonest first */
   function starCfg() { var b = meta.starbar || {}; return { hide: !!b.hide, done: !!b.done, nolate: b.nolate === undefined ? true : !!b.nolate }; }   // overdue ones stay hidden unless asked for, as before
