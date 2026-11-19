@@ -202,6 +202,11 @@ thead th.today { box-shadow: inset 0 3px 0 var(--today-line); }
 th.today .dd { color: var(--ink); }
 th.mstart, td.mstart { box-shadow: inset 3px 0 0 var(--accent); }
 thead th.today.mstart { box-shadow: inset 0 3px 0 var(--today-line), inset 3px 0 0 var(--accent); }
+/* today: red frame (work-month: the whole date column; calendar month: the day cell) */
+:root { --today-red: #e53935; }
+thead th.today, thead th.today.mstart { box-shadow: inset 2px 0 0 var(--today-red), inset -2px 0 0 var(--today-red), inset 0 2px 0 var(--today-red); }
+tbody td.today, tbody td.today.mstart { box-shadow: inset 2px 0 0 var(--today-red), inset -2px 0 0 var(--today-red); }
+tbody tr:last-child td.today { box-shadow: inset 2px 0 0 var(--today-red), inset -2px 0 0 var(--today-red), inset 0 -2px 0 var(--today-red); }
 #rules { position: fixed; inset: 0; z-index: 54; background: rgba(0, 0, 0, .42); display: flex; align-items: center; justify-content: center; padding: 16px; }
 #rulesList { display: flex; flex-direction: column; gap: 8px; }
 .rli { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line2); border-radius: 10px; padding: 8px 10px; }
@@ -449,7 +454,7 @@ body.monthv #copyYest { display: none; }   /* 複製昨日項目 only belongs to
 .mcal .md.blank:hover { background: var(--wk); }
 .mcal .md.wk { background: var(--wk); }
 .mcal .md.out .mdh b, .mcal .md.out .mdh span { opacity: .55; }
-.mcal .md.today { background: var(--today); box-shadow: inset 0 3px 0 var(--today-line); }
+.mcal .md.today { background: var(--today); box-shadow: inset 0 0 0 2px var(--today-red, #e53935); }
 .mcal .md.hol { background: #fde8e8; }
 .mcal .md.meet { background: var(--mbg, var(--mgr)); }
 .mcal .mdh { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 2px; color: var(--ink2); font-size: 12px; }
@@ -680,7 +685,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <div class="rrow" id="mgrERow"><label for="mgrE">結束日</label><span class="dwrap"><input type="date" id="mgrE"><span class="mgrwd" id="mgrEW"></span><button type="button" class="dcal" data-for="mgrE" title="月曆" aria-label="月曆"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg></button></span></div>
       <div class="rrow"><label for="mgrNote">備註</label><textarea id="mgrNote" rows="3" maxlength="500" style="flex:1;min-width:0;font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;resize:vertical;background:var(--card);color:var(--ink)"></textarea></div>
       <div class="rrow"><label>倒數顯示</label><label class="one"><input type="checkbox" id="mgrCd"> 會議前每天倒數（取消勾選＝只在會議當天／會期標記）</label></div>
-      <div class="rrow"><label></label><label class="one"><input type="checkbox" id="mgrCdLim"> 剩 <input type="number" id="mgrCdN" min="1" max="365" step="1" style="width:64px"> 天才顯示倒數（不勾＝一直顯示）</label></div>
+      <div class="rrow"><label></label><select id="mgrCdMode"><option value="n">剩</option><option value="d">從</option></select><span id="mgrCdNW"><input type="number" id="mgrCdN" min="1" max="365" step="1" placeholder="00" style="width:64px"> 天開始倒數</span><span id="mgrCdDW" style="display:none;align-items:center;gap:6px"><span class="dwrap"><input type="date" id="mgrCdD"><span class="mgrwd" id="mgrCdDWd"></span><button type="button" class="dcal" data-for="mgrCdD" title="月曆" aria-label="月曆"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg></button></span> 開始倒數</span></div>
       <div class="rrow"><label>色塊底色</label><div class="swatches" id="mgrColors"></div></div>
     </div>
     <div class="rulefoot"><button class="btn" id="mgrDel" type="button">刪除這個會議</button><span class="grow"></span><button class="btn" id="mgrNo" type="button">取消</button><button class="btn primary" id="mgrOk" type="button">完成</button></div>
@@ -803,7 +808,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function mgrInfo(dn, cfg) {                                          // row 5 (new formula); without cfg: the first meeting (used by the Excel export)
     var c = cfg || mgrCfg(), s = isoToDn(c.start), e = isoToDn(c.end);
-    if (dn < s && (c.nocd || (c.cdn && s - dn > c.cdn))) return { txt: '', note: '' };                 // 只在會議當天／會期標記，不做倒數
+    if (dn < s && (c.nocd || (c.cdn && s - dn > c.cdn) || (c.cdf && iso(dn) < c.cdf))) return { txt: '', note: '' };                 // 只在會議當天／會期標記，不做倒數
     var lead = c.name + '\n';
     if (dn < s) return { txt: lead + '剩' + z2(s - dn) + '天', note: slash(dn) + ' 距離 ' + c.name + '開始（' + slash(s) + '）還有 ' + (s - dn) + ' 天。' };
     if (dn <= e && s === e) return { txt: lead + '當天', note: slash(dn) + ' 就是 ' + c.name + ' 當天。' };
@@ -1377,7 +1382,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
     var cds = [], box = $('nextLine'); box.textContent = '';
-    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) { var o = fromDn(ms); cds.push({ d: ms - todayDn, name: z2(o.m) + '/' + z2(o.d) + '(' + WDN[o.w].replace('星期', '') + ') ' + mc.name }); } });   // date and weekday come first
+    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn) && !(mc.cdf && iso(todayDn) < mc.cdf)) { var o = fromDn(ms); cds.push({ d: ms - todayDn, name: z2(o.m) + '/' + z2(o.d) + '(' + WDN[o.w].replace('星期', '') + ') ' + mc.name }); } });   // date and weekday come first
     cds.sort(function (a, b) { return a.d - b.d; });                       // the nearest comes first
     cds.forEach(function (c) { var sp = h('span', 'cd', c.name + ' 剩'); sp.appendChild(h('span', c.d <= 10 ? 'soon' : null, z2(c.d) + '天')); box.appendChild(sp); });
     var cdEls = box.querySelectorAll('.cd'), cdW = 0, ci;                  // every countdown gets the width of the widest one, so a second line starts under the first line's entries (aligned by date)
@@ -3016,20 +3021,20 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     $('mgrName').value = m ? m.name : ''; $('mgrTag').value = m && m.tag ? m.tag : ''; $('mgrLoc').value = m && m.loc ? m.loc : ''; var day = !m && dn ? iso(Number(dn)) : ''; $('mgrS').value = m ? m.start : day; $('mgrE').value = m ? m.end : day;
     var usedC = mgrList().map(function (x) { return x.color || 'red'; });                  // new meeting: first colour no other meeting uses (all used: cycle)
     mgrColor = m ? (m.color || 'red') : (MC.filter(function (c) { return usedC.indexOf(c) < 0; })[0] || MC[usedC.length % MC.length]);
-    $('mgrOne').checked = !!m && m.start === m.end; syncOne(); $('mgrNote').value = m && m.note ? m.note : ''; $('mgrCd').checked = m ? !m.nocd : true; $('mgrCdLim').checked = !!(m && m.cdn); $('mgrCdN').value = m && m.cdn ? m.cdn : ''; syncCd();
+    $('mgrOne').checked = !!m && m.start === m.end; syncOne(); $('mgrNote').value = m && m.note ? m.note : ''; $('mgrCd').checked = m ? !m.nocd : true; $('mgrCdMode').value = m && m.cdf ? 'd' : 'n'; $('mgrCdN').value = m && m.cdn ? m.cdn : ''; $('mgrCdD').value = m && m.cdf ? m.cdf : ''; syncCd();
     $('mgrDel').style.display = m ? '' : 'none';
     paintMgrColors();
     mgrWd(); $('mgr').hidden = false; $('mgrName').focus();
   }
   function mgrWd() {                                                      // weekday in brackets next to each date: (一)
-    [['mgrS', 'mgrSW'], ['mgrE', 'mgrEW']].forEach(function (p) {
+    [['mgrS', 'mgrSW'], ['mgrE', 'mgrEW'], ['mgrCdD', 'mgrCdDWd']].forEach(function (p) {
       var v = $(p[0]).value; $(p[1]).textContent = /^\d{4}-\d\d-\d\d$/.test(v) ? '(' + '日一二三四五六'.charAt(fromDn(isoToDn(v)).w) + ')' : '';
     });
     mgrFit();
   }
   var mgrCv = null;
   function mgrFit() {                                                    // size each date box to its text so the weekday sits right after the last digit
-    ['mgrS', 'mgrE'].forEach(function (id) {
+    ['mgrS', 'mgrE', 'mgrCdD'].forEach(function (id) {
       var i = $(id), cs = getComputedStyle(i); mgrCv = mgrCv || document.createElement('canvas');
       var cx = mgrCv.getContext('2d'); cx.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
       var w = cx.measureText(i.value ? '2026/12/02' : 'yyyy/mm/dd').width;
@@ -3037,12 +3042,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     });
   }
   document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('.dcal'); if (!b) return; var i = $(b.dataset.for); try { i.showPicker(); } catch (e) { i.focus(); } });
-  $('mgrS').addEventListener('input', mgrWd); $('mgrS').addEventListener('change', mgrWd); $('mgrE').addEventListener('input', mgrWd); $('mgrE').addEventListener('change', mgrWd);
+  $('mgrS').addEventListener('input', mgrWd); $('mgrS').addEventListener('change', mgrWd); $('mgrE').addEventListener('input', mgrWd); $('mgrE').addEventListener('change', mgrWd); $('mgrCdD').addEventListener('input', mgrWd); $('mgrCdD').addEventListener('change', mgrWd);
   function syncOne() { var on = $('mgrOne').checked; $('mgrERow').style.display = on ? 'none' : ''; }
   $('mgrOne').addEventListener('change', syncOne);
-  function syncCd() { var on = $('mgrCd').checked; $('mgrCdLim').disabled = !on; $('mgrCdN').disabled = !on || !$('mgrCdLim').checked; }
+  function syncCd() { var on = $('mgrCd').checked, d = $('mgrCdMode').value === 'd'; $('mgrCdMode').disabled = !on; $('mgrCdN').disabled = !on; $('mgrCdD').disabled = !on; $('mgrCdNW').style.display = d ? 'none' : ''; $('mgrCdDW').style.display = d ? 'inline-flex' : 'none'; mgrWd(); }
+  $('mgrCdMode').addEventListener('change', syncCd);
   $('mgrCd').addEventListener('change', syncCd);
-  $('mgrCdLim').addEventListener('change', function () { if ($('mgrCdLim').checked && !$('mgrCdN').value) $('mgrCdN').value = 7; syncCd(); if (!$('mgrCdN').disabled) $('mgrCdN').focus(); });
   function closeMgr() { $('mgr').hidden = true; }
   function putMgrs(list) { meta.mgrs = { list: list }; backend.put('meta', 'mgrs', meta.mgrs).catch(failToast); closeMgr(); render(); }
   function saveMgr() {
@@ -3053,7 +3058,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var list = mgrList().slice(), data = { id: mgrEdit || 'm' + Date.now().toString(36), name: n, loc: $('mgrLoc').value.trim(), start: s, end: e, color: mgrColor };
     if (!$('mgrCd').checked) data.nocd = true;
     var tg = $('mgrTag').value.trim(); if (tg) data.tag = tg;
-    var cdn = parseInt($('mgrCdN').value, 10); if ($('mgrCd').checked && $('mgrCdLim').checked && cdn > 0) data.cdn = cdn;
+    if ($('mgrCd').checked) { if ($('mgrCdMode').value === 'd') { var cdf = $('mgrCdD').value; if (cdf) data.cdf = cdf; } else { var cdn = parseInt($('mgrCdN').value, 10); if (cdn > 0) data.cdn = cdn; } }
     var nt0 = $('mgrNote').value.trim(); if (nt0) data.note = nt0;
     var at = -1; list.forEach(function (m, i) { if (m.id === mgrEdit) at = i; });
     if (at >= 0) list[at] = data; else list.push(data);
