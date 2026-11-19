@@ -166,6 +166,8 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .chip-s { display: flex; align-items: flex-start; gap: 6px; padding: 2px 12px 2px 8px; }
 .cks, .cgo { border: 0; background: transparent; padding: 0; font: inherit; color: inherit; text-align: left; }
 .cks { font-size: 16px; line-height: 1.35; flex: none; }
+.cst { font-size: 16px; line-height: 1.35; flex: none; width: 0; opacity: 0; overflow: hidden; margin-right: -6px; color: var(--star); cursor: pointer; transition: opacity .12s; }
+.chip-s:hover .cst { width: 18px; opacity: 1; margin-right: 0; }
 .cgo { cursor: pointer; min-width: 0; overflow-wrap: anywhere; }
 .chip-s.done .cgo { text-decoration: line-through; opacity: .6; }
 .chip-s.done { background: var(--card); border-color: var(--line2); }
@@ -1460,7 +1462,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       var go = h('button', 'cgo'); go.type = 'button'; go.title = s.label + '：' + s.t + '（點一下跳到那一格）';
       go.appendChild(h('b', null, (s.late ? '逾期 ' : '') + (s.note ? '待定' : o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週')))); go.appendChild(document.createTextNode(s.label + '：' + s.t));
       if (s.n) { w.classList.add('hasnote'); go.title += '\n備註：' + s.n; }
-      w.appendChild(ck); w.appendChild(go); box.appendChild(w);
+      var cs = h('button', 'cst', '★'); cs.type = 'button'; cs.title = '取消置頂這項工作'; cs.setAttribute('aria-label', cs.title);
+      w.appendChild(cs); w.appendChild(ck); w.appendChild(go); box.appendChild(w);
     });
   }
   /* ---------- 關注清單: every item whose text / note contains a keyword; from today on, plus overdue ones that are not finished ---------- */
@@ -2397,6 +2400,15 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   [$('tbl'), $('mbub')].forEach(function (root) { root.addEventListener('mouseleave', function () { var hot = root.querySelector('.it.hot'); if (hot) hot.classList.remove('hot'); }); });
   $('starChips').addEventListener('click', function (ev) {
     var w = ev.target.closest('.chip-s'); if (!w) return;
+    if (ev.target.closest('.cst')) {                                // solid star shown on hover: ask, then take the item off the 置頂 list
+      var g = w.querySelector('.cgo'), nm = g ? g.textContent : '';
+      var NL = String.fromCharCode(10);
+      if (!window.confirm('要取消置頂這項工作嗎？' + NL + NL + nm)) return;
+      var dn0 = Number(w.dataset.dn), k0 = w.dataset.k, i0 = Number(w.dataset.i), col0 = { dn: dn0 }, its = itemsNow(col0, k0); if (!its[i0]) return;
+      its[i0].s = 0; saveItems(col0, k0, its);
+      cols.forEach(function (c) { if (c.dn !== dn0) return; var td = $('tbl').querySelector('td.c[data-k="' + k0 + '"][data-c="' + c.i + '"]'); if (td) paintCell(td, c, k0); });
+      renderStars(); return;
+    }
     if (ev.target.closest('.cks')) { toggleDone(Number(w.dataset.dn), w.dataset.k, Number(w.dataset.i)); return; }
     if (!ev.target.closest('.cgo')) return;
     if (w.dataset.note) {                                           // starred 待定事項 item: show that column and flash the cell
