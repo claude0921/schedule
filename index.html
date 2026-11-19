@@ -153,7 +153,7 @@ h1 { margin: 0; font-size: 22px; letter-spacing: .04em; }
 .tline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
 .tdate { color: var(--red); font-weight: 700; font-size: 17px; }
 #nextLine { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }   /* countdowns: nearest first; the 大金馬 note sits at the right edge */
-#nextLine .cd { color: var(--blue); font-weight: 700; }
+#nextLine .cd { color: var(--blue); font-weight: 700; } white-space: nowrap;
 #nextLine .cd .soon { color: var(--red); text-decoration: underline; }   /* 10 days or less */
 #nextLine .jm { margin-left: auto; }
 .srow { display: flex; align-items: flex-start; gap: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
@@ -287,9 +287,9 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .mo { display: none; position: absolute; top: 2px; right: 2px; border: 1px solid var(--line2); background: var(--card); border-radius: 6px; font-size: 12px; line-height: 1.4; padding: 0 6px; color: var(--ink2); }
 @media (hover: none) { .mo { display: block; } }
 /* notepad */
-#pad { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .42); display: flex; align-items: center; justify-content: center; padding: 16px; }
-.padcard { background: var(--card); width: min(1180px, 100%); height: min(760px, calc(100vh - 32px)); display: flex; flex-direction: column; border-radius: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .35); overflow: hidden; }
-.padhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+#pad { position: fixed; inset: 0; z-index: 50; pointer-events: none; }   /* not modal: the sheet behind stays usable, the card floats and can be moved / resized */
+.padcard { position: absolute; left: 0; top: 0; pointer-events: auto; background: var(--card); width: min(920px, calc(100vw - 24px)); height: min(640px, calc(100vh - 24px)); min-width: 360px; min-height: 260px; max-width: 100vw; max-height: 100vh; resize: both; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--line2); box-shadow: 0 12px 40px rgba(0, 0, 0, .35); overflow: hidden; }
+.padhead { cursor: move; touch-action: none; user-select: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .padtitle { font-weight: 700; font-size: 17px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .padsplit { flex: 1; min-height: 0; display: flex; }
 .padpane { flex: 1 1 50%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -315,13 +315,14 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
 .todorow:hover .tgr, .todorow:focus-within .tgr { opacity: .8; }
-#pad.pdrag { pointer-events: none; background: transparent; }
-#pad.pdrag .padcard { opacity: .18; }
+#pad.pdrag .padcard { pointer-events: none; opacity: .18; }
 .todorow .tlk { flex: none; font-size: 12px; line-height: 28px; opacity: .7; }
 .todorow .tdel { flex: none; width: 24px; height: 28px; border: 0; background: none; color: var(--ink2); cursor: pointer; opacity: 0; font-size: 15px; padding: 0; }
 .todorow:hover .tdel, .todorow:focus-within .tdel { opacity: 1; }
 .todobar { flex: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 12px 10px; }
 @media (max-width: 760px) {
+  #padCard { left: 8px !important; top: 8px !important; width: calc(100vw - 16px) !important; height: calc(100vh - 16px) !important; resize: none; }
+  .padhead { cursor: default; }
   .padsplit { flex-direction: column; }
   #padCard[data-tab="todo"] #notePane, #padCard[data-tab="note"] #todoPane { display: none; }
   .padpane + .padpane { border-left: 0; }
@@ -714,7 +715,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     </div>
   </div>
 </div>
-<div id="pad" hidden role="dialog" aria-modal="true" aria-labelledby="padTitle">
+<div id="pad" hidden role="dialog" aria-modal="false" aria-labelledby="padTitle">
   <div class="padcard" id="padCard" data-tab="todo">
     <div class="padhead">
       <span class="padtitle" id="padTitle"></span>
@@ -1376,9 +1377,12 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var w = wmOf(todayDn), wd = fromDn(todayDn).w;
     $('todayDate').textContent = slash(todayDn) + ' ' + WDN[wd].replace('星期', '週') + '　' + wdLabel(w);
     var cds = [], box = $('nextLine'); box.textContent = '';
-    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) { var o = fromDn(ms); cds.push({ d: ms - todayDn, name: o.m + '/' + o.d + ' ' + WDN[o.w].replace('星期', '週') + ' ' + mc.name }); } });   // date and weekday come first
+    mgrList().forEach(function (mc) { var ms = isoToDn(mc.start); if (todayDn < ms && !mc.nocd && !(mc.cdn && ms - todayDn > mc.cdn)) { var o = fromDn(ms); cds.push({ d: ms - todayDn, name: z2(o.m) + '/' + z2(o.d) + '(' + WDN[o.w].replace('星期', '') + ') ' + mc.name }); } });   // date and weekday come first
     cds.sort(function (a, b) { return a.d - b.d; });                       // the nearest comes first
     cds.forEach(function (c) { var sp = h('span', 'cd', c.name + ' 剩'); sp.appendChild(h('span', c.d <= 10 ? 'soon' : null, z2(c.d) + '天')); box.appendChild(sp); });
+    var cdEls = box.querySelectorAll('.cd'), cdW = 0, ci;                  // every countdown gets the width of the widest one, so a second line starts under the first line's entries (aligned by date)
+    for (ci = 0; ci < cdEls.length; ci++) cdW = Math.max(cdW, cdEls[ci].offsetWidth);
+    if (cdW) for (ci = 0; ci < cdEls.length; ci++) cdEls[ci].style.minWidth = cdW + 'px';
     for (var n = 0; n <= 60; n++) {
       var dn = todayDn + n, fi = itemsOf(iso(dn) + '_field').filter(function (x) { return !x.d; });
       if (fi.length) { box.appendChild(h('span', 'jm', '大金馬：' + (n === 0 ? '今天' : md(dn) + '（還有 ' + n + ' 天）') + ' ' + fi.map(function (x) { return x.t.replace(/\n/g, ' '); }).join('、'))); break; }
@@ -2112,7 +2116,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
           x.t = x.t + nx.t; todoArr.splice(i + 1, 1); todoRender(i, at2); todoChanged();
         }
         else if (ev.key === 'Backspace' && !ta.value) { ev.preventDefault(); todoPush(); todoArr.splice(i, 1); todoRender(Math.max(0, i - 1) < todoArr.length && i > 0 ? i - 1 : -1); todoChanged(); }
-        else if (ev.key === 'Escape') { ev.preventDefault(); commit(); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); closePadSave(); }
       });
       var del = h('button', 'tdel', '×'); del.type = 'button'; del.title = '刪除這個待辦事項'; del.setAttribute('aria-label', del.title);
       del.addEventListener('click', function () { todoPush(); todoArr.splice(i, 1); todoRender(); todoChanged(); });
@@ -2134,14 +2138,20 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     document.addEventListener('pointermove', padDragMove); document.addEventListener('pointerup', padDragUp);
     document.addEventListener('pointercancel', padDragCancel); document.addEventListener('keydown', padDragKey); document.addEventListener('keyup', padDragKeyUp);
   }
+  function padDragTick() {
+    if (!pd) return;
+    if (pd.mode === '' && (pd.sx || pd.sy)) { var sh = $('sheet'); sh.scrollLeft += pd.sx; sh.scrollTop += pd.sy; if (pd.last) padDragMove(pd.last); }   // the cell under the still pointer changes as the sheet moves
+    pd.raf = requestAnimationFrame(padDragTick);
+  }
   function padDragMark() { if (pd && pd.ghost) pd.ghost.textContent = (pd.copy ? '＋ ' : '') + pd.x.t; }
   function padDragMove(ev) {
     if (!pd) return;
     if (!pd.on) {
       if (Math.abs(ev.clientX - pd.x0) + Math.abs(ev.clientY - pd.y0) < 5) return;
       pd.on = true; pd.ghost = h('div', 'ghost', ''); document.body.appendChild(pd.ghost);
-      $('pad').classList.add('pdrag'); document.body.classList.add('dragmode'); padDragMark();
+      $('pad').classList.add('pdrag'); document.body.classList.add('dragmode'); padDragMark(); pd.raf = requestAnimationFrame(padDragTick);
     }
+    pd.last = ev;
     pd.ghost.style.left = ((ev.clientX + 12) / UZ) + 'px'; pd.ghost.style.top = ((ev.clientY + 8) / UZ) + 'px';
     clearDrop();
     var cr = $('padCard').getBoundingClientRect(), srow = $('todoList').querySelectorAll('.todorow')[todoArr.indexOf(pd.x)];
@@ -2150,12 +2160,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       pd.mode = 'pad'; pd.t = null; $('pad').classList.remove('pdrag'); if (srow) srow.classList.add('dragging');
       var rws = $('todoList').querySelectorAll('.todorow'), idx = 0, i2;
       for (i2 = 0; i2 < rws.length; i2++) { var rr = rws[i2].getBoundingClientRect(); if (ev.clientY > rr.top + rr.height / 2) idx = i2 + 1; }
-      pd.idx = idx; pd.v = Math.max(0, Math.min(4, pd.v0 + Math.round((ev.clientX - pd.x0) / 24)));
+      pd.sx = pd.sy = 0; pd.idx = idx; pd.v = Math.max(0, Math.min(4, pd.v0 + Math.round((ev.clientX - pd.x0) / 24)));
       var ln = h('div', 'dropline'); ln.style.marginLeft = (pd.v * 24 + 20) + 'px';
       if (idx < rws.length) rws[idx].parentNode.insertBefore(ln, rws[idx]); else $('todoList').appendChild(ln);
       return;
     }
     pd.mode = ''; $('pad').classList.add('pdrag');
+    var sh = $('sheet').getBoundingClientRect(), stick = 150 + (hideB ? 0 : bw) + 40;      // near the sheet's edges the sheet scrolls along, like dragging a work item
+    if (ev.clientX >= sh.left + stick) pd.out = true;
+    pd.sx = ev.clientX > sh.right - 50 ? 18 : (ev.clientX < sh.left + stick && pd.out ? -18 : 0);
+    pd.sy = ev.clientY > sh.bottom - 40 ? 18 : (ev.clientY < sh.top + 90 ? -18 : 0);
     var t = dropTarget(ev.clientX, ev.clientY);
     if (t && (t.td.dataset.k !== todoK || Number(t.td.dataset.c) === -1)) t = null;      // only a day of this same main work item
     pd.t = t;
@@ -2168,7 +2182,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   }
   function padDragEnd(cancelIt, ev) {
     if (!pd) return;
-    var d = pd; pd = null;
+    var d = pd; pd = null; cancelAnimationFrame(d.raf);
     document.removeEventListener('pointermove', padDragMove); document.removeEventListener('pointerup', padDragUp);
     document.removeEventListener('pointercancel', padDragCancel); document.removeEventListener('keydown', padDragKey); document.removeEventListener('keyup', padDragKeyUp);
     clearDrop(); document.body.classList.remove('dragmode'); $('pad').classList.remove('pdrag');
@@ -2211,29 +2225,49 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var def = rowDef(k); if (!def) return;
     var ta = $('padArea'); ta.value = (notes['pad-' + k] && notes['pad-' + k].text) || '';   // its own text, separate from the 子項目／備註 column
     todoLoad(k); todoHist = { u: [], r: [], last: 0 }; todoHistSync();
-    $('padTitle').textContent = '📓 ' + flat(def.label); $('pad').hidden = false; document.body.style.overflow = 'hidden';
-    editing = { kind: 'pad', k: k, node: $('padCard'), ta: ta };
+    if (padK && padK !== k) padSaveAll(padK);                    // switching to another row's pad: keep the one we leave
+    padK = k;
+    $('padTitle').textContent = '📓 ' + flat(def.label); $('pad').hidden = false; padPlace();
     $('padStatus').textContent = '輸入後會自動儲存'; padCount();
     todoRender();
     if (!todoArr.length && !ta.value) { padTab('todo'); todoArr.push({ t: '', d: 0 }); todoRender(0); }
     else if (ta.value && !todoArr.length) { padTab('note'); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); ta.scrollTop = ta.scrollHeight; }
     else { padTab('todo'); }
   }
-  function closePad() { $('pad').hidden = true; document.body.style.overflow = ''; clearTimeout(padTimer); }
+  var padK = null;                                                        // the row whose notepad is open (the pad is not an 'editing' state: the sheet behind stays usable)
+  function closePad() { $('pad').hidden = true; clearTimeout(padTimer); }
+  function closePadSave() { if (!padK) return; var k = padK; padK = null; padSaveAll(k); closePad(); render(); }
+  function padPlace() {                                                  // restore the last position, or centre the card; always keep the title bar on screen
+    var c = $('padCard'), pos = null; try { pos = JSON.parse(localStorage.getItem('sched2.padpos') || 'null'); } catch (e) {}
+    if (pos && pos.w) { c.style.width = pos.w + 'px'; c.style.height = pos.h + 'px'; }
+    var r = c.getBoundingClientRect();
+    var x = pos ? pos.x : Math.max(8, (innerWidth - r.width) / 2), y = pos ? pos.y : Math.max(8, (innerHeight - r.height) / 2);
+    padMove(x, y);
+  }
+  function padMove(x, y) { var c = $('padCard'), w = c.offsetWidth; c.style.left = Math.max(60 - w, Math.min(innerWidth - 60, x)) + 'px'; c.style.top = Math.max(0, Math.min(innerHeight - 40, y)) + 'px'; }
+  function padSavePos() { var c = $('padCard'); try { localStorage.setItem('sched2.padpos', JSON.stringify({ x: parseFloat(c.style.left) || 0, y: parseFloat(c.style.top) || 0, w: c.offsetWidth, h: c.offsetHeight })); } catch (e) {} }
+  $('padCard').querySelector('.padhead').addEventListener('pointerdown', function (ev) {
+    if (ev.button || ev.target.closest('button') || innerWidth <= 760) return;
+    var c = $('padCard'), sx = ev.clientX, sy = ev.clientY, ox = parseFloat(c.style.left) || 0, oy = parseFloat(c.style.top) || 0;
+    function mv(e) { padMove(ox + e.clientX - sx, oy + e.clientY - sy); }
+    function up() { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); padSavePos(); }
+    document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); ev.preventDefault();
+  });
+  if (window.ResizeObserver) new ResizeObserver(function () { if (!$('pad').hidden) padSavePos(); }).observe($('padCard'));
   function padSaveAll(k) {
     saveNote({ k: 'pad-' + k, c: -1 }, $('padArea').value.replace(/\s+$/, ''));
     saveNote({ k: 'todo-' + k, c: -1 }, todoText());
   }
   function padSave() {
-    if (!editing || editing.kind !== 'pad') return;
-    padSaveAll(editing.k);
+    if (!padK) return;
+    padSaveAll(padK);
     var d = new Date(); $('padStatus').textContent = '已儲存 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
   $('padArea').addEventListener('input', function () {
     padCount(); $('padStatus').textContent = '輸入中…'; clearTimeout(padTimer); padTimer = setTimeout(padSave, 700);
   });
-  $('padArea').addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { ev.preventDefault(); commit(); } });
-  $('padClose').addEventListener('click', commit);
+  $('padArea').addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { ev.preventDefault(); closePadSave(); } });
+  $('padClose').addEventListener('click', closePadSave);
   $('padDate').addEventListener('click', function () {
     var ta = $('padArea'), o = fromDn(todayDn), stamp = slash(todayDn) + ' ' + WDN[o.w].replace('星期', '週') + '　';
     ta.setRangeText(stamp, ta.selectionStart, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input'));
