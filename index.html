@@ -391,7 +391,12 @@ td.a:hover .rowtools, td.a:focus-within .rowtools, td.a.open .rowtools { display
 .wbtn .btn { min-height: 0; padding: 0 8px; font-size: 12px; }
 .wbtn.wvert { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 12px; color: var(--ink2); }
 .wbtn label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
-.slcol { width: 112px; flex: none; }   /* both lines (置頂工作, 關注清單) use the same left column, so their items start at the same place */
+.slcol { width: 112px; flex: none; }
+.srow.fold { align-items: center; padding-top: 4px; }
+.srow.fold .slcol { flex-direction: row; align-items: center; width: auto; gap: 8px; }
+.srow.fold .slabel { padding-top: 0; }
+.srow.fold .btn, #starBtn .btn, .wbtn .btn { color: var(--ink2); }   /* the 「顯示」 buttons of 置頂工作 / 關注清單 / 備註 share one colour */
+.srow.fold .chips { min-height: 0; }   /* both lines (置頂工作, 關注清單) use the same left column, so their items start at the same place */
 .srow .wgrid { border-top: 0; padding-top: 0; flex: 1; min-width: 0; }
 .wtools label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .wempty { color: var(--ink2); font-size: 13px; padding-top: 3px; }
@@ -655,7 +660,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     <div class="foot-h"><span></span><span>雙擊或點「編輯」修改</span></div>
     <div class="foot-txt" id="footTxt" data-k="foot"></div>
   </details>
-  <div class="srow" id="footHid" hidden><div class="slcol"><span class="slabel">※ 備註</span><div class="wbtn"><button type="button" class="btn" id="footShow">顯示</button></div></div><span class="hint">（已隱藏）</span></div>
+  <div class="srow fold" id="footHid" hidden><div class="slcol"><span class="slabel">※ 備註</span><div class="wbtn"><button type="button" class="btn" id="footShow">顯示</button></div></div><span class="hint">（已隱藏）</span></div>
 
   <details class="wm" id="wmBox">
     <summary>工作月對照表</summary>
@@ -1441,11 +1446,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var cfg = starCfg(), list = starredList(cfg), stHide = cfg.hide;
     function setStar(patch) { var c = starCfg(); for (var k in patch) c[k] = patch[k]; meta.starbar = { hide: c.hide ? 1 : 0, done: c.done ? 1 : 0, nolate: c.nolate ? 1 : 0 }; backend.put('meta', 'starbar', meta.starbar).catch(failToast); renderStars(); }
     var sbtn = $('starBtn'); sbtn.textContent = '';
+    $('starTog').closest('.srow').classList.toggle('fold', !!stHide);
     $('starTog').textContent = '★ 置頂工作' + (stHide ? '(' + list.length + ')' : '');   // folded: the count stays in brackets
     if (stHide) {                                                    // same as 關注清單: one small line with a way back
       var ss = h('button', 'btn', '顯示'); ss.type = 'button'; ss.addEventListener('click', function () { setStar({ hide: false }); });
-      sbtn.appendChild(ss); box.appendChild(h('span', 'hint', '（已隱藏）')); return;
+      sbtn.appendChild(ss); box.appendChild(h('span', 'hint', '（已隱藏）')); alignFold(); return;
     }
+    alignFold();
     var stl = h('div', 'wbtn wvert');                                // the same function keys as 關注清單
     var lb = h('label'), cb = h('input'); cb.type = 'checkbox'; cb.checked = cfg.done; lb.appendChild(cb); lb.appendChild(document.createTextNode('顯示已完成'));
     cb.addEventListener('change', function () { setStar({ done: cb.checked }); });
@@ -1518,14 +1525,18 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var c = watchCfg(); c.words.splice(d.to, 0, c.words.splice(d.from, 1)[0]); saveWatch(c);
   }
   function watchDragCancel() { watchDragStop(); wdrag = null; }
+  function alignFold() {                                             // folded 關注清單: its 「顯示」 button lines up with the one of 置頂工作 above (that one leads)
+    var a = $('starTog'), b = document.querySelector('#watchBox .srow.fold .slabel'); if (!a || !b) return;
+    b.style.minWidth = ''; if (a.closest('.srow').classList.contains('fold')) b.style.minWidth = a.offsetWidth + 'px';
+  }
   function renderWatch() {
     var box = $('watchBox'); if (!box) return; box.textContent = '';
     var cfg = watchCfg();
     if (cfg.hide) {                                                  // folded away: one small line with a way back
-      var hr = h('div', 'srow'), hc = h('div', 'slcol'), sh = h('button', 'btn', '顯示'); sh.type = 'button';   // laid out like the 置頂工作 line: label, the button under it, 「（已隱藏）」 beside
+      var hr = h('div', 'srow fold'), hc = h('div', 'slcol'), sh = h('button', 'btn', '顯示'); sh.type = 'button';   // laid out like the 置頂工作 line: label, the button under it, 「（已隱藏）」 beside
       sh.addEventListener('click', function () { var c = watchCfg(); c.hide = false; saveWatch(c); });
       var sb = h('div', 'wbtn'); sb.appendChild(sh); hc.appendChild(h('span', 'slabel', '👁 關注清單')); hc.appendChild(sb);
-      hr.appendChild(hc); hr.appendChild(h('span', 'hint', '（已隱藏）')); box.appendChild(hr); return;
+      hr.appendChild(hc); hr.appendChild(h('span', 'hint', '（已隱藏）')); box.appendChild(hr); alignFold(); return;
     }
     var grid = h('div', 'wgrid'); grid.style.gridTemplateColumns = 'repeat(' + Math.max(1, cfg.words.length) + ', minmax(0, 1fr))';   // keywords side by side, every column the same width
     cfg.words.forEach(function (word, wi) {
