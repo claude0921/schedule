@@ -871,7 +871,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   var armed = null, armTimer = null;
   var clip = null, pick = null;   // clip: {from, rows:[{k, items}]} = what 複製 last collected; pick: {c, k0, sel:{rowKey:[bool]}} = the date column whose items (every row) are being ticked for 複製; k0 = row of the cell that shows the √
   var hideB = false, hideWk = false;                                   // hideWk: Saturday / Sunday columns left out of the week sheet
-  try { hideWk = localStorage.getItem('sched2.hideWk') === '1'; } catch (e) {}
+  hideWk = true;                                                        // default look: weekends left out (until the viewer chooses otherwise)
+  try { var hw0 = localStorage.getItem('sched2.hideWk'); if (hw0 !== null) hideWk = hw0 === '1'; } catch (e) {}
   try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) {}
   try { if (window.innerWidth < 700 && localStorage.getItem('sched2.hideB') === null) hideB = true; } catch (e) {}
   var bw = 400;   // width of the 子項目／備註 column, adjustable by dragging its right edge
@@ -1096,7 +1097,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     function set(on) {
       document.body.classList.toggle('fillwin', on); btn.textContent = on ? '⛶ 還原大小' : '⛶ 放大表格'; btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       window.scrollTo(0, 0); fit(); setTimeout(fit, 60);    }
-    btn.addEventListener('click', function () { set(!document.body.classList.contains('fillwin')); });
+    btn.addEventListener('click', function () { var on = !document.body.classList.contains('fillwin'); set(on); try { localStorage.setItem('sched2.fill', on ? '1' : '0'); } catch (e) {} });
+    try { var f0 = localStorage.getItem('sched2.fill'); if (f0 === '1' || (f0 === null && window.innerWidth >= 700)) set(true); } catch (e) {}   // default look: enlarged table
     document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && document.body.classList.contains('fillwin') && !editing && !ev.defaultPrevented) set(false); });
   })();
   (function () {                                                       // a cell whose bottom is below the screen keeps its ＋ at the bottom of the screen (still at the cell's right edge)
