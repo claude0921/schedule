@@ -716,6 +716,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         <label class="rrow"><input type="radio" name="ruleE" value="on"> 於 <input type="date" id="ruleEOn"></label>
         <label class="rrow"><input type="radio" name="ruleE" value="count"> 重複 <input type="number" id="ruleECnt" min="1" max="999" value="13"> 次</label>
       </div>
+      <div class="rrow" id="rulePastBox" title="重複事項預設只從「開始日期」起出現；要不要也補到過去的日期，這裡決定"><label for="rulePast">過去的日期</label><select id="rulePast"><option value="">請選擇…</option><option value="no">不套用（只從開始日期起）</option><option value="all">套用到所有過去日期</option><option value="from">從過去某一天起</option></select><input type="date" id="rulePastD" hidden></div>
       <label class="rrow"><input type="checkbox" id="ruleSt"> ★ 標星號（出現在最上方的置頂工作）</label>
       <label class="rrow" title="平常不標星號，到了那一天才自動加上星號，那天就會出現在最上方的置頂工作"><input type="checkbox" id="ruleSt1"> 當天標星號（到了當天才自動加星號）</label>
     </div>
@@ -2783,10 +2784,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   })();
   function ruleSync() {
     var f = $('ruleF').value;
-    $('ruleIntBox').hidden = f === 'none'; $('ruleWdBox').hidden = f !== 'week'; $('ruleWmBox').hidden = f !== 'wm'; $('ruleEndBox').hidden = f === 'none';
+    $('ruleIntBox').hidden = f === 'none'; $('ruleWdBox').hidden = f !== 'week'; $('ruleWmBox').hidden = f !== 'wm'; $('ruleEndBox').hidden = f === 'none'; $('rulePastBox').hidden = f === 'none'; $('rulePastD').hidden = $('rulePast').value !== 'from';
     $('ruleUnit').textContent = f === 'day' ? '天' : f === 'week' ? '週' : '個工作月';
   }
-  $('ruleF').addEventListener('change', ruleSync);
+  $('ruleF').addEventListener('change', ruleSync); $('rulePast').addEventListener('change', function () { ruleSync(); if ($('rulePast').value === 'from' && !$('rulePastD').value) { $('rulePastD').value = iso(isoToDn($('ruleS').value || iso(todayDn)) - 7); } });
   function closeRule() { $('rule').hidden = true; ruleEd = null; if (!$('rules').hidden) renderRuleList(); var d = $('ruleDel'); d.classList.remove('armed'); d.textContent = '刪除整個重複事項'; }
   var listRow = 'routine';
   function openRule(dn, rid, row) {
@@ -2805,6 +2806,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     Array.prototype.forEach.call(document.getElementsByName('ruleE'), function (x) { x.checked = x.value === e.k; });
     $('ruleEOn').value = e.on || ''; $('ruleECnt').value = e.c || 13;
     $('ruleSt').checked = !!(r && r.st); $('ruleSt1').checked = !!(r && r.st1 && !r.st);
+    $('rulePast').value = r ? 'no' : ''; $('rulePastD').value = '';                 // a new repeating item must say what happens to the past dates
     $('ruleDel').hidden = !r;
     ruleSync(); $('rule').hidden = false; $('ruleT').focus();
   }
@@ -2841,13 +2843,17 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       items.push({ t: t, s: ($('ruleSt').checked || ($('ruleSt1').checked && isoToDn(s) === todayDn)) ? 1 : 0 }); saveItems(col, ruleEd.row, items);
       closeRule(); render(); return;
     }
+    var pastV = $('rulePast').value, s0 = s;
+    if (!pastV) { toast('請選擇要不要套用到過去的日期'); $('rulePast').focus(); return; }
+    if (pastV === 'all') { if (s > '2020-01-01') s = '2020-01-01'; }
+    else if (pastV === 'from') { var pd = $('rulePastD').value; if (!pd) { toast('請選從過去哪一天開始'); $('rulePastD').focus(); return; } if (pd >= s0) { toast('「從哪一天」要早於開始日期'); $('rulePastD').focus(); return; } s = pd; }
     var r = { id: ruleEd.id || 'r' + Date.now().toString(36), t: t, st: $('ruleSt').checked ? 1 : 0, st1: (!$('ruleSt').checked && $('ruleSt1').checked) ? 1 : 0, start: s, f: f, n: Math.max(1, Math.min(99, Math.floor(Number($('ruleN').value)) || 1)) };
     if (ruleEd.row !== 'routine') r.row = ruleEd.row;
     if (f === 'week') { r.wd = getDots('ruleWd'); if (!r.wd.length) { toast('請至少選一個星期'); return; } }
     if (f === 'wm') { r.wm = getDots('ruleWm'); if (!r.wm.length) { toast('請至少選一個「每工第幾天」'); return; } }
     var ek = 'never'; Array.prototype.forEach.call(document.getElementsByName('ruleE'), function (x) { if (x.checked) ek = x.value; });
     r.end = { k: ek };
-    if (ek === 'on') { r.end.on = $('ruleEOn').value; if (!r.end.on || r.end.on < s) { toast('結束日期要在開始日期之後'); return; } }
+    if (ek === 'on') { r.end.on = $('ruleEOn').value; if (!r.end.on || r.end.on < s0) { toast('結束日期要在開始日期之後'); return; } }
     if (ek === 'count') r.end.c = Math.max(1, Math.min(999, Math.floor(Number($('ruleECnt').value)) || 1));
     var list = rulesList().filter(function (x) { return x.id !== r.id; });
     var at = rulesList().map(function (x) { return x.id; }).indexOf(r.id);
