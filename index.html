@@ -320,6 +320,7 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .mgrwd { margin-left: 4px; }   /* about one half-width space */
 .dwrap { position: relative; }
 .dwrap input.dt { border: 0 !important; background: transparent !important; min-height: 30px; outline: none; padding: 0 0 0 8px; font: inherit; color: var(--ink); box-sizing: content-box; width: 8.4em; }
+#mgr .rrow .dwrap input[type=text] { padding: 0 0 0 8px; min-height: 30px; }
 .dcal { border: 0; background: transparent; color: var(--ink); cursor: pointer; padding: 2px 0 2px 8px; display: inline-flex; align-items: center; }
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
@@ -3091,11 +3092,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     ['mgrS', 'mgrE', 'mgrCdD', 'ruleS', 'ruleEOn', 'rulePastD'].forEach(function (id) {
       var el = $(id); if (!el) return;
       var own = !!el.closest('.dwrap'), wrap = el.closest('.dwrap');
+      var wasHid = el.hasAttribute('hidden'); el.removeAttribute('hidden');      // the box (wrapper) is what gets hidden from now on
       el.setAttribute('type', 'text'); el.classList.add('dt'); el.placeholder = 'yyyy/mm/dd'; el.maxLength = 12; el.autocomplete = 'off';
       if (!wrap) {
         wrap = h('span', 'dwrap'); el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
         var bt = h('button', 'dcal'); bt.type = 'button'; bt.dataset.for = id; bt.title = '月曆'; bt.setAttribute('aria-label', '月曆'); bt.innerHTML = CAL; wrap.appendChild(bt);
       }
+      if (wasHid) wrap.hidden = true;
       Object.defineProperty(el, 'value', { configurable: true, get: function () { return parseD(rawGet.call(el)); }, set: function (v) { rawSet.call(el, show(v)); } });
       Object.defineProperty(el, 'hidden', { configurable: true, get: function () { return wrap.hidden; }, set: function (v) { wrap.hidden = !!v; } });
       function norm() { var v = parseD(rawGet.call(el)); if (v) rawSet.call(el, show(v)); }
