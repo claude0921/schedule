@@ -318,6 +318,8 @@ td.a.fixh .lbrow { max-height: calc(var(--rh) - 6px); overflow: hidden; }   /* t
 .dwrap input[type=date] { padding-right: 0; }
 .dwrap input[type=date]::-webkit-datetime-edit { padding-right: 0; }
 .mgrwd { margin-left: 4px; }   /* about one half-width space */
+.dwrap { position: relative; }
+.dwrap input.dt { border: 0 !important; background: transparent !important; min-height: 30px; outline: none; padding: 0 0 0 8px; font: inherit; color: var(--ink); box-sizing: content-box; width: 8.4em; }
 .dcal { border: 0; background: transparent; color: var(--ink); cursor: pointer; padding: 2px 0 2px 8px; display: inline-flex; align-items: center; }
 .todorow.dragging { opacity: .35; }
 .todorow .tgr { flex: none; width: 16px; line-height: 28px; text-align: center; font-size: 13px; color: var(--ink2); cursor: grab; opacity: 0; user-select: none; touch-action: none; }
@@ -3072,7 +3074,41 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       i.style.boxSizing = 'content-box'; i.style.width = Math.ceil(w + 3) + 'px';
     });
   }
-  document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('.dcal'); if (!b) return; var i = $(b.dataset.for); try { i.showPicker(); } catch (e) { i.focus(); } });
+  /* date fields: type the date by hand (2026/11/20, 20261120, 11/20 = this year) or pick it from the calendar button; .value stays an ISO yyyy-mm-dd string for the rest of the code */
+  (function () {
+    var rawGet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').get, rawSet = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    var CAL = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3"/></svg>';
+    function parseD(t) {
+      t = String(t || '').replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 65248); }).replace(/[／－．]/g, '/').trim();
+      var m = /^(\d{4})\D?(\d{1,2})\D?(\d{1,2})$/.exec(t), y, mo, d;
+      if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+      else if ((m = /^(\d{1,2})[\/\-.](\d{1,2})$/.exec(t))) { y = new Date().getFullYear(); mo = +m[1]; d = +m[2]; }
+      else return '';
+      var dt = new Date(y, mo - 1, d); if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+      return y + '-' + z2(mo) + '-' + z2(d);
+    }
+    function show(v) { return /^\d{4}-\d\d-\d\d$/.test(v) ? v.replace(/-/g, '/') : ''; }
+    ['mgrS', 'mgrE', 'mgrCdD', 'ruleS', 'ruleEOn', 'rulePastD'].forEach(function (id) {
+      var el = $(id); if (!el) return;
+      var own = !!el.closest('.dwrap'), wrap = el.closest('.dwrap');
+      el.setAttribute('type', 'text'); el.classList.add('dt'); el.placeholder = 'yyyy/mm/dd'; el.maxLength = 12; el.autocomplete = 'off';
+      if (!wrap) {
+        wrap = h('span', 'dwrap'); el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
+        var bt = h('button', 'dcal'); bt.type = 'button'; bt.dataset.for = id; bt.title = '月曆'; bt.setAttribute('aria-label', '月曆'); bt.innerHTML = CAL; wrap.appendChild(bt);
+      }
+      Object.defineProperty(el, 'value', { configurable: true, get: function () { return parseD(rawGet.call(el)); }, set: function (v) { rawSet.call(el, show(v)); } });
+      Object.defineProperty(el, 'hidden', { configurable: true, get: function () { return wrap.hidden; }, set: function (v) { wrap.hidden = !!v; } });
+      function norm() { var v = parseD(rawGet.call(el)); if (v) rawSet.call(el, show(v)); }
+      el.addEventListener('blur', norm);
+      el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') norm(); });
+      var pk = document.createElement('input'); pk.type = 'date'; pk.tabIndex = -1; pk.setAttribute('aria-hidden', 'true');
+      pk.style.cssText = 'position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0';
+      wrap.appendChild(pk);
+      pk.addEventListener('change', function () { if (!pk.value) return; el.value = pk.value; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); });
+      el._pick = function () { pk.value = el.value || ''; try { pk.showPicker(); } catch (e) { el.focus(); } };
+    });
+  })();
+  document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('.dcal'); if (!b) return; var i = $(b.dataset.for); if (i._pick) i._pick(); else try { i.showPicker(); } catch (e) { i.focus(); } });
   $('mgrS').addEventListener('input', mgrWd); $('mgrS').addEventListener('change', mgrWd); $('mgrE').addEventListener('input', mgrWd); $('mgrE').addEventListener('change', mgrWd); $('mgrCdD').addEventListener('input', mgrWd); $('mgrCdD').addEventListener('change', mgrWd);
   function syncOne() { var on = $('mgrOne').checked; $('mgrERow').style.display = on ? 'none' : ''; }
   $('mgrOne').addEventListener('change', syncOne);
