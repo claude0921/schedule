@@ -47,6 +47,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<script>try{var __c=matchMedia("(pointer:coarse)").matches;if(innerWidth<=700||(__c&&innerHeight<=500))document.documentElement.classList.add("mob");if(__c)addEventListener("resize",function(){clearTimeout(window.__rz);window.__rz=setTimeout(function(){var m=innerWidth<=700||innerHeight<=500;if(m!==document.documentElement.classList.contains("mob")&&!document.activeElement.matches("input,textarea,[contenteditable]"))location.reload();},400);});}catch(e){}</script>
 <style>
 /* Layout: today strip with starred items on top, then a work-month board (dates across, main items down). */
 html { zoom: .8; }   /* default view size = the browser at 80% */
@@ -594,6 +595,98 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 40; max-width: 90vw; }
 .toast[hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---------- phone layout (html.mob: narrow screens / phones held sideways) ---------- */
+#mobSeg { display: none; }
+html.mob { zoom: 1; }
+html.mob body { padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); padding-block: 8px 28px; font-size: 14px; }
+html.mob .page { gap: 8px; }
+html.mob h1 { font-size: 19px; }
+html.mob #mobSeg { display: inline-flex; }
+html.mob body.monthv #mobSeg { display: none; }
+html.mob #sizeSeg, html.mob #hideSeg, html.mob #fillWin, html.mob #copyYest, html.mob #exportDir, html.mob #exportWm, html.mob #exportX, html.mob #addRow, html.mob .hb, html.mob .rz, html.mob .cz, html.mob .rh, html.mob #wmBox { display: none !important; }
+html.mob .midbar .btn { min-height: 38px; padding: 2px 7px; font-size: 13px; flex: 0 1 auto; }
+html.mob .midbar .tools { gap: 4px; flex-wrap: nowrap; }
+html.mob .midbar .seg { flex-wrap: nowrap; flex: 0 1 auto; }
+html.mob .midbar .btn .bl { display: none; }
+html.mob .tstrip { padding: 8px 10px; }
+html.mob #tbl { font-size: 13px; }
+html.mob th, html.mob td { padding: 4px 5px; }
+html.mob thead tr.h1 th { height: 42px; }
+html.mob thead tr.h2 th { top: 42px; height: 22px; font-size: 11px; }
+html.mob .dd { font-size: 14px; }
+html.mob .dw { font-size: 11px; }
+html.mob .sheet { overflow-y: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scroll-padding-left: 76px; }
+html.mob thead th.dh { scroll-snap-align: start; }
+html.mob td.a { font-size: 12px; line-height: 1.3; }
+html.mob .lbrow .lb { padding: 0 1px; }
+html.mob .page > * { order: 5; }
+html.mob .page > .top { order: 1; }
+html.mob .page > .banner { order: 2; }
+html.mob .page > .midbar { order: 3; }
+html.mob .page > .sheet, html.mob .page > .mcal { order: 4; }
+html.mob #autoWrap { display: none; }
+html.mob .top { gap: 2px 8px; align-items: center; }
+html.mob .hright { min-height: 0; }
+html.mob .sheet { max-height: calc(100dvh - 190px) !important; min-height: 320px; }
+html.mob body.monthv .sheet { max-height: none !important; }
+html.mob .lbrow .rgr { display: none; }
+html.mob .lbrow .pd { right: 0; top: 0; bottom: auto; transform: none; font-size: 11px; padding: 0 1px; }
+html.mob td.a .mo { top: auto; bottom: 1px; right: 1px; font-size: 11px; padding: 0 4px; line-height: 1.3; }
+html.mob .lbrow .lb { word-break: break-all; }
+html.mob .rowtools { left: 100%; top: 0; transform: none; }
+html.mob .rt { min-height: 30px; font-size: 12px; padding: 0 9px; }
+html.mob .it { font-size: 13px; }
+html.mob .it .ck, html.mob .it .st, html.mob .itb .x, html.mob .itb .nt, html.mob .itb .ind, html.mob .itb .cpy, html.mob .itl .gr, html.mob .itb .gr { min-width: 30px; min-height: 30px; font-size: 17px; }
+html.mob .itl .gr, html.mob .itb .gr { display: inline-flex; align-items: center; justify-content: center; opacity: .8; touch-action: none; }
+html.mob td.c > .add { min-width: 34px; min-height: 26px; font-size: 16px; opacity: .8; }
+html.mob .composer textarea, html.mob .composer .ted, html.mob td.editing .it .ted, html.mob td.a .ted, html.mob .composer input { font-size: 16px; }
+html.mob .crow .btn { min-height: 36px; font-size: 14px; }
+html.mob input, html.mob select, html.mob textarea { font-size: 16px; }   /* iPhone zooms the page in when a field's text is smaller than 16px */
+html.mob .padcard { min-width: 0; }
+
+#mobAdd { display: none; }
+html.mob #mobAdd { display: inline-flex; align-items: center; justify-content: center; font-size: 20px; padding: 2px 12px; }
+html.mob td.c > .add { display: none !important; }
+#mAdd { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; justify-content: center; }
+#mAdd[hidden] { display: none; }
+#mAdd .mabox { background: var(--card); color: var(--ink); width: min(520px, 100vw); border-radius: 16px 16px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; box-shadow: 0 -8px 30px rgba(0, 0, 0, .3); }
+#mAdd .mat { font-weight: 700; font-size: 17px; margin-bottom: 2px; }
+#mAdd label { font-size: 13px; color: var(--ink2); margin-top: 4px; }
+#mAdd .maw { color: var(--ink); font-weight: 700; }
+#mAdd input[type=date], #mAdd select, #mAdd textarea { font: inherit; font-size: 16px; min-height: 42px; padding: 6px 10px; border: 1px solid var(--line2); border-radius: 8px; background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
+#mAdd textarea { resize: none; }
+#mAdd .mck { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--ink); }
+#mAdd .mck input { width: 20px; height: 20px; min-height: 0; }
+#mAdd .mabt { display: flex; gap: 10px; margin-top: 8px; }
+#mAdd .mabt .btn { flex: 1; min-height: 44px; font-size: 16px; }
+
+/* phone, second round: nothing below the table (隱藏工作項目 / 已刪除 / 備註), no row-name drag handle, no ⋮ row menu strip beside it */
+html.mob #watchBox, html.mob .addrow, html.mob #footBox, html.mob #footHid, html.mob #wmBox, html.mob th.b, html.mob td.b { display: none !important; }
+
+/* phone: items show bullet + text only; tap picks an item and its tool bars float at the bottom of the screen */
+html.mob .it:not(.hot) .itl, html.mob .it:not(.hot) .itb { display: none !important; }
+html.mob .it:not(.hot) .bul { display: block !important; width: 10px; }
+html.mob .it { flex-wrap: nowrap; padding: 2px 0; }
+html.mob .it.hot { background: var(--star-bg); border-radius: 6px; box-shadow: 0 0 0 1px var(--star); }
+html.mob .it.hot .bul { display: block; }
+html.mob .it.hot .itl, html.mob .it.hot .itb { position: fixed !important; left: 50% !important; right: auto !important; transform: translateX(-50%); z-index: 90; display: flex !important; flex-basis: auto !important; align-items: center; justify-content: center; gap: 2px; padding: 4px 6px !important; max-width: calc(100vw - 12px); background: var(--card) !important; border: 1px solid var(--line2) !important; border-radius: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, .3) !important; white-space: nowrap; }
+html.mob .it.hot .itb { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); top: auto !important; }
+html.mob .it.hot .itl { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); top: auto !important; }
+html.mob .it.hot .itl > *, html.mob .it.hot .itb > * { min-width: 40px; min-height: 40px; font-size: 20px; opacity: 1 !important; display: inline-flex; align-items: center; justify-content: center; }
+html.mob .it.hot .itb .nt { font-size: 14px; }
+html.mob .it.hot .itb .x.armed { font-size: 14px; }
+html.mob body.dragmode .it.hot .itl, html.mob body.dragmode .it.hot .itb { opacity: .25; }
+html.mob td.c.manual:has(.it) { padding-bottom: 30px; }
+html.mob th.dh.wk .dd { font-size: 10px; letter-spacing: -.5px; }
+html.mob th.dh.wk .dw { font-size: 10px; }
+html.mob.mob7 th, html.mob.mob7 td { padding-left: 2px; padding-right: 2px; }
+html.mob.mob7 .it { font-size: 11.5px; }
+html.mob.mob7 .it:not(.hot) .bul { width: 6px; }
+html.mob.mob7 .dd { font-size: 13px; }
+html.mob.mob7 td.c > .add { min-width: 22px; padding: 0; }
+html.mob.mob7 thead tr.h2 th { font-size: 10px; }
+html.mob.mob7 .chip.mgr { font-size: 11px; padding: 1px 3px; }
 </style>
 
 <div class="page">
@@ -632,14 +725,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       <button class="btn" id="prev">‹ 上一工作月</button>
       <button class="btn primary" id="goToday">回到今天</button>
       <button class="btn" id="next">下一工作月 ›</button>
-      <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶ 復原</button>
-      <button class="btn" id="redoBtn" title="重做剛剛復原的動作（Ctrl+Y）" disabled>↷ 重做</button>
+      <button class="btn" id="undoBtn" title="復原上一個動作（Ctrl+Z）：新增、修改、刪除、完成、星號、拖曳移動工作項目" disabled>↶<span class="bl"> 復原</span></button>
+      <button class="btn" id="redoBtn" title="重做剛剛復原的動作（Ctrl+Y）" disabled>↷<span class="bl"> 重做</span></button>
       <button class="btn" id="copyYest" title="把今天還沒打勾的工作項目，複製到下一個上班日（明天；遇到週末、國定假日就順延）的對應主項目">⧉ 複製今日未完成項目</button>
       <span class="seg" id="viewSeg" role="group" aria-label="切換顯示方式">
         <button class="btn" type="button" data-mode="week" title="一次看一週（可以編輯）">週</button>
         <button class="btn" type="button" data-mode="wm" title="整個工作月一頁：4 週 × 7 天">工作月</button>
         <button class="btn" type="button" data-mode="cm" title="像一般月曆：一個曆月一頁">曆月</button>
       </span>
+      <span class="seg" id="mobSeg" role="group" aria-label="一頁幾天"><button class="btn" type="button" data-n="3">3天</button><button class="btn" type="button" data-n="7" title="一週（週一到週五）">1週</button></span>
+      <button class="btn primary" type="button" id="mobAdd" title="新增工作項目" aria-label="新增工作項目">＋</button>
       <span class="seg" id="sizeSeg" role="group" aria-label="欄列"><span class="seglabel">欄列</span><button class="btn" type="button" id="resetCW" title="日期欄寬還原成自動（一次剛好顯示一週／一個工作月）">預設欄寬</button><button class="btn" type="button" id="resetRH" title="把目前顯示的工作項目平均成相同列高（剛好填滿畫面）">預設列高</button><button class="btn" type="button" id="fitCWBtn" title="日期欄寬調成剛好放得下目前這一週最長的工作項目">適應欄寬</button><button class="btn" type="button" id="fitRHBtn" title="每一列的高度都調成剛好放得下裡面的工作項目">適應列高</button></span>
       <span class="seg" id="hideSeg" role="group" aria-label="隱藏"><span class="seglabel">隱藏</span><button class="btn" type="button" id="toggleB" title="隱藏／顯示待定事項欄">待定事項</button><button class="btn" type="button" id="toggleWk" title="隱藏／顯示週六、週日">六日</button></span>
       <button class="btn" type="button" id="fillWin" title="把表格放大到整個瀏覽器視窗（暫時隱藏上方與下方其他區塊），再按一次還原" aria-pressed="false">⛶ 放大表格</button>
@@ -651,6 +746,16 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   <div class="mcal" id="mcal" aria-label="工作月月曆" hidden></div>
   <div class="mbub" id="mbub" hidden aria-label="這一天的所有工作項目"></div>
 
+  <div id="mAdd" hidden>
+    <div class="mabox" role="dialog" aria-label="新增工作項目">
+      <div class="mat">新增工作項目</div>
+      <label>日期 <span id="mAddW" class="maw"></span></label><input type="date" id="mAddD">
+      <label>主要項目</label><select id="mAddR"></select>
+      <label>工作內容</label><textarea id="mAddT" rows="3" maxlength="400" placeholder="工作內容"></textarea>
+      <label class="mck"><input type="checkbox" id="mAddS"> ☆ 標星號</label>
+      <div class="mabt"><button class="btn primary" type="button" id="mAddOk">加入</button><button class="btn" type="button" id="mAddNo">取消</button></div>
+    </div>
+  </div>
   <div class="addrow">
     <span class="hiddenwrap" id="hiddenRow" hidden><button type="button" class="slabel hl hbtn" id="hiddenToggle" aria-expanded="false">▫ 隱藏工作項目</button><span class="chips" id="hiddenChips" hidden></span></span>
     <span class="removed" id="removedBox" hidden><span class="slabel hl">▫ 已刪除</span><span class="chips" id="removedChips"></span></span>
@@ -787,7 +892,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
 
   /* ---------- formulas (same logic as the Excel cells) ---------- */
   function prevMo(m) { return m === 1 ? 13 : m - 1; }                    // IF(LEFT(C2,2)-1=0,13,LEFT(C2,2)-1)
-  function wdLabel(w) { return pad(w.mo) + '工W' + (Math.floor((w.dayno - 1) / 7) + 1) + '第' + pad(w.dayno) + '天'; } // row 2
+  function wdLabel(w) { if (MOB) return 'W' + (Math.floor((w.dayno - 1) / 7) + 1) + '·' + pad(w.dayno); return pad(w.mo) + '工W' + (Math.floor((w.dayno - 1) / 7) + 1) + '第' + pad(w.dayno) + '天'; } // row 2
   function fieldInfo(w) {                                                // row 6
     var p = prevMo(w.mo), d = w.dayno;
     if (d === 9)  return { txt: p + '工\n業績核實\n(跑資料)', note: '上一工作月 ' + p + ' 的業績核實，開始跑資料' };
@@ -879,6 +984,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   try { var hw0 = localStorage.getItem('sched2.hideWk'); if (hw0 !== null) hideWk = hw0 === '1'; } catch (e) {}
   try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) {}
   try { if (window.innerWidth < 700 && localStorage.getItem('sched2.hideB') === null) hideB = true; } catch (e) {}
+  var MOB = document.documentElement.classList.contains('mob'), LW = MOB ? 76 : 150, mobN = 3;   // phone layout: narrow 主項目 column, 3 or 7 days per screen
+  try { var mn0 = localStorage.getItem('sched2.mobN'); if (mn0 === '7') mobN = 7; } catch (e) {}
+  if (MOB) hideB = true;
+  function setMob7() { document.documentElement.classList.toggle('mob7', MOB && mobN === 7); }
+  setMob7();
   var bw = 400;   // width of the 子項目／備註 column, adjustable by dragging its right edge
   try { var sv = Number(localStorage.getItem('sched2.bw')); if (sv >= 160 && sv <= 900) bw = sv; } catch (e) {}
 
@@ -1044,6 +1154,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
         row.appendChild(pk); row.appendChild(tx); box.appendChild(row); return;
       }
       var itl = h('div', 'itl'); itl.appendChild(st); itl.appendChild(ck); itl.appendChild(gr);   // 移動鈕在已完成的右邊
+      if (MOB) { var eb = h('button', 'st', '✎'); eb.type = 'button'; eb.dataset.act = 'edit'; eb.title = '修改內容'; eb.setAttribute('aria-label', '修改內容'); itl.appendChild(eb); }
       row.appendChild(itl); row.appendChild(tb); row.appendChild(bul); row.appendChild(tx); box.appendChild(row);
     });
     td.appendChild(box);
@@ -1142,13 +1253,13 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   if (mode !== 'week') span = 28;
   var cmIdx = fromDn(todayDn).y * 12 + fromDn(todayDn).m - 1;     // calendar month shown on the 曆月 page
   if (span === 28) hideB = true;
-  var UZ = .8;   // = the html { zoom } above: mouse movement is in screen pixels, sizes are in zoomed pixels
+  var UZ = MOB ? 1 : .8;   // = the html { zoom } above: mouse movement is in screen pixels, sizes are in zoomed pixels
   var cwUser = {}, rhUser = {};   // per-viewer: date-column width (per view) and row heights (per row), set by dragging
   try { cwUser = JSON.parse(localStorage.getItem('sched2.cw') || '{}') || {}; rhUser = JSON.parse(localStorage.getItem('sched2.rh') || '{}') || {}; } catch (e) {}
   function saveSizes() { try { localStorage.setItem('sched2.cw', JSON.stringify(cwUser)); localStorage.setItem('sched2.rh', JSON.stringify(rhUser)); } catch (e) {} }
-  function fitCW() { if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - 150 - (hideB ? 0 : bw)) / (span === 7 ? (wkOff() ? 5 : 6) : span))); var ch = n !== CW; CW = n; return ch; }
+  function fitCW() { if (MOB && span === 7) { var nm = Math.max(40, Math.floor(($('sheet').clientWidth - LW) / (mobN === 3 ? 3 : 5))), chm = nm !== CW; CW = nm; return chm; } if (cwUser[span]) { var u = cwUser[span], chg = u !== CW; CW = u; return chg; } var n = Math.max(span === 28 ? 34 : 110, Math.floor(($('sheet').clientWidth - LW - (hideB ? 0 : bw)) / (span === 7 ? (wkOff() ? 5 : 6) : span))); var ch = n !== CW; CW = n; return ch; }
   /* Saturday and Sunday columns are half as wide as the others */
-  function wkOff() { return hideWk && mode === 'week'; }
+  function wkOff() { return (MOB || hideWk) && mode === 'week'; }   // phone: Saturday / Sunday are always left out
   function isWkCol(c) { return c.wd === 0 || c.wd === 6; }
   function colW(c) { return isWkCol(c) ? (wkOff() ? 0 : Math.round(CW / 2)) : CW; }
   function colsW() { var t = 0; for (var i = 0; i < cols.length; i++) t += colW(cols[i]); return t; }
@@ -1160,11 +1271,11 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     buildCols();
     var tbl = $('tbl'); tbl.textContent = '';
     $('sheet').classList.toggle('hideB', hideB); $('sheet').classList.toggle('hideWk', wkOff());
-    var cg = document.createElement('colgroup'), widths = [150, hideB ? 0 : bw];
+    var cg = document.createElement('colgroup'), widths = [LW, hideB ? 0 : bw];
     widths.forEach(function (wd, n) { var c = document.createElement('col'); c.style.width = wd + 'px'; if (n === 1 && hideB) c.style.display = 'none'; cg.appendChild(c); });
     cols.forEach(function (cc) { var c = document.createElement('col'); c.style.width = colW(cc) + 'px'; if (!colW(cc)) c.style.display = 'none'; cg.appendChild(c); });
     tbl.appendChild(cg);
-    tbl.style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
+    tbl.style.width = (LW + (hideB ? 0 : bw) + colsW()) + 'px';
 
     var thead = document.createElement('thead'), r1 = h('tr', 'h1'), r2 = h('tr', 'h2');
     var a = h('th', 'a', '主項目'); a.rowSpan = 2; r1.appendChild(a);
@@ -1211,7 +1322,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     paintFoot();
     paintTitle(); fillExportSel();
     Array.prototype.forEach.call(document.querySelectorAll('#viewSeg .btn'), function (b) { b.classList.toggle('on', b.dataset.mode === mode); });
-    $('prev').textContent = mode === 'cm' ? '‹ 上個月' : '‹ 上一工作月'; $('next').textContent = mode === 'cm' ? '下個月 ›' : '下一工作月 ›';
+    $('prev').textContent = MOB ? '‹' : mode === 'cm' ? '‹ 上個月' : '‹ 上一工作月'; $('next').textContent = MOB ? '›' : mode === 'cm' ? '下個月 ›' : '下一工作月 ›';
     $('sheet').classList.toggle('mview', span === 28);
     $('toggleB').classList.toggle('on', hideB); $('toggleWk').classList.toggle('on', hideWk);
     renderTop(); renderStars(); renderHidden(); renderRemoved(); renderWm(); padSheet();
@@ -1306,7 +1417,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (!k) { var f = visibleRows().filter(function (d) { return !isCalc(d); })[0]; k = f ? f.k : 'temp'; }
     if (editing) commit();
     mode = 'week'; span = 7; try { localStorage.setItem('sched2.mode', 'week'); localStorage.setItem('sched2.span', '7'); } catch (e) {}
-    try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; }
+    try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; } if (MOB) hideB = true;
     render(); jumpTo(Number(c.dataset.dn), k);
   });
   function renderRemoved() {
@@ -2204,7 +2315,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       return;
     }
     pd.mode = ''; $('pad').classList.add('pdrag');
-    var sh = $('sheet').getBoundingClientRect(), stick = 150 + (hideB ? 0 : bw) + 40;      // near the sheet's edges the sheet scrolls along, like dragging a work item
+    var sh = $('sheet').getBoundingClientRect(), stick = LW + (hideB ? 0 : bw) + 40;      // near the sheet's edges the sheet scrolls along, like dragging a work item
     if (ev.clientX >= sh.left + stick) pd.out = true;
     pd.sx = ev.clientX > sh.right - 50 ? 18 : (ev.clientX < sh.left + stick && pd.out ? -18 : 0);
     pd.sy = ev.clientY > sh.bottom - 40 ? 18 : (ev.clientY < sh.top + 90 ? -18 : 0);
@@ -2368,6 +2479,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (act === 'delm') return startPick(k, c, i, 'del');
     if (act === 'pick') { if (pick && pick.sel[k]) { pick.sel[k][i] = !pick.sel[k][i]; paintCell(td, col, k); } return; }
     if (act === 'rule') { var it0 = itemsNow(col, k)[i]; if (it0 && it0.r) openRule(col.dn, it0.r); return; }
+    if (act === 'edit' && MOB && !row.classList.contains('hot')) { var oh = document.querySelectorAll('.it.hot'); for (var h0 = 0; h0 < oh.length; h0++) oh[h0].classList.remove('hot'); row.classList.add('hot'); return; }   // phone: first tap picks the item (tool bars show at the bottom), tapping its text again edits it
     if (act === 'edit') return startItem(td, k, c, i);
     if (act === 'inote') return startItemNote(td, k, c, i);
     var items = itemsNow(col, k);
@@ -2388,6 +2500,10 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     }
   }
   $('tbl').addEventListener('click', tblClick); $('mbub').addEventListener('click', tblClick);
+  if (MOB) {
+    document.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('.it.hot')) return; var oh = document.querySelectorAll('.it.hot'); for (var q = 0; q < oh.length; q++) oh[q].classList.remove('hot'); });
+    document.addEventListener('touchmove', function (ev) { if (drag && drag.on && ev.cancelable) ev.preventDefault(); }, { passive: false });   // while an item is being dragged the page must not scroll under the finger
+  }
   function cellDbl(ev) {                                                // double-click the empty part of a cell = press its ＋ (new work item / new meeting)
     var td = ev.target.closest && ev.target.closest('td.c'); if (!td || editing || pick) return;
     if (ev.target.closest('[data-act], .it, a, textarea, input, .rh, .cz, .rtb')) return;
@@ -2401,6 +2517,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var b = ev.target.closest('.chip-h'); if (b) rowAction('rowshow', b.dataset.k);
   });
   function tblOver(ev) {   // tool buttons sit to the right of the item; flip them to the left only when the sheet edge is in the way
+    if (MOB) return;                                               // phone: an item is picked by tapping it (see tblClick), not by hovering
     var root = ev.currentTarget, hot = root.querySelector('.it.hot'), it = ev.target.closest && ev.target.closest('.it');
     if (!it) {                                                     // over the cell's own ＋ button: keep the tools of the item just left, so the mouse can still get across to them
       if (hot && !(hot.closest('td') && hot.closest('td').contains(ev.target))) hot.classList.remove('hot');
@@ -2454,7 +2571,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var sh = $('sheet'), holdTimer = null, repTimer = null;
     function points(axis) {
       var t = $('tbl'), out = [], i;
-      if (axis === 'x') { var pad = 150 + (hideB ? 0 : bw), ths = t.querySelectorAll('thead th.dh'); for (i = 0; i < ths.length; i++) if (ths[i].offsetWidth) out.push(ths[i].offsetLeft - pad); }
+      if (axis === 'x') { var pad = LW + (hideB ? 0 : bw), ths = t.querySelectorAll('thead th.dh'); for (i = 0; i < ths.length; i++) if (ths[i].offsetWidth) out.push(ths[i].offsetLeft - pad); }
       else { var hh = t.tHead ? t.tHead.offsetHeight : 72, tds = t.querySelectorAll('tbody td.a'); for (i = 0; i < tds.length; i++) out.push(tds[i].offsetTop - hh); }
       return out;
     }
@@ -2543,7 +2660,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function applyBw() {
     var col = $('tbl').querySelector('colgroup col:nth-child(2)');
     if (col && !hideB) col.style.width = bw + 'px';
-    $('tbl').style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
+    $('tbl').style.width = (LW + (hideB ? 0 : bw) + colsW()) + 'px';
     padSheet();
   }
   function moveResize(ev) { if (!rs) return; bw = Math.max(160, Math.min(900, Math.round(rs.w + (ev.clientX - rs.x) / UZ))); applyBw(); }
@@ -2563,7 +2680,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function applyCW(w) {
     CW = w; var cs = $('tbl').querySelectorAll('colgroup col');
     for (var i = 2; i < cs.length; i++) cs[i].style.width = colW(cols[i - 2]) + 'px';
-    $('tbl').style.width = (150 + (hideB ? 0 : bw) + colsW()) + 'px';
+    $('tbl').style.width = (LW + (hideB ? 0 : bw) + colsW()) + 'px';
   }
   function startColResize(ev) {
     ev.preventDefault(); ev.stopPropagation();
@@ -2607,7 +2724,18 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var top = sr.top + (window.pageYOffset || 0), room = (window.innerHeight - 6 - top - below) / UZ;
     sh.style.maxHeight = Math.max(300, Math.floor(room)) + 'px';
   }
-  function scheduleClip() { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(function () { fitSheet(); markClipped(); if (bubTd && document.body.contains(bubTd)) bubbleOn(bubTd); }); }   // a repaint of the hovered cell makes a new items box: set the bubble on it again
+  function mobFitRows() {                                               // phone only: 重要會議 keeps its default height, every other main item is as tall as its date cells need (set without scheduleClip, so no loop)
+    if (!MOB || mode !== 'week') return;
+    var trs = Array.prototype.slice.call($('tbl').querySelectorAll('tbody tr')); if (!trs.length) return;
+    var raw = function (tr, px) { tr.style.height = px ? px + 'px' : ''; Array.prototype.forEach.call(tr.querySelectorAll('td.c, td.a'), function (td) { if (px) { td.classList.add('fixh'); td.style.setProperty('--rh', px + 'px'); } else { td.classList.remove('fixh'); td.style.removeProperty('--rh'); } }); };
+    var isMgr = function (tr) { var a = tr.querySelector('td.a'); return !!a && a.dataset.k === 'mgr'; };
+    trs.forEach(function (tr) { raw(tr, 0); });
+    var others = trs.filter(function (tr) { return !isMgr(tr); });
+    others.forEach(function (tr) { Array.prototype.forEach.call(tr.querySelectorAll('td.a'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', '1px'); }); });
+    var hs = others.map(function (tr) { return Math.max(26, Math.ceil(tr.getBoundingClientRect().height / UZ)); });
+    others.forEach(function (tr, n) { raw(tr, 0); raw(tr, hs[n]); });
+  }
+  function scheduleClip() { cancelAnimationFrame(clipRaf); clipRaf = requestAnimationFrame(function () { fitSheet(); mobFitRows(); markClipped(); if (bubTd && document.body.contains(bubTd)) bubbleOn(bubTd); }); }   // a repaint of the hovered cell makes a new items box: set the bubble on it again
   var clipMo = new MutationObserver(scheduleClip); clipMo.observe($('tbl'), { childList: true, subtree: true }); clipMo.observe($('starChips'), { childList: true, subtree: true }); clipMo.observe($('watchBox'), { childList: true, subtree: true });
   window.addEventListener('resize', scheduleClip); window.addEventListener('load', scheduleClip); scheduleClip();
   function setRowH(tr, px) {
@@ -2976,7 +3104,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
       if (t.idx < items.length) items[t.idx].parentNode.insertBefore(line, items[t.idx]);
       else { var box = t.td.querySelector('.items'); if (box) box.appendChild(line); }
     }
-    var sh = $('sheet').getBoundingClientRect(), stick = 150 + (hideB ? 0 : bw) + 40;
+    var sh = $('sheet').getBoundingClientRect(), stick = LW + (hideB ? 0 : bw) + 40;
     if (ev.clientX >= sh.left + stick) drag.out = true;   // an item picked up inside the fixed left columns (待定事項) must not scroll left until the pointer has left that strip once
     drag.sx = ev.clientX > sh.right - 50 ? 18 : (ev.clientX < sh.left + stick && drag.out ? -18 : 0);
     drag.sy = ev.clientY > sh.bottom - 40 ? 18 : (ev.clientY < sh.top + 90 ? -18 : 0);
@@ -3141,7 +3269,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   [$('mgrName'), $('mgrTag'), $('mgrLoc')].forEach(function (el) { el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); saveMgr(); } }); });
   /* The board is endless: it holds a run of whole work months (winFirst..winLast) and builds more when the scroll gets near an end. */
   function ensureIdx(idx) { if (idx < winFirst) winFirst = idx; if (idx > winLast) winLast = idx; }
-  function stickW() { return 150 + (hideB ? 0 : bw); }
+  function stickW() { return LW + (hideB ? 0 : bw); }
   function scrollToDn(dn) {
     var sheet = $('sheet'), ci = -1; cols.forEach(function (c) { if (ci < 0 && c.dn >= dn && !(wkOff() && isWkCol(c))) ci = c.i; });
     var th = ci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + ci + '"]');
@@ -3150,6 +3278,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
   function go(delta) {
     if (editing) commit();
     if (mode !== 'week') { if (mode === 'cm') cmIdx += delta; else viewIdx += delta; expPick = false; paintTitle(); renderWm(); renderMcal(); return; }   // a calendar page just changes month
+    if (MOB) { var shm = $('sheet'), k1 = colIndexAt(shm.scrollLeft + 2), want = (mobN === 3 ? 3 : 5), t1 = k1, got = 0; while (got < want && t1 + delta >= 0 && t1 + delta < cols.length) { t1 += delta; if (!isWkCol(cols[t1])) got++; } shm.scrollTo({ left: leftOf(t1), behavior: 'smooth' }); return; }
     var t = viewIdx + delta, before = winFirst + ':' + winLast;
     ensureIdx(t);
     if (before !== winFirst + ':' + winLast) render();
@@ -3195,8 +3324,8 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     var sheet = $('sheet'), tci = -1; cols.forEach(function (c) { if (tci < 0 && c.dn >= todayDn && !(wkOff() && isWkCol(c))) tci = c.i; });
     var th = tci < 0 ? null : $('tbl').querySelector('thead th.dh[data-c="' + tci + '"]'); if (!th) return;
     padSheet();
-    var stick = 150 + (hideB ? 0 : bw), vis = Math.max(sheet.clientWidth - stick, th.offsetWidth);
-    var li = tci, back = 2; while (back > 0 && li > 0) { li--; if (!(wkOff() && isWkCol(cols[li]))) back--; }   // two shown days before today
+    var stick = LW + (hideB ? 0 : bw), vis = Math.max(sheet.clientWidth - stick, th.offsetWidth);
+    var li = tci, back = MOB ? (mobN === 3 ? 0 : 1) : 2; while (back > 0 && li > 0) { li--; if (!(wkOff() && isWkCol(cols[li]))) back--; }   // two shown days before today
     var lead = $('tbl').querySelector('thead th.dh[data-c="' + li + '"]');   // start two days before today: seven whole days (5 weekdays + 2 half-width weekend days always fill the width), none cut off at either side
     var left = lead && mode === 'week' ? lead.offsetLeft - stick : th.offsetLeft - stick - (vis - th.offsetWidth) / 2;
     sheet.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
@@ -3259,12 +3388,57 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     mode = to; span = to === 'week' ? 7 : 28;
     try { localStorage.setItem('sched2.mode', mode); localStorage.setItem('sched2.span', String(span)); } catch (e) {}
     if (span === 28) hideB = true;
-    else { try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; } }
+    else { try { hideB = localStorage.getItem('sched2.hideB') === '1'; } catch (e) { hideB = false; } if (MOB) hideB = true; }
     ensureIdx(viewIdx);
     fitCW(); render();
     if (mode === 'week') { scrollToDn(wmOf(todayDn).idx === viewIdx ? todayDn : wmOf(ANCHOR + viewIdx * LEN).start); if (wmOf(todayDn).idx === viewIdx) centerToday(false); }
   }
   Array.prototype.forEach.call(document.querySelectorAll('#viewSeg .btn'), function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('#mobSeg .btn'), function (b) {
+    b.classList.toggle('on', Number(b.dataset.n) === mobN);
+    b.addEventListener('click', function () {
+      if (editing) commit();
+      var n = Number(b.dataset.n); if (n === mobN) return;
+      var sh = $('sheet'), k = colIndexAt(sh.scrollLeft + 2), dn = cols[k] && cols[k].dn;
+      mobN = n; setMob7(); try { localStorage.setItem('sched2.mobN', String(n)); } catch (e) {}
+      Array.prototype.forEach.call(document.querySelectorAll('#mobSeg .btn'), function (x) { x.classList.toggle('on', Number(x.dataset.n) === mobN); });
+      render(); if (dn != null) scrollToDn(dn);
+    });
+  });
+  (function () {                                                         // phone: one ＋ button in the toolbar adds an item to any date / main item
+    var box = $('mAdd'), bt = $('mobAdd'); if (!box || !bt) return;
+    var WD = ['日', '一', '二', '三', '四', '五', '六'];
+    function wdTxt() { var v = $('mAddD').value; $('mAddW').textContent = v ? '週' + WD[fromDn(isoToDn(v)).w] : ''; }
+    function close() { box.hidden = true; $('mAddT').blur(); }
+    function openAdd() {
+      if (editing) commit();
+      var sel = $('mAddR'); sel.innerHTML = '';
+      rows().filter(function (d) { return !isCalc(d); }).forEach(function (d) { var o = document.createElement('option'); o.value = d.k; o.textContent = flat(d.label); sel.appendChild(o); });
+      var last = ''; try { last = localStorage.getItem('sched2.mobAddRow') || ''; } catch (e) {}
+      if (last && rowDef(last) && !isCalc(rowDef(last))) sel.value = last;
+      var dn = todayDn;
+      if (mode === 'week' && cols.length) { var k = colIndexAt($('sheet').scrollLeft + 2); while (k < cols.length - 1 && isWkCol(cols[k])) k++; if (cols[k]) dn = cols[k].dn; }
+      $('mAddD').value = iso(dn); $('mAddT').value = ''; $('mAddS').checked = false; wdTxt();
+      box.hidden = false; setTimeout(function () { $('mAddT').focus(); }, 50);
+    }
+    function saveAdd() {
+      var dv = $('mAddD').value, k = $('mAddR').value, txt = $('mAddT').value.replace(/\s+$/, '').replace(/^\s+/, '');
+      if (!dv || !k) { toast('請選日期和主要項目'); return; }
+      var dn = isoToDn(dv);
+      try { localStorage.setItem('sched2.mobAddRow', k); } catch (e) {}
+      if (isRR(k)) { close(); openRule(dn, null, k); return; }           // repeat rows ask for their repeat settings
+      if (!txt) { toast('請輸入工作內容'); $('mAddT').focus(); return; }
+      var col = colAt(-100 - dn), items = itemsNow(col, k); items.push({ t: txt.slice(0, 400), s: $('mAddS').checked ? 1 : 0 });
+      saveItems(col, k, items); close();
+      if (mode === 'week') { ensureIdx(wmOf(dn).idx); render(); scrollToDn(dn); } else { renderWm(); renderMcal(); }
+      toast('已加入 ' + (fromDn(dn).m) + '/' + fromDn(dn).d + '　' + flat((rowDef(k) || {}).label));
+    }
+    bt.addEventListener('click', openAdd);
+    $('mAddD').addEventListener('input', wdTxt); $('mAddD').addEventListener('change', wdTxt);
+    $('mAddOk').addEventListener('click', saveAdd); $('mAddNo').addEventListener('click', close);
+    box.addEventListener('click', function (ev) { if (ev.target === box) close(); });
+  })();
+  if (MOB) { $('goToday').textContent = '今天'; $('prev').title = '往前'; $('next').title = '往後'; }
   $('toggleB').addEventListener('click', function () {
     if (editing) commit();
     hideB = !hideB; try { localStorage.setItem('sched2.hideB', hideB ? '1' : '0'); } catch (e) {}
@@ -3523,7 +3697,7 @@ details.fold .foot-txt { margin: 0 -14px -8px; }
     if (autoOn) checkAuto();
   });
   function checkAuto() {
-    if (!autoOn || autoBusy || window.claude || window.__schedLocal || window.SCHED_READONLY || editing) return;   // the offline preview file never auto-downloads
+    if (MOB || !autoOn || autoBusy || window.claude || window.__schedLocal || window.SCHED_READONLY || editing) return;   // the offline preview file never auto-downloads
     if (!(live.cells && live.rowNotes && live.meta)) return;     // wait for the real data, so an empty month is never exported
     var prev = wmOf(localToday()).idx - 1;
     var last = meta.autoExp && typeof meta.autoExp.idx === 'number' ? meta.autoExp.idx : null;   // shared by every computer: the first one to open the page in a new work month does the export
