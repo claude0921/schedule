@@ -647,7 +647,7 @@ html.mob .padcard { min-width: 0; }
 
 #mobAdd { display: none; }
 html.mob #mobAdd { display: inline-flex; align-items: center; justify-content: center; font-size: 20px; padding: 2px 12px; }
-html.mob td.c > .add { display: none !important; }
+html.mob td.c > .add, html.mob td.a > .add { display: none !important; }
 #mAdd { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; justify-content: center; }
 #mAdd[hidden] { display: none; }
 #mAdd .mabox { background: var(--card); color: var(--ink); width: min(520px, 100vw); border-radius: 16px 16px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; box-shadow: 0 -8px 30px rgba(0, 0, 0, .3); }
@@ -2731,7 +2731,6 @@ html.mob.mob7 .chip.mgr { font-size: 11px; padding: 1px 3px; }
     var isMgr = function (tr) { var a = tr.querySelector('td.a'); return !!a && a.dataset.k === 'mgr'; };
     trs.forEach(function (tr) { raw(tr, 0); });
     var others = trs.filter(function (tr) { return !isMgr(tr); });
-    others.forEach(function (tr) { Array.prototype.forEach.call(tr.querySelectorAll('td.a'), function (td) { td.classList.add('fixh'); td.style.setProperty('--rh', '1px'); }); });
     var hs = others.map(function (tr) { return Math.max(26, Math.ceil(tr.getBoundingClientRect().height / UZ)); });
     others.forEach(function (tr, n) { raw(tr, 0); raw(tr, hs[n]); });
   }
