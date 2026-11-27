@@ -648,6 +648,7 @@ html.mob .padcard { min-width: 0; }
 #mobAdd { display: none; }
 html.mob #mobAdd { display: inline-flex; align-items: center; justify-content: center; font-size: 20px; padding: 2px 12px; }
 html.mob td.c > .add, html.mob td.a > .add { display: none !important; }
+html.mob .tstrip .srow { display: none !important; }
 #mAdd { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; justify-content: center; }
 #mAdd[hidden] { display: none; }
 #mAdd .mabox { background: var(--card); color: var(--ink); width: min(520px, 100vw); border-radius: 16px 16px 0 0; padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; box-shadow: 0 -8px 30px rgba(0, 0, 0, .3); }
@@ -892,7 +893,7 @@ html.mob.mob7 .chip.mgr { font-size: 11px; padding: 1px 3px; }
 
   /* ---------- formulas (same logic as the Excel cells) ---------- */
   function prevMo(m) { return m === 1 ? 13 : m - 1; }                    // IF(LEFT(C2,2)-1=0,13,LEFT(C2,2)-1)
-  function wdLabel(w) { if (MOB) return 'W' + (Math.floor((w.dayno - 1) / 7) + 1) + '·' + pad(w.dayno); return pad(w.mo) + '工W' + (Math.floor((w.dayno - 1) / 7) + 1) + '第' + pad(w.dayno) + '天'; } // row 2
+  function wdLabel(w) { if (MOB) return 'W' + (Math.floor((w.dayno - 1) / 7) + 1) + ' D' + pad(w.dayno); return pad(w.mo) + '工W' + (Math.floor((w.dayno - 1) / 7) + 1) + '第' + pad(w.dayno) + '天'; } // row 2
   function fieldInfo(w) {                                                // row 6
     var p = prevMo(w.mo), d = w.dayno;
     if (d === 9)  return { txt: p + '工\n業績核實\n(跑資料)', note: '上一工作月 ' + p + ' 的業績核實，開始跑資料' };
